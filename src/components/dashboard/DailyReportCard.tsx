@@ -140,7 +140,18 @@ export default function DailyReportCard() {
         </button>
       </div>
 
-      <p className="flex-1 text-sm leading-relaxed text-zinc-200">{report}</p>
+      {/* Live report text can never match the server prerender (1s tick +
+          random noise), so render a stable skeleton until mount — same
+          hydration-gate pattern as the AppShell live values. */}
+      {mounted ? (
+        <p className="flex-1 text-sm leading-relaxed text-zinc-200">{report}</p>
+      ) : (
+        <div className="flex-1 space-y-2" aria-hidden>
+          <div className="h-3 animate-pulse rounded bg-white/10" />
+          <div className="h-3 w-11/12 animate-pulse rounded bg-white/10" />
+          <div className="h-3 w-2/3 animate-pulse rounded bg-white/10" />
+        </div>
+      )}
 
       {speaking && (
         <div className="mt-3 flex items-center gap-1.5" aria-hidden>

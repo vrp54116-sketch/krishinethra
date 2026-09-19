@@ -47,13 +47,12 @@ export default function LiveFarmPill() {
   const zoneBMoisture = mounted
     ? Math.round(snapshot.soilMoistureB)
     : null;
-  const tempC = mounted ? Math.round(snapshot.tempC) : null;
-  const tankPct = mounted ? Math.round(snapshot.tankLevelPercent) : null;
+  const tempC = mounted ? Math.round(snapshot.tempC) : 32;
+  const tankPct = mounted ? Math.round(snapshot.tankLevelPercent) : 78;
 
-  const liveText =
-    zoneBMoisture == null || tempC == null
-      ? "···"
-      : `Zone B ${zoneBMoisture}% • Pump ${running ? t("common.on") : t("common.off")} • ${tempC}°C`;
+  const liveText = mounted
+    ? `Zone B ${zoneBMoisture ?? 22}% • Pump ${running ? "ON" : "OFF"} • ${tempC}°C`
+    : "Zone B 22% • Pump OFF • 32°C";
 
   const togglePump = () => {
     if (running) setPumpManual(false);
@@ -62,50 +61,52 @@ export default function LiveFarmPill() {
 
   const glowStyle = running
     ? {
-        borderColor: "rgba(52,211,153,0.55)",
+        borderColor: "rgba(52,211,153,0.65)",
         boxShadow:
-          "0 0 24px rgba(16,185,129,0.35), 0 8px 32px rgba(0,0,0,0.5)",
+          "0 0 24px rgba(16,185,129,0.45), 0 8px 32px rgba(0,0,0,0.55)",
       }
     : hasCritical
       ? {
-          borderColor: "rgba(251,191,36,0.55)",
+          borderColor: "rgba(251,191,36,0.65)",
           boxShadow:
-            "0 0 24px rgba(245,158,11,0.35), 0 8px 32px rgba(0,0,0,0.5)",
+            "0 0 24px rgba(245,158,11,0.45), 0 8px 32px rgba(0,0,0,0.55)",
         }
-      : undefined;
+      : {
+          borderColor: "rgba(255,255,255,0.12)",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.55)",
+        };
 
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: 32, scale: 0.94 }}
+        initial={{ opacity: 0, y: 28, scale: 0.94 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: "spring", stiffness: 260, damping: 24 }}
-        className="fixed inset-x-4 bottom-[92px] z-40 md:inset-x-auto md:bottom-24 md:right-6 md:w-[380px]"
+        exit={{ opacity: 0, y: 20, scale: 0.95 }}
+        transition={{ type: "spring", stiffness: 280, damping: 24 }}
+        className="fixed inset-x-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-40 md:inset-x-auto md:bottom-6 md:right-6 md:w-[390px]"
       >
         <div
-          className="glass-strong flex items-center gap-2.5 py-2 pl-2.5 pr-2 backdrop-blur-xl"
-          style={{ borderRadius: 999, ...glowStyle }}
+          className="glass-strong flex items-center gap-2.5 py-2 pl-2.5 pr-2 rounded-full backdrop-blur-xl transition-all"
+          style={glowStyle}
         >
           {/* Pill body — tap to expand quick controls */}
           <button
             type="button"
             onClick={() => setSheetOpen(true)}
             aria-label="Open live farm controls"
-            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-full text-left"
+            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-full text-left cursor-pointer"
           >
             <span
               className={cn(
-                "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border",
+                "glass-pill flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all",
                 running
-                  ? "border-emerald-400/50 bg-emerald-500/20 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.5)]"
+                  ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.6)]"
                   : "border-white/10 bg-white/[0.05] text-zinc-400",
               )}
             >
               <Droplets
-                className={cn("h-4 w-4", running && "animate-spin")}
-                style={
-                  running ? { animationDuration: "2.5s" } : undefined
-                }
+                className={cn("h-4 w-4", running && "animate-spin text-emerald-300")}
+                style={running ? { animationDuration: "2.2s" } : undefined}
               />
             </span>
             <span className="min-w-0 flex-1">
@@ -128,12 +129,15 @@ export default function LiveFarmPill() {
           {/* Round glass action buttons */}
           <button
             type="button"
-            onClick={togglePump}
+            onClick={(e) => {
+              e.stopPropagation();
+              togglePump();
+            }}
             aria-label={running ? "Turn pump off" : "Turn pump on"}
             className={cn(
-              "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all active:scale-95",
+              "glass-pill flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all active:scale-90 cursor-pointer",
               running
-                ? "border-emerald-400/50 bg-emerald-500/25 text-emerald-200 shadow-[0_0_14px_rgba(16,185,129,0.5)]"
+                ? "border-emerald-400/60 bg-emerald-500/25 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.6)]"
                 : "border-white/10 bg-white/[0.05] text-zinc-300 hover:border-emerald-500/40 hover:text-emerald-200",
             )}
           >
@@ -141,9 +145,12 @@ export default function LiveFarmPill() {
           </button>
           <button
             type="button"
-            onClick={() => router.push("/camera")}
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push("/camera");
+            }}
             aria-label={t("dashboard.scanLeaf")}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-zinc-300 transition-all hover:border-emerald-500/40 hover:text-emerald-200 active:scale-95"
+            className="glass-pill flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-zinc-300 transition-all hover:border-emerald-500/40 hover:text-emerald-200 active:scale-90 cursor-pointer"
           >
             <ScanLine className="h-4 w-4" />
           </button>

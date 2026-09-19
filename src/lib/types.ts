@@ -182,13 +182,33 @@ export interface FarmLocation {
   label: string;
 }
 
+export type FarmerRole = "Farmer" | "Farm Manager" | "Student Researcher" | string;
+export type SizeUnit = "Acres" | "Bigha" | "Hectare" | "Guntha";
+
 export interface FarmProfile {
   /** Display name of the farm (Settings → Farm Profile). */
   farmName: string;
   /** Farmer / owner name. */
   farmerName: string;
+  /** 10-digit Indian mobile number (no +91 prefix stored). */
+  phone: string;
+  role: FarmerRole;
+  /** Emoji avatar selected in onboarding. */
+  avatar: string;
   state: string;
+  /** District used as the default mandi filter (Settings → Farm Profile). */
+  district: string;
+  village: string;
+  /** GPS from onboarding geolocation (null until detected/edited). */
+  location: { lat: number; lng: number } | null;
   farmSizeAcres: number;
+  /** Display size + unit (farmSizeAcres stays canonical for agronomy). */
+  size: number;
+  sizeUnit: SizeUnit;
+  soilType: string;
+  waterSource: string;
+  irrigationMethod: string;
+  powerSource: string;
   hasPump: boolean;
   /** crop slugs, e.g. ["tomato","chili","spinach"] */
   crops: string[];
@@ -214,6 +234,11 @@ export interface AppSettings {
   location: FarmLocation;
   /** Farm profile used by /schemes recommendations + /market "Your Crops". */
   farmProfile: FarmProfile;
+  /** Live mandi data source (Settings → Data Sources). Stored client-side so
+   *  the app also works when DATA_GOV_IN_API_KEY / COMMODITY_RESOURCE_ID env
+   *  vars are missing — sent as ?apiKey=&resourceId= overrides to /api/mandi. */
+  dataGovApiKey: string;
+  commodityResourceId: string;
   telegram: {
     botToken: string;
     chatId: string;

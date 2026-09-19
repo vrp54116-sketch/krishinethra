@@ -103,11 +103,26 @@ export const DEFAULT_SETTINGS: AppSettings = {
   farmProfile: {
     farmName: "Patel Farm",
     farmerName: "",
+    phone: "",
+    role: "Farmer",
+    avatar: "🧑‍🌾",
     state: "Gujarat",
+    district: "Ahmedabad",
+    village: "",
+    location: null,
     farmSizeAcres: 1,
+    size: 1,
+    sizeUnit: "Acres",
+    soilType: "Black cotton",
+    waterSource: "Borewell",
+    irrigationMethod: "Drip",
+    powerSource: "Electricity",
     hasPump: true,
     crops: ["tomato", "chili", "spinach"],
   },
+  /** Live mandi source — Settings → Data Sources can override without env vars. */
+  dataGovApiKey: "",
+  commodityResourceId: "9ef84268-d588-465a-a308-a864a43d0070",
   telegram: {
     botToken: "",
     chatId: "",
@@ -509,13 +524,48 @@ export type SettingsPatch = Partial<
   farmProfile?: Partial<AppSettings["farmProfile"]>;
 };
 
+/** djb2 hash for the optional 4-digit app PIN (obfuscation, not crypto). */
+export function hashPin(pin: string): string {
+  let h = 5381;
+  for (let i = 0; i < pin.length; i++) {
+    h = ((h << 5) + h + pin.charCodeAt(i)) | 0;
+  }
+  return `pin_${(h >>> 0).toString(16)}`;
+}
+
+/** Convert a display size+unit back to canonical acres. */
+export function sizeToAcres(size: number, unit: string): number {
+  const s = Number.isFinite(size) ? size : 0;
+  switch (unit) {
+    case "Hectare":
+      return Math.round(s * 2.47105 * 100) / 100;
+    case "Bigha":
+      return Math.round(s * 0.625 * 100) / 100;
+    case "Guntha":
+      return Math.round(s * 0.025 * 100) / 100;
+    default:
+      return Math.round(s * 100) / 100;
+  }
+}
+
 interface FarmState {
-  // Legacy landing-page surface (mirrored with settings.language).
+  // Landing / onboarding surface (mirrored with settings.language).
   language: LanguageCode;
   isAuthenticated: boolean;
+  /** True once the 5-step wizard has been completed. Forces routing. */
+  onboardingDone: boolean;
+  /** Hashed optional 4-digit app PIN (null = no PIN). */
+  appPinHash: string | null;
   setLanguage: (lang: LanguageCode) => void;
   unlock: () => void;
   lock: () => void;
+  setOnboardingDone: (done: boolean) => void;
+  setAppPin: (pin: string | null) => void;
+  verifyPin: (pin: string) => boolean;
+  /** Persist a completed wizard: profile + zones + location + flags. */
+  completeOnboarding: (opts?: { pin?: string | null }) => void;
+  /** Re-open the wizard for editing (Settings → Edit Registration). */
+  resetOnboarding: () => void;
 
   // Core farm state.
   settings: AppSettings;
@@ -1088,6 +1138,8 @@ export const useFarmStore = create<FarmState>()(
     (set, get) => ({
       language: "en",
       isAuthenticated: false,
+      onboardingDone: false,
+      appPinHash: null,
       setLanguage: (language) =>
         set((s) => ({
           language,
@@ -1095,6 +1147,49 @@ export const useFarmStore = create<FarmState>()(
         })),
       unlock: () => set({ isAuthenticated: true }),
       lock: () => set({ isAuthenticated: false }),
+      setOnboardingDone: (done) => set({ onboardingDone: done }),
+      setAppPin: (pin) =>
+        set({
+          appPinHash: pin && /^\d{4}$/.test(pin) ? hashPin(pin) : null,
+        }),
+      verifyPin: (pin) => {
+        const h = get().appPinHash;
+        if (!h) return true;
+        return h === hashPin(pin);
+      },
+      completeOnboarding: (opts) => {
+        const pin = opts?.pin ?? null;
+        set((s) => {
+          const fp = s.settings.farmProfile;
+          const gps = fp.location ?? null;
+          const capFallback = { latitude: 23.0225, longitude: 72.5714, label: "Ahmedabad" };
+          const location = gps
+            ? {
+                latitude: gps.lat,
+                longitude: gps.lng,
+                label: [fp.district, fp.state].filter(Boolean).join(", ") || "Farm",
+              }
+            : s.settings.location;
+          void capFallback;
+          // First 3 crops → Zones A/B/C display names.
+          const cropNames = (fp.crops ?? []).slice(0, 3).map((c) => {
+            const titled = c.charAt(0).toUpperCase() + c.slice(1);
+            return titled;
+          });
+          const zones: Zone[] = s.zones.map((z, i) =>
+            i < cropNames.length && cropNames[i] ? { ...z, crop: cropNames[i] } : z,
+          );
+          return {
+            zones,
+            settings: { ...s.settings, location },
+            onboardingDone: true,
+            isAuthenticated: true,
+            appPinHash:
+              pin && /^\d{4}$/.test(pin) ? hashPin(pin) : s.appPinHash,
+          };
+        });
+      },
+      resetOnboarding: () => set({ onboardingDone: false }),
 
       settings: DEFAULT_SETTINGS,
       ...freshFarmState(Date.now()),
@@ -1837,6 +1932,27 @@ export const useFarmStore = create<FarmState>()(
             if (fp.farmName == null) fp.farmName = DEFAULT_SETTINGS.farmProfile.farmName;
           }
           if (fp.farmerName == null) fp.farmerName = DEFAULT_SETTINGS.farmProfile.farmerName;
+          if (fp.phone == null) fp.phone = "";
+          if (fp.role == null) fp.role = "Farmer";
+          if (fp.avatar == null) fp.avatar = "🧑‍🌾";
+          if (fp.village == null) fp.village = "";
+          if (fp.location === undefined) fp.location = null;
+          if (fp.size == null) fp.size = fp.farmSizeAcres ?? 1;
+          if (fp.sizeUnit == null) fp.sizeUnit = "Acres";
+          if (fp.soilType == null) fp.soilType = "Black cotton";
+          if (fp.waterSource == null) fp.waterSource = "Borewell";
+          if (fp.irrigationMethod == null) fp.irrigationMethod = "Drip";
+          if (fp.powerSource == null) fp.powerSource = "Electricity";
+        }
+        if (state && state.onboardingDone == null) {
+          state.onboardingDone = false;
+        }
+        if (state && state.appPinHash === undefined) {
+          state.appPinHash = null;
+        }
+        // PIN set → start locked until the user unlocks (fresh visit).
+        if (state && state.appPinHash && state.onboardingDone) {
+          state.isAuthenticated = false;
         }
         // Backfill newer top-level settings keys.
         if (state?.settings) {
@@ -1847,6 +1963,18 @@ export const useFarmStore = create<FarmState>()(
           if (st.hardwareGatewayUrl == null) st.hardwareGatewayUrl = "";
           if (st.cameraStreamUrl == null) st.cameraStreamUrl = "";
           if (st.cameraSource == null) st.cameraSource = "simulation";
+          if (st.dataGovApiKey == null) st.dataGovApiKey = DEFAULT_SETTINGS.dataGovApiKey;
+          if (st.commodityResourceId == null)
+            st.commodityResourceId = DEFAULT_SETTINGS.commodityResourceId;
+          if (
+            st.farmProfile &&
+            (st.farmProfile as Partial<AppSettings["farmProfile"]>).district == null
+          ) {
+            st.farmProfile = {
+              ...st.farmProfile,
+              district: DEFAULT_SETTINGS.farmProfile.district,
+            };
+          }
           // Migrate old humidityLow default (30 → 40 per agronomy spec).
           if (st.thresholds && st.thresholds.humidityLow === 30) {
             st.thresholds = { ...st.thresholds, humidityLow: 40 };
@@ -1905,7 +2033,7 @@ export const useFarmStore = create<FarmState>()(
             }
           }
         }
-        if (state && Array.isArray(state.zones)) {
+        if (state && Array.isArray(state.zones) && !state.onboardingDone) {
           const want: Record<string, string> = { A: "Tomato", B: "Chili", C: "Spinach" };
           const needsFix = state.zones.some((z) => want[z.id] && z.crop !== want[z.id]);
           if (needsFix) {

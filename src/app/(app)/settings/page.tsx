@@ -21,12 +21,14 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { useFarmStore, DEFAULT_SETTINGS } from "@/lib/store";
+import { useFarmStore, DEFAULT_SETTINGS, sizeToAcres } from "@/lib/store";
 import { LANGUAGES } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 import { Card, CardHeader, useMounted } from "@/components/dashboard/ui";
 import { MANDI_PRICES, mandiById } from "@/lib/market-data";
+import { INDIAN_STATES, districtsForState } from "@/lib/india-locations";
 import { exportFarmBackup } from "@/lib/report-export";
 
 function Rise({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
@@ -46,23 +48,14 @@ const inputCls =
 
 const labelCls = "mb-1 block text-[11px] font-bold uppercase tracking-wider text-zinc-500";
 
-const STATES = [
-  "Gujarat",
-  "Maharashtra",
-  "Rajasthan",
-  "Madhya Pradesh",
-  "Uttar Pradesh",
-  "Punjab",
-  "Haryana",
-  "Karnataka",
-  "Tamil Nadu",
-  "Telangana",
-  "West Bengal",
-  "Bihar",
-  "Odisha",
-  "Kerala",
-  "Assam",
-];
+const STATES = INDIAN_STATES;
+const AVATARS = ["🧑‍🌾", "👩‍🌾", "🧔", "👳‍♀️", "🧕", "👨‍🌾"];
+const ROLES = ["Farmer", "Farm Manager", "Student Researcher"];
+const SIZE_UNITS = ["Acres", "Bigha", "Hectare", "Guntha"];
+const SOIL_TYPES = ["Sandy", "Loamy", "Clay", "Black cotton"];
+const WATER_SOURCES = ["Borewell", "Canal", "Rain-fed", "Tank"];
+const IRRIGATION_METHODS = ["Flood", "Drip", "Sprinkler", "None"];
+const POWER_SOURCES = ["Electricity", "Solar", "Diesel", "None"];
 
 const REC_LANGS = [
   { code: "en-IN", label: "English (en-IN)" },
@@ -170,12 +163,17 @@ function ThresholdRow({
  */
 export default function SettingsPage() {
   const t = useT();
+  const router = useRouter();
   const mounted = useMounted();
   const settings = useFarmStore((s) => s.settings);
   const zones = useFarmStore((s) => s.zones);
   const updateSettings = useFarmStore((s) => s.updateSettings);
   const setLanguage = useFarmStore((s) => s.setLanguage);
   const resetFarm = useFarmStore((s) => s.resetFarm);
+  const resetOnboarding = useFarmStore((s) => s.resetOnboarding);
+  const appPinHash = useFarmStore((s) => s.appPinHash);
+  const setAppPin = useFarmStore((s) => s.setAppPin);
+  const [newPin, setNewPin] = useState("");
   void zones;
 
   const profile = settings.farmProfile ?? DEFAULT_SETTINGS.farmProfile;
@@ -187,6 +185,12 @@ export default function SettingsPage() {
   const [hwTesting, setHwTesting] = useState(false);
   const [hwResult, setHwResult] = useState<string | null>(null);
   const [hwOk, setHwOk] = useState<boolean | null>(null);
+
+  // Mandi API test state (Settings → Data Sources).
+  const [mandiTesting, setMandiTesting] = useState(false);
+  const [mandiResult, setMandiResult] = useState<string | null>(null);
+  const [mandiOk, setMandiOk] = useState<boolean | null>(null);
+  const [showMandiKey, setShowMandiKey] = useState(false);
 
   // Telegram card state (mirrors /alerts).
   const [showToken, setShowToken] = useState(false);
@@ -286,6 +290,62 @@ export default function SettingsPage() {
       toast.error("Gateway unreachable", { description: msg });
     } finally {
       setHwTesting(false);
+    }
+  };
+
+  const handleMandiTest = async () => {
+    const apiKey = (settings.dataGovApiKey ?? "").trim();
+    const resourceId = (settings.commodityResourceId ?? "").trim();
+    setMandiTesting(true);
+    setMandiResult(null);
+    setMandiOk(null);
+    try {
+      const params = new URLSearchParams();
+      params.set("state", profile.state || "Gujarat");
+      if (apiKey) params.set("apiKey", apiKey);
+      if (resourceId) params.set("resourceId", resourceId);
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 20000);
+      const res = await fetch(`/api/mandi?${params.toString()}`, {
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+      const body = (await res.json().catch(() => null)) as {
+        ok?: boolean;
+        fallback?: boolean;
+        reason?: string;
+        count?: number;
+        updatedAt?: string;
+      } | null;
+      if (body?.ok && !body.fallback && (body.count ?? 0) > 0) {
+        setMandiOk(true);
+        setMandiResult(
+          `Live OK — ${body.count} records for ${profile.state || "Gujarat"} · updated ${body.updatedAt ?? "just now"}`,
+        );
+        toast.success("Mandi API connected", {
+          description: `${body.count} live records for ${profile.state || "Gujarat"}.`,
+        });
+      } else {
+        setMandiOk(false);
+        const reason = typeof body?.reason === "string" ? body.reason : "unavailable";
+        const hint =
+          reason === "missing-api-key"
+            ? "Add your DATA_GOV_IN_API_KEY above (or as an env var) and retry."
+            : reason === "missing-resource-id"
+              ? "Add the commodity resource ID above (or as an env var) and retry."
+              : reason === "zero-results"
+                ? `No records for ${profile.state || "Gujarat"} — try another state on the Market page.`
+                : "Upstream request failed — check the key/ID and retry.";
+        setMandiResult(`Fallback (demo data in use) — ${reason}. ${hint}`);
+        toast.error("Mandi API not live", { description: hint });
+      }
+    } catch (err) {
+      setMandiOk(false);
+      const msg = err instanceof Error ? err.message : "Network error";
+      setMandiResult(`Fallback (demo data in use) — request failed: ${msg}.`);
+      toast.error("Mandi test failed", { description: msg });
+    } finally {
+      setMandiTesting(false);
     }
   };
 
@@ -438,10 +498,56 @@ export default function SettingsPage() {
               />
             </label>
             <label className="block">
+              <span className={labelCls}>Mobile (+91)</span>
+              <input
+                value={profile.phone ?? ""}
+                onChange={(e) =>
+                  updateSettings({
+                    farmProfile: { phone: e.target.value.replace(/\D/g, "").slice(0, 10) },
+                  })
+                }
+                placeholder="98765 43210"
+                inputMode="numeric"
+                className={cn(inputCls, "font-mono")}
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className={labelCls}>Role</span>
+                <select
+                  value={profile.role || "Farmer"}
+                  onChange={(e) => updateSettings({ farmProfile: { role: e.target.value } })}
+                  className={inputCls}
+                >
+                  {ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block">
+                <span className={labelCls}>Avatar</span>
+                <select
+                  value={profile.avatar || AVATARS[0]}
+                  onChange={(e) => updateSettings({ farmProfile: { avatar: e.target.value } })}
+                  className={inputCls}
+                >
+                  {AVATARS.map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <label className="block">
               <span className={labelCls}>{t("settings.state")}</span>
               <select
                 value={profile.state}
-                onChange={(e) => updateSettings({ farmProfile: { state: e.target.value } })}
+                onChange={(e) =>
+                  updateSettings({ farmProfile: { state: e.target.value, district: "" } })
+                }
                 className={inputCls}
               >
                 {STATES.map((s) => (
@@ -451,21 +557,182 @@ export default function SettingsPage() {
                 ))}
               </select>
             </label>
+            {(() => {
+              const dists = districtsForState(profile.state);
+              return dists ? (
+                <label className="block">
+                  <span className={labelCls}>District (default mandi filter)</span>
+                  <select
+                    value={(profile as { district?: string }).district ?? ""}
+                    onChange={(e) =>
+                      updateSettings({ farmProfile: { district: e.target.value } })
+                    }
+                    className={inputCls}
+                  >
+                    <option value="" disabled>
+                      — District —
+                    </option>
+                    {dists.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <label className="block">
+                  <span className={labelCls}>District (default mandi filter)</span>
+                  <input
+                    value={(profile as { district?: string }).district ?? ""}
+                    onChange={(e) =>
+                      updateSettings({ farmProfile: { district: e.target.value.slice(0, 40) } })
+                    }
+                    placeholder="e.g. Ahmedabad"
+                    className={inputCls}
+                  />
+                </label>
+              );
+            })()}
             <label className="block">
-              <span className={labelCls}>{t("settings.farmSize")}</span>
+              <span className={labelCls}>Village / Taluka</span>
               <input
-                value={String(profile.farmSizeAcres)}
-                onChange={(e) => {
-                  const n = Number(e.target.value.replace(/[^0-9.]/g, ""));
-                  if (Number.isFinite(n))
-                    updateSettings({
-                      farmProfile: { farmSizeAcres: Math.min(500, Math.max(0.1, n || 0.1)) },
-                    });
-                }}
-                inputMode="decimal"
+                value={profile.village ?? ""}
+                onChange={(e) =>
+                  updateSettings({ farmProfile: { village: e.target.value.slice(0, 60) } })
+                }
+                placeholder="e.g. Sanand"
                 className={inputCls}
               />
             </label>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block">
+                <span className={labelCls}>{t("settings.farmSize")}</span>
+                <input
+                  value={String(profile.size ?? profile.farmSizeAcres ?? 1)}
+                  onChange={(e) => {
+                    const n = Number(e.target.value.replace(/[^0-9.]/g, ""));
+                    if (Number.isFinite(n)) {
+                      const size = Math.min(10000, Math.max(0, n));
+                      updateSettings({
+                        farmProfile: {
+                          size,
+                          farmSizeAcres: Math.max(
+                            0.1,
+                            sizeToAcres(size, profile.sizeUnit || "Acres"),
+                          ),
+                        },
+                      });
+                    }
+                  }}
+                  inputMode="decimal"
+                  className={cn(inputCls, "font-mono")}
+                />
+              </label>
+              <label className="block">
+                <span className={labelCls}>Unit</span>
+                <select
+                  value={profile.sizeUnit || "Acres"}
+                  onChange={(e) => {
+                    const unit = e.target.value as "Acres" | "Bigha" | "Hectare" | "Guntha";
+                    updateSettings({
+                      farmProfile: {
+                        sizeUnit: unit,
+                        farmSizeAcres: Math.max(
+                          0.1,
+                          sizeToAcres(Number(profile.size ?? 1), unit),
+                        ),
+                      },
+                    });
+                  }}
+                  className={inputCls}
+                >
+                  {SIZE_UNITS.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <label className="block">
+              <span className={labelCls}>Soil type</span>
+              <select
+                value={profile.soilType || SOIL_TYPES[0]}
+                onChange={(e) => updateSettings({ farmProfile: { soilType: e.target.value } })}
+                className={inputCls}
+              >
+                {SOIL_TYPES.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className={labelCls}>Water source</span>
+              <select
+                value={profile.waterSource || WATER_SOURCES[0]}
+                onChange={(e) => updateSettings({ farmProfile: { waterSource: e.target.value } })}
+                className={inputCls}
+              >
+                {WATER_SOURCES.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className={labelCls}>Irrigation method</span>
+              <select
+                value={profile.irrigationMethod || IRRIGATION_METHODS[0]}
+                onChange={(e) =>
+                  updateSettings({ farmProfile: { irrigationMethod: e.target.value } })
+                }
+                className={inputCls}
+              >
+                {IRRIGATION_METHODS.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className={labelCls}>Power source</span>
+              <select
+                value={profile.powerSource || POWER_SOURCES[0]}
+                onChange={(e) => updateSettings({ farmProfile: { powerSource: e.target.value } })}
+                className={inputCls}
+              >
+                {POWER_SOURCES.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="mt-3">
+            <span className={labelCls}>Avatar preview</span>
+            <div className="flex flex-wrap gap-2">
+              {AVATARS.map((a) => (
+                <button
+                  key={a}
+                  type="button"
+                  onClick={() => updateSettings({ farmProfile: { avatar: a } })}
+                  aria-pressed={(profile.avatar || AVATARS[0]) === a}
+                  className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-xl border text-xl transition-all active:scale-95",
+                    (profile.avatar || AVATARS[0]) === a
+                      ? "border-emerald-400/70 bg-emerald-500/15"
+                      : "border-white/10 bg-black/30 hover:border-emerald-500/30",
+                  )}
+                >
+                  {a}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="mt-3">
@@ -557,7 +824,76 @@ export default function SettingsPage() {
           <p className="mt-2 flex items-center gap-1.5 text-[11px] text-zinc-600">
             <Globe2 className="h-3.5 w-3.5" /> {t("settings.gps")} — {(location.label || "Custom").toString()} ·{" "}
             {Number(location.latitude).toFixed(2)}, {Number(location.longitude).toFixed(2)}
+            {profile.location
+              ? ` · farm GPS ${profile.location.lat.toFixed(2)}, ${profile.location.lng.toFixed(2)}`
+              : ""}
           </p>
+          <div className="mt-3 flex flex-col gap-2 rounded-xl border border-white/10 bg-black/40 p-3 sm:flex-row sm:items-center">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-white">Edit Registration</p>
+              <p className="text-[11px] text-zinc-500">
+                Re-open the 5-step onboarding wizard with everything pre-filled.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                resetOnboarding();
+                toast.info("Opening registration wizard…");
+                router.push("/");
+              }}
+              className="shrink-0 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-xs font-extrabold text-emerald-200 transition-all hover:bg-emerald-500/20 active:scale-[0.98]"
+            >
+              {t("common.edit")} Registration
+            </button>
+          </div>
+          <div className="mt-2 flex flex-col gap-2 rounded-xl border border-white/10 bg-black/40 p-3 sm:flex-row sm:items-center">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-white">App PIN</p>
+              <p className="text-[11px] text-zinc-500">
+                {appPinHash ? "PIN is set — unlock screen shows on next visit." : "No PIN — wizard is skipped straight to the dashboard."}
+              </p>
+            </div>
+            {appPinHash ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setAppPin(null);
+                  toast.success("PIN removed");
+                }}
+                className="shrink-0 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-2 text-xs font-extrabold text-red-200 transition-all hover:bg-red-500/20 active:scale-[0.98]"
+              >
+                Remove PIN
+              </button>
+            ) : (
+              <div className="flex shrink-0 items-center gap-2">
+                <input
+                  value={newPin}
+                  onChange={(e) => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  placeholder="••••"
+                  inputMode="numeric"
+                  maxLength={4}
+                  aria-label="New 4-digit PIN"
+                  className="w-20 rounded-xl border border-white/10 bg-black/60 px-3 py-2 text-center font-mono text-sm font-bold tracking-[0.3em] text-white outline-none placeholder:text-zinc-600 focus:border-emerald-500/50"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!/^\d{4}$/.test(newPin)) {
+                      toast.error(t("pinError"));
+                      return;
+                    }
+                    setAppPin(newPin);
+                    setNewPin("");
+                    toast.success("PIN set — it will lock on next visit.");
+                  }}
+                  className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-extrabold text-black transition-all hover:bg-emerald-400 active:scale-[0.98]"
+                >
+                  Set PIN
+                </button>
+              </div>
+            )}
+          </div>
         </Card>
       </Rise>
 
@@ -856,6 +1192,99 @@ export default function SettingsPage() {
           )}
           <p className="mt-2 rounded-xl border border-dashed border-white/10 p-3 text-[11px] leading-relaxed text-zinc-500">
             {t("settings.liveNote")}
+          </p>
+        </Card>
+      </Rise>
+
+      {/* ============ 6b. DATA SOURCES (live mandi) ============ */}
+      <Rise delay={0.13}>
+        <Card>
+          <CardHeader
+            title="Data Sources"
+            subtitle="Live mandi prices via data.gov.in — Market page uses these when env vars are missing"
+            action={
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/15 text-sky-300">
+                <Globe2 className="h-4 w-4" />
+              </span>
+            }
+          />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className={labelCls}>DATA_GOV_IN_API_KEY</span>
+              <div className="relative">
+                <input
+                  type={showMandiKey ? "text" : "password"}
+                  value={settings.dataGovApiKey ?? ""}
+                  onChange={(e) =>
+                    updateSettings({ dataGovApiKey: e.target.value.trim() })
+                  }
+                  placeholder="Get one free at data.gov.in → Login → My API Keys"
+                  autoComplete="off"
+                  spellCheck={false}
+                  className="w-full rounded-xl border border-white/10 bg-black/40 py-2.5 pl-3 pr-10 font-mono text-sm text-white outline-none transition-colors placeholder:font-sans placeholder:text-zinc-600 focus:border-emerald-500/50"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowMandiKey((v) => !v)}
+                  aria-label={showMandiKey ? "Hide API key" : "Show API key"}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-zinc-500 hover:text-white"
+                >
+                  {showMandiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </label>
+            <label className="block">
+              <span className={labelCls}>COMMODITY_RESOURCE_ID</span>
+              <input
+                value={settings.commodityResourceId ?? ""}
+                onChange={(e) =>
+                  updateSettings({ commodityResourceId: e.target.value.trim() })
+                }
+                placeholder="e.g. 9ef84268-d588-465a-a308-a864a43d0070"
+                autoComplete="off"
+                spellCheck={false}
+                className={cn(inputCls, "font-mono")}
+              />
+            </label>
+          </div>
+          <button
+            type="button"
+            onClick={() => void handleMandiTest()}
+            disabled={mandiTesting}
+            className={cn(
+              "mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-extrabold transition-all active:scale-[0.98]",
+              mandiTesting
+                ? "cursor-wait border border-white/10 bg-white/[0.04] text-zinc-400"
+                : "bg-emerald-500 text-black shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:bg-emerald-400",
+            )}
+          >
+            {mandiTesting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> {t("common.testing")}
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4" strokeWidth={2.5} /> Test Mandi API
+              </>
+            )}
+          </button>
+          {mandiResult && (
+            <p
+              className={cn(
+                "mt-2 rounded-xl border px-3 py-2.5 font-mono text-[11px] leading-relaxed",
+                mandiOk
+                  ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-200"
+                  : "border-amber-400/40 bg-amber-500/10 text-amber-200",
+              )}
+            >
+              GET /api/mandi?state={profile.state || "Gujarat"} → {mandiResult}
+            </p>
+          )}
+          <p className="mt-2 rounded-xl border border-dashed border-white/10 p-3 text-[11px] leading-relaxed text-zinc-500">
+            Server env vars take precedence when set; these stored values are the
+            fallback (also used for the [Test Mandi API] call). Without a key the
+            Market page keeps showing offline-friendly demo data with a DEMO DATA
+            badge — the exhibition demo never breaks.
           </p>
         </Card>
       </Rise>

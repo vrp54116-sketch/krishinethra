@@ -219,15 +219,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       suppressHydrationWarning
     >
       {/* ============ DESKTOP SIDEBAR — floating glass panel (md+) ============ */}
-      <aside className="glass-strong fixed bottom-4 left-4 top-4 z-40 hidden w-60 flex-col rounded-3xl md:flex">
+      <aside className="glass-strong fixed left-4 top-4 z-40 hidden h-[calc(100vh-32px)] w-60 flex-col rounded-3xl md:flex">
         {/* Logo — leaf inside a glass circle with emerald glow */}
         <div className="flex items-center gap-3 px-5 pb-5 pt-6">
-          <div className="glass-pill flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-emerald-300 shadow-[0_0_18px_rgba(34,197,94,0.45)]">
-            <Leaf className="h-5 w-5" />
+          <div className="glass-pill flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 shadow-[0_0_20px_rgba(34,197,94,0.45)]">
+            <Leaf className="h-5 w-5 text-emerald-400" />
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-extrabold tracking-tight text-white">KrishiNethra AI</p>
-            <p className="truncate text-[11px] text-emerald-200/60">{t("tagline").split("—")[0].trim() || "Har Khet Ka AI Doctor"}</p>
+            <p className="truncate text-[11px] font-medium text-emerald-200/60">{t("tagline").split("—")[0].trim() || "Har Khet Ka AI Doctor"}</p>
           </div>
         </div>
 
@@ -243,7 +243,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 className={cn(
                   "relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[13px] font-medium transition-all",
                   active
-                    ? "glass-inset pl-4 text-emerald-200"
+                    ? "glass-inset pl-4 text-emerald-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]"
                     : "border border-transparent text-zinc-400 hover:bg-white/5 hover:text-emerald-100",
                 )}
               >
@@ -253,10 +253,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     className="absolute left-1.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]"
                   />
                 )}
-                <Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-emerald-300" : "text-zinc-500")} />
+                <Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-emerald-400" : "text-zinc-500")} />
                 <span className="truncate">{t(labelKey)}</span>
                 {mounted && showBadge && (
-                  <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white">
+                  <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(239,68,68,0.7)]">
                     {unread > 99 ? "99+" : unread}
                   </span>
                 )}
@@ -269,33 +269,35 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <div className="p-4">
           <div className="glass-inset flex items-center justify-between gap-3 rounded-2xl p-3">
             <div className="flex flex-col items-center gap-1">
-              <div className="glass-pill rounded-full p-1.5">
+              <div className="glass-pill flex h-14 w-14 items-center justify-center rounded-full border border-white/10 p-1 shadow-[0_0_12px_rgba(0,0,0,0.3)]">
                 {mounted ? (
-                  <HealthRing score={farmHealthScore} />
+                  <HealthRing score={farmHealthScore} size={48} />
                 ) : (
                   <div
                     aria-hidden
                     className="animate-pulse rounded-full bg-white/10"
-                    style={{ width: 56, height: 56 }}
+                    style={{ width: 48, height: 48 }}
                   />
                 )}
               </div>
-              <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
                 {t("common.farmHealth")}
               </span>
             </div>
             <span
-              className="glass-pill rounded-full px-3 py-1.5 text-[11px] font-bold tracking-widest"
+              className="glass-pill rounded-full px-3 py-1.5 text-[11px] font-bold tracking-widest uppercase"
               style={
                 isLive
                   ? {
                       borderColor: "rgba(52,211,153,0.5)",
                       color: "#a7f3d0",
+                      backgroundColor: "rgba(16,185,129,0.12)",
                       boxShadow: "0 0 12px rgba(34,197,94,0.4)",
                     }
                   : {
                       borderColor: "rgba(251,191,36,0.45)",
                       color: "#fcd34d",
+                      backgroundColor: "rgba(245,158,11,0.10)",
                     }
               }
             >
@@ -310,19 +312,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen flex-col md:pl-[272px]">
         {/* Top header — slim glass strip */}
         <header className="sticky top-0 z-30 px-4 pt-4 md:px-6">
-          <div
-            className="glass mx-auto flex max-w-7xl items-center gap-2 px-3 py-2.5 sm:gap-3"
-            style={{ borderRadius: 16 }}
-          >
+          <div className="glass mx-auto flex max-w-7xl items-center gap-2 px-3.5 py-2.5 rounded-2xl sm:gap-3">
             {/* Mobile logo */}
-            <div className="glass-pill flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-emerald-300 md:hidden">
+            <div className="glass-pill flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-emerald-300 md:hidden border border-emerald-500/30 bg-emerald-500/10 shadow-[0_0_12px_rgba(34,197,94,0.4)]">
               <Leaf className="h-4 w-4" />
             </div>
 
             <div className="min-w-0 flex-1">
               <h1 className="truncate text-base font-bold text-white sm:text-lg">{pageTitle}</h1>
               {mounted && (farmProfile?.farmerName || farmProfile?.farmName) && (
-                <p className="truncate text-[11px] text-emerald-200/60">
+                <p className="truncate text-[11px] font-medium text-emerald-200/60">
                   {farmProfile?.farmerName ? `Namaste, ${farmProfile.farmerName.split(" ")[0]} 🌾` : ""}
                   {farmProfile?.farmerName && farmProfile?.farmName ? " · " : ""}
                   {farmProfile?.farmName || ""}
@@ -331,7 +330,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Live clock */}
-            <span className="hidden rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 font-mono text-xs text-zinc-300 sm:block">
+            <span className="glass-pill hidden items-center px-3 py-1.5 font-mono text-xs text-zinc-300 sm:inline-flex border border-white/10">
               {clock}
             </span>
 
@@ -349,16 +348,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   setAlertsOpen(false);
                   setLangOpen((v) => !v);
                 }}
-                className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:border-emerald-500/40"
+                className="glass-pill flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-all hover:border-emerald-500/40 hover:text-white cursor-pointer"
                 aria-label={t("common.language")}
               >
                 <span>{activeLang?.nativeLabel ?? "English"}</span>
-                <ChevronDown className="h-3.5 w-3.5 text-zinc-500" />
+                <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
               </button>
               {langOpen && (
                 <>
                   <button aria-label="close" className="fixed inset-0 z-40 cursor-default" onClick={closeOverlays} />
-                  <div className="absolute right-0 top-full z-50 mt-2 w-40 overflow-hidden rounded-xl border border-emerald-500/25 bg-[#0a120c] shadow-[0_8px_32px_rgba(0,0,0,0.8)]">
+                  <div className="glass-strong absolute right-0 top-full z-50 mt-2 w-40 overflow-hidden rounded-2xl border border-emerald-500/25 p-1 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.8)]">
                     {LANGUAGES.map((l) => (
                       <button
                         key={l.code}
@@ -368,14 +367,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                           setLangOpen(false);
                         }}
                         className={cn(
-                          "flex w-full items-center justify-between px-3 py-2.5 text-left text-xs transition-colors",
+                          "flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition-colors",
                           language === l.code
-                            ? "bg-emerald-500/15 font-bold text-white"
-                            : "text-zinc-300 hover:bg-emerald-500/10 hover:text-white",
+                            ? "bg-emerald-500/20 font-bold text-white shadow-[inset_0_0_8px_rgba(34,197,94,0.2)]"
+                            : "text-zinc-300 hover:bg-white/10 hover:text-white",
                         )}
                       >
                         <span>{l.nativeLabel}</span>
-                        <span className="text-[10px] text-zinc-500">{l.label}</span>
+                        <span className="text-[10px] text-zinc-400">{l.label}</span>
                       </button>
                     ))}
                   </div>
@@ -392,20 +391,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   if (!alertsOpen) markAlertsRead();
                   setAlertsOpen((v) => !v);
                 }}
-                className="relative flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-zinc-200 transition-colors hover:border-emerald-500/40"
+                className="glass-pill relative flex h-9 w-9 items-center justify-center rounded-full text-zinc-200 transition-all hover:border-emerald-500/40 hover:text-white cursor-pointer"
                 aria-label={t("nav.alerts")}
               >
                 <Bell className="h-4 w-4" />
                 {mounted && unread > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(239,68,68,0.8)]">
-                    {unread > 99 ? "99+" : unread}
-                  </span>
+                  <span className="absolute right-1 top-1 flex h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)] ring-2 ring-[#0a120c]" />
                 )}
               </button>
               {alertsOpen && (
                 <>
                   <button aria-label="close" className="fixed inset-0 z-40 cursor-default" onClick={closeOverlays} />
-                  <div className="absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-emerald-500/25 bg-[#0a120c] shadow-[0_8px_32px_rgba(0,0,0,0.8)]">
+                  <div className="glass-strong absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-emerald-500/25 p-1 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.8)]">
                     <div className="flex items-center justify-between border-b border-white/5 px-3 py-2.5">
                       <span className="text-xs font-bold text-white">{t("common.recentAlerts")}</span>
                       <Link href="/alerts" onClick={closeOverlays} className="text-[11px] font-medium text-emerald-300 hover:text-emerald-200">
@@ -416,7 +413,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       <p className="px-3 py-6 text-center text-xs text-zinc-500">{t("common.noAlerts")}</p>
                     ) : (
                       lastFive.map((a) => (
-                        <div key={a.id} className="border-b border-white/5 px-3 py-2.5 last:border-0">
+                        <div key={a.id} className="border-b border-white/5 px-3 py-2.5 last:border-0 hover:bg-white/[0.03] rounded-xl transition-colors">
                           <p className="truncate text-xs font-semibold text-white">{a.title}</p>
                           <p className="mt-0.5 line-clamp-2 text-[11px] text-zinc-400">{a.message}</p>
                         </div>
@@ -427,10 +424,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               )}
             </div>
 
-            {/* Health pill chip */}
+            {/* Health score chip */}
             <Link
               href="/dashboard"
-              className="hidden items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-200 xs:flex sm:flex"
+              className="glass-pill hidden items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-200 border border-emerald-500/30 bg-emerald-500/10 shadow-[0_0_12px_rgba(34,197,94,0.2)] transition-all hover:border-emerald-400/50 xs:flex sm:flex"
               title={t("common.farmHealthScore")}
             >
               <span
@@ -439,24 +436,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   !mounted
                     ? "bg-zinc-600"
                     : farmHealthScore >= 70
-                      ? "bg-emerald-400"
+                      ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]"
                       : farmHealthScore >= 40
-                        ? "bg-amber-400"
-                        : "bg-red-400",
+                        ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)]"
+                        : "bg-red-400 shadow-[0_0_8px_rgba(239,68,68,0.9)]",
                 )}
               />
-              {mounted ? Math.round(farmHealthScore) : "–"}
+              <span>{mounted ? Math.round(farmHealthScore) : "–"}</span>
             </Link>
           </div>
         </header>
 
-        {/* Page content — max-w-7xl centered, 24px gutters */}
+        {/* Page content — max-w-7xl centered, 24px gutters (px-6) */}
         <motion.main
           key={pathname}
-          initial={{ opacity: 0, y: 15 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.28, ease: "easeOut" }}
-          className="flex-1 px-6 pb-56 pt-5 md:pb-14"
+          transition={{ duration: 0.25, ease: "easeOut" }}
+          className="flex-1 px-6 pb-60 pt-5 md:pb-16"
         >
           <div className="mx-auto max-w-7xl">
             <Suspense fallback={<PageSkeleton rows={2} />}>
@@ -474,11 +471,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* ============ MOBILE BOTTOM NAV — floating glass pill bar ============ */}
       <nav
-        className="fixed inset-x-4 bottom-4 z-40 md:hidden"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        className="fixed inset-x-0 bottom-0 z-40 pointer-events-none md:hidden px-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]"
       >
-        <div className="glass-strong rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] backdrop-blur-xl">
-          <div className="grid grid-cols-5 px-2 py-2">
+        <div className="glass-strong pointer-events-auto mx-auto max-w-lg rounded-full backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.65)] border border-white/12">
+          <div className="grid grid-cols-5 px-2 py-1.5">
             {MOBILE_TABS.map((tab) => {
               if ("key" in tab) {
                 return (
@@ -486,11 +482,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     key="more"
                     type="button"
                     onClick={() => setMoreOpen(true)}
-                    className="flex flex-col items-center gap-1 rounded-2xl py-1.5 text-[10px] font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-emerald-200"
+                    className="flex flex-col items-center justify-center gap-0.5 rounded-2xl py-1 text-[10px] font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-emerald-200"
                   >
-                    <MoreHorizontal className="h-5 w-5" />
-                    {t("nav.more")}
-                    <span className="h-1 w-1 rounded-full bg-transparent" />
+                    <div className="relative flex flex-col items-center">
+                      <MoreHorizontal className="h-5 w-5 text-gray-400" />
+                      <span className="mt-0.5 h-1 w-1 rounded-full bg-transparent" />
+                    </div>
+                    <span className="text-[10px] font-medium text-gray-400 leading-tight">
+                      {t("nav.more")}
+                    </span>
                   </button>
                 );
               }
@@ -503,30 +503,44 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   key={tab.href}
                   href={tab.href}
                   className={cn(
-                    "relative flex flex-col items-center gap-1 rounded-2xl py-1.5 text-[10px] font-medium transition-colors",
+                    "relative flex flex-col items-center justify-center gap-0.5 rounded-2xl py-1 transition-colors",
                     active
-                      ? "text-emerald-300"
+                      ? "text-emerald-400"
                       : "text-gray-400 hover:bg-white/5 hover:text-emerald-100",
                   )}
                 >
-                  <span className={cn(active && "drop-shadow-[0_0_8px_rgba(34,197,94,0.8)]")}>
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  {t(tab.labelKey)}
-                  {/* soft emerald glow dot under active icon */}
+                  <div className="relative flex flex-col items-center">
+                    <Icon
+                      className={cn(
+                        "h-5 w-5 transition-transform",
+                        active
+                          ? "text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.85)]"
+                          : "text-gray-400",
+                      )}
+                    />
+                    {/* soft emerald glow dot under icon */}
+                    <span
+                      className={cn(
+                        "mt-0.5 h-1 w-1 rounded-full transition-all",
+                        active
+                          ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.95)]"
+                          : "bg-transparent",
+                      )}
+                    />
+                    {mounted && showBadge && (
+                      <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(239,68,68,0.8)]">
+                        {unread > 99 ? "99+" : unread}
+                      </span>
+                    )}
+                  </div>
                   <span
                     className={cn(
-                      "h-1 w-1 rounded-full",
-                      active
-                        ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]"
-                        : "bg-transparent",
+                      "text-[10px] leading-tight font-medium transition-colors",
+                      active ? "font-semibold text-emerald-400" : "text-gray-400",
                     )}
-                  />
-                  {mounted && showBadge && (
-                    <span className="absolute right-1/2 top-0.5 flex h-4 min-w-4 translate-x-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                      {unread > 99 ? "99+" : unread}
-                    </span>
-                  )}
+                  >
+                    {t(tab.labelKey)}
+                  </span>
                 </Link>
               );
             })}
@@ -551,20 +565,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="fixed inset-x-0 bottom-0 z-50 max-h-[75vh] overflow-y-auto rounded-t-3xl border-t border-emerald-500/25 bg-[#060b08] p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:hidden"
+              className="glass-strong fixed inset-x-0 bottom-0 z-50 max-h-[80vh] overflow-y-auto rounded-t-3xl border-t border-emerald-500/25 p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:hidden backdrop-blur-2xl"
             >
               <div className="mb-4 flex items-center justify-between">
                 <span className="text-sm font-bold text-white">{t("nav.more")}</span>
                 <button
                   type="button"
                   onClick={() => setMoreOpen(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 text-zinc-300"
+                  className="glass-pill flex h-8 w-8 items-center justify-center rounded-full text-zinc-300 hover:text-white"
                   aria-label={t("common.close")}
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2.5">
                 {NAV_ITEMS.filter((n) => !MOBILE_TABS.some((m) => "href" in m && m.href === n.href)).map(({ href, labelKey, icon: Icon }) => {
                   const showBadge = href === "/alerts" && unread > 0;
                   return (
@@ -572,12 +586,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       key={href}
                       href={href}
                       onClick={() => setMoreOpen(false)}
-                      className="relative flex flex-col items-center gap-2 rounded-2xl border border-white/5 bg-white/[0.02] px-2 py-4 text-center text-[11px] font-medium text-zinc-300 transition-colors hover:border-emerald-500/30 hover:text-white"
+                      className="glass-inset relative flex flex-col items-center gap-2 rounded-2xl p-3 text-center text-[11px] font-medium text-zinc-300 transition-all hover:border-emerald-500/40 hover:text-emerald-200 hover:shadow-[0_0_16px_rgba(34,197,94,0.2)]"
                     >
                       <Icon className="h-5 w-5 text-emerald-300" />
-                      {t(labelKey)}
+                      <span className="truncate w-full">{t(labelKey)}</span>
                       {mounted && showBadge && (
-                        <span className="absolute right-2 top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                        <span className="absolute right-2 top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(239,68,68,0.8)]">
                           {unread > 99 ? "99+" : unread}
                         </span>
                       )}

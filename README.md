@@ -60,7 +60,19 @@ No `vercel.json` needed — default Next.js works.
    - `TELEGRAM_CHAT_ID` — Telegram chat ID for alert forwarding fallback.
    - `HARDWARE_GATEWAY_URL` — default ESP32/RPi gateway base URL for LIVE mode
      (can also be set per-device in Settings → Hardware Bridge).
+   - `DATA_GOV_IN_API_KEY` — data.gov.in API key for LIVE mandi prices on
+     the Market page. Get one free: data.gov.in → Login → My API Keys.
+     (Can also be pasted in Settings → Data Sources — no redeploy needed.)
+   - `COMMODITY_RESOURCE_ID` — data.gov.in resource for daily mandi prices
+     (default `9ef84268-d588-465a-a308-a864a43d0070`, the Dept. of Consumer
+     Affairs daily-price dataset). Override in Settings → Data Sources if
+     the dataset moves.
 4. Click **Deploy**. That's it.
+
+> Without a mandi API key the Market page keeps showing its built-in demo
+> table with a DEMO DATA badge (offline-safe for exhibitions). Add the key
+> to go live — the banner flips to "📡 Live data: data.gov.in", and
+> responses are cached server-side for 6 hours to respect API limits.
 
 > Telegram also works per-device: Settings → Alerts → paste bot token + chat ID
 > and toggle forwarding. Env vars are just the server-side fallback.

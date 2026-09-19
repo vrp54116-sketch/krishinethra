@@ -12,12 +12,16 @@ import {
   FlaskConical,
   Globe2,
   HandCoins,
+  Landmark,
   ListChecks,
+  MapPin,
+  Printer,
   Search,
   ShieldCheck,
   Sparkles,
   Sprout,
   Sun,
+  Tractor,
   UserCheck,
   type LucideIcon,
 } from "lucide-react";
@@ -25,11 +29,15 @@ import { cn } from "@/lib/utils";
 import { useFarmStore } from "@/lib/store";
 import { Card, CardHeader } from "@/components/dashboard/ui";
 import {
+  getStatePortal,
+  getVisibleSchemes,
   recommendSchemes,
   SCHEME_FILTERS,
-  SCHEMES,
+  SCHEMES_LAST_VERIFIED,
+  scoreAllSchemes,
   type GovScheme,
   type SchemeFilter,
+  type StatePortal,
 } from "@/lib/schemes-data";
 
 function Rise({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
@@ -53,6 +61,11 @@ const SCHEME_ICONS: Record<string, LucideIcon> = {
   kcc: CreditCard,
   nhm: Sprout,
   enam: Globe2,
+  "gj-ikhedut-drip": Droplets,
+  "gj-ikhedut-machinery": Tractor,
+  "mh-mahadbt-drip": Droplets,
+  "mh-mahadbt-solar": Sun,
+  "other-state-dbt": Landmark,
 };
 
 const CATEGORY_TONE: Record<string, string> = {
@@ -63,13 +76,116 @@ const CATEGORY_TONE: Record<string, string> = {
   "Income Support": "border-teal-400/40 bg-teal-500/10 text-teal-300",
 };
 
+function escHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * Printable one-page application checklist for a scheme.
+ * Opens a minimal print window and calls window.print().
+ */
+function printSchemeChecklist(
+  scheme: GovScheme,
+  profile: { state: string; farmSizeAcres: number; hasPump: boolean; crops: string[] },
+  portal: StatePortal,
+  score?: number,
+  reason?: string,
+): void {
+  const li = (items: string[]) =>
+    items.map((t) => `<li><span class="box">☐</span><span>${escHtml(t)}</span></li>`).join("");
+  const steps = scheme.howToApply
+    .map((t, i) => `<li><span class="step">${i + 1}</span><span>${escHtml(t)}</span></li>`)
+    .join("");
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8" />
+<title>Application Checklist — ${escHtml(scheme.shortName)}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #111; margin: 0; padding: 24px; font-size: 12px; line-height: 1.5; }
+  h1 { font-size: 18px; margin: 0 0 2px; }
+  h2 { font-size: 13px; margin: 14px 0 6px; border-bottom: 1px solid #ddd; padding-bottom: 3px; }
+  .hindi { color: #444; font-size: 13px; margin-bottom: 6px; }
+  .meta { color: #555; font-size: 11px; margin: 2px 0; }
+  .benefit { background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 8px 10px; margin: 10px 0; font-weight: bold; }
+  .reason { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
+  ul, ol { list-style: none; padding: 0; margin: 6px 0; }
+  li { display: flex; gap: 8px; margin: 4px 0; align-items: flex-start; }
+  .box { font-size: 14px; line-height: 1.3; }
+  .step { display: inline-flex; width: 18px; height: 18px; border-radius: 50%; background: #111; color: #fff; font-size: 11px; font-weight: bold; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .grid { display: flex; gap: 16px; }
+  .grid > div { flex: 1; }
+  .footer { margin-top: 14px; border-top: 1px solid #ddd; padding-top: 8px; font-size: 10.5px; color: #555; }
+  .sign { display: flex; gap: 32px; margin-top: 18px; }
+  .sign div { flex: 1; border-top: 1px solid #999; padding-top: 4px; font-size: 11px; color: #555; }
+  @media print { body { padding: 0; } }
+</style></head><body>
+<h1>${escHtml(scheme.name)}</h1>
+<div class="hindi">${escHtml(scheme.nameHindi)} · ${escHtml(scheme.shortName)} · ${escHtml(scheme.category)}</div>
+<p class="meta">Farmer profile: ${escHtml(profile.state)} · ${escHtml(String(profile.farmSizeAcres))} acre(s) · ${profile.hasPump ? "has pump" : "no pump"} · grows ${escHtml(profile.crops.join(", ") || "—")}</p>
+${typeof score === "number" ? `<p class="meta">Match score for your farm: <b>${score}/100</b></p>` : ""}
+${reason ? `<div class="reason">${escHtml(reason)}</div>` : ""}
+<div class="benefit">Benefit: ${escHtml(scheme.benefit)}</div>
+<div class="grid"><div>
+<h2>Eligibility — tick what applies to you</h2>
+<ul>${li(scheme.eligibility)}</ul>
+</div><div>
+<h2>Documents needed — pack these</h2>
+<ul>${li(scheme.documents)}</ul>
+</div></div>
+<h2>How to apply — 4 steps</h2>
+<ol>${steps}</ol>
+<h2>Where to apply</h2>
+<p class="meta">Official portal: <b>${escHtml(scheme.websiteLabel)}</b> — ${escHtml(scheme.website)}<br />
+Your state portal: <b>${escHtml(portal.name)}</b> — ${escHtml(portal.url)}</p>
+<div class="sign"><div>Applicant signature + date</div><div>CSC / Taluka officer stamp + date</div></div>
+<div class="footer">Last verified: ${escHtml(SCHEMES_LAST_VERIFIED)} · Verify on official portal before applying — subsidy rates and cut-off dates change by season.</div>
+</body></html>`;
+  const w = window.open("", "_blank", "width=800,height=900");
+  if (!w) return;
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  // Let the new document finish rendering before printing.
+  w.setTimeout(() => w.print(), 350);
+}
+
+function MatchBadge({ score }: { score?: number }) {
+  if (typeof score !== "number") return null;
+  const tone =
+    score >= 85
+      ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-200"
+      : score >= 70
+        ? "border-amber-400/50 bg-amber-500/15 text-amber-200"
+        : "border-white/15 bg-white/[0.04] text-zinc-300";
+  return (
+    <span
+      title="Eligibility match for your farm profile (0–100)"
+      className={cn(
+        "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-extrabold tabular-nums",
+        tone,
+      )}
+    >
+      {score}/100 match
+    </span>
+  );
+}
+
 function SchemeCard({
   scheme,
   reason,
+  score,
+  profile,
+  portal,
   defaultOpen = false,
 }: {
   scheme: GovScheme;
   reason?: string;
+  score?: number;
+  profile: { state: string; farmSizeAcres: number; hasPump: boolean; crops: string[] };
+  portal: StatePortal;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -86,6 +202,7 @@ function SchemeCard({
             <div className="flex flex-wrap items-center gap-1.5">
               <h3 className="text-sm font-extrabold leading-snug text-white">{scheme.name}</h3>
             </div>
+            <p className="mt-0.5 text-xs font-semibold text-zinc-400">{scheme.nameHindi}</p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               <span
                 className={cn(
@@ -98,6 +215,12 @@ function SchemeCard({
               <span className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[10px] font-bold text-zinc-400">
                 {scheme.shortName}
               </span>
+              {scheme.scope === "state" && (
+                <span className="inline-flex items-center rounded-full border border-sky-400/40 bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold text-sky-300">
+                  {scheme.states?.includes("Other") ? "Your state" : scheme.states?.join(", ")}
+                </span>
+              )}
+              <MatchBadge score={score} />
             </div>
           </div>
         </div>
@@ -114,6 +237,10 @@ function SchemeCard({
             {reason}
           </p>
         )}
+
+        <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+          Last verified: {SCHEMES_LAST_VERIFIED}
+        </p>
 
         <div className="mt-3 grid grid-cols-2 gap-2">
           <button
@@ -134,6 +261,13 @@ function SchemeCard({
             Apply <ExternalLink className="h-3.5 w-3.5" strokeWidth={2.5} />
           </a>
         </div>
+        <button
+          type="button"
+          onClick={() => printSchemeChecklist(scheme, profile, portal, score, reason)}
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-xs font-extrabold text-zinc-200 transition-all hover:border-emerald-500/40 hover:text-white active:scale-[0.98]"
+        >
+          <Printer className="h-3.5 w-3.5" /> 📋 Save Scheme Details
+        </button>
       </div>
 
       <AnimatePresence initial={false}>
@@ -199,6 +333,9 @@ function SchemeCard({
                 Official portal: {scheme.websiteLabel}
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>
+              <p className="text-[11px] leading-relaxed text-zinc-500">
+                Last verified: {SCHEMES_LAST_VERIFIED} · Verify on official portal before applying.
+              </p>
             </div>
           </motion.div>
         )}
@@ -207,34 +344,82 @@ function SchemeCard({
   );
 }
 
+const FALLBACK_PROFILE = {
+  state: "Gujarat",
+  farmSizeAcres: 1,
+  hasPump: true,
+  crops: ["tomato", "chili", "spinach"],
+};
+
 export default function SchemesPage() {
   const farmProfile = useFarmStore((s) => s.settings.farmProfile);
   const [filter, setFilter] = useState<SchemeFilter>("All");
   const [query, setQuery] = useState("");
 
-  const recommended = useMemo(
-    () => recommendSchemes(farmProfile ?? { state: "Gujarat", farmSizeAcres: 1, hasPump: true, crops: ["tomato", "chili", "spinach"] }),
-    [farmProfile],
-  );
+  const profile = useMemo(() => farmProfile ?? FALLBACK_PROFILE, [farmProfile]);
+  const portal = getStatePortal(profile.state);
+  const visible = useMemo(() => getVisibleSchemes(profile.state), [profile.state]);
+
+  const recommended = useMemo(() => recommendSchemes(profile), [profile]);
+
+  /** All visible schemes scored 0-100 for this farm, best match first. */
+  const scored = useMemo(() => scoreAllSchemes(profile), [profile]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return SCHEMES.filter((s) => {
+    return scored.filter(({ scheme }) => {
+      const s = scheme;
       if (filter !== "All" && s.category !== filter) return false;
       if (!q) return true;
       return (
         s.name.toLowerCase().includes(q) ||
+        s.nameHindi.includes(query.trim()) ||
         s.shortName.toLowerCase().includes(q) ||
         s.benefit.toLowerCase().includes(q) ||
         s.eligibility.some((e) => e.toLowerCase().includes(q))
       );
     });
-  }, [filter, query]);
-
-  const profile = farmProfile ?? { state: "Gujarat", farmSizeAcres: 1, hasPump: true, crops: ["tomato", "chili", "spinach"] };
+  }, [scored, filter, query]);
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-5">
+      {/* ===== Your state portal ===== */}
+      <Rise>
+        <Card className="border-sky-400/25">
+          <CardHeader
+            title={`Your state portal: ${portal.name}`}
+            subtitle={`${profile.state} · ${portal.description}`}
+            action={
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/15 text-sky-300">
+                <MapPin className="h-4 w-4" />
+              </span>
+            }
+          />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <a
+              href={portal.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm font-bold text-sky-200 underline decoration-sky-400/40 underline-offset-4 hover:text-sky-100"
+            >
+              {portal.label} <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+            <a
+              href={portal.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-sky-500 px-4 py-2.5 text-xs font-extrabold text-black shadow-[0_0_16px_rgba(56,189,248,0.35)] transition-all hover:bg-sky-400 active:scale-[0.98]"
+            >
+              Open {portal.name} <ExternalLink className="h-3.5 w-3.5" strokeWidth={2.5} />
+            </a>
+          </div>
+          <p className="mt-3 text-[11px] leading-relaxed text-zinc-500">
+            State-specific schemes below apply through this portal. Last verified: {SCHEMES_LAST_VERIFIED} ·
+            Verify on official portal before applying.
+          </p>
+        </Card>
+      </Rise>
+
       {/* ===== Recommended for YOU ===== */}
       <Rise>
         <Card className="border-amber-400/25">
@@ -248,13 +433,20 @@ export default function SchemesPage() {
             }
           />
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-            {recommended.map(({ scheme, reason }, i) => (
+            {recommended.map(({ scheme, reason, score }, i) => (
               <div key={scheme.id} className="relative">
                 <span className="absolute -top-2 left-3 z-10 rounded-full bg-amber-400 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-black shadow-[0_0_12px_rgba(251,191,36,0.5)]">
-                  #{i + 1} for you
+                  #{i + 1} for you · {score}/100
                 </span>
                 <div className="pt-1">
-                  <SchemeCard scheme={scheme} reason={reason} defaultOpen={i === 0} />
+                  <SchemeCard
+                    scheme={scheme}
+                    reason={reason}
+                    score={score}
+                    profile={profile}
+                    portal={portal}
+                    defaultOpen={i === 0}
+                  />
                 </div>
               </div>
             ))}
@@ -266,8 +458,8 @@ export default function SchemesPage() {
       <Rise delay={0.06}>
         <Card>
           <CardHeader
-            title="All Schemes"
-            subtitle={`${filtered.length}/${SCHEMES.length} schemes · verify details on official portal`}
+            title={`All Schemes for ${profile.state}`}
+            subtitle={`${filtered.length}/${visible.length} schemes · sorted by match · Last verified: ${SCHEMES_LAST_VERIFIED}`}
             action={
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-zinc-400">
                 <Search className="h-4 w-4" />
@@ -308,14 +500,22 @@ export default function SchemesPage() {
             </p>
           ) : (
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
-              {filtered.map((s) => (
-                <SchemeCard key={s.id} scheme={s} />
+              {filtered.map(({ scheme, reason, score }) => (
+                <SchemeCard
+                  key={scheme.id}
+                  scheme={scheme}
+                  reason={reason}
+                  score={score}
+                  profile={profile}
+                  portal={portal}
+                />
               ))}
             </div>
           )}
           <p className="mt-3 text-[11px] leading-relaxed text-zinc-600">
-            Summaries are for guidance only — subsidy rates and cut-off dates change by season.
-            Always verify on the linked official portal or your taluka agriculture office.
+            Summaries are for guidance only — subsidy rates and cut-off dates change by season. Last verified:{" "}
+            {SCHEMES_LAST_VERIFIED}. Verify on official portal before applying, or check with your taluka
+            agriculture office.
           </p>
         </Card>
       </Rise>

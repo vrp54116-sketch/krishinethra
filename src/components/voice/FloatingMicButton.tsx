@@ -42,7 +42,7 @@ export default function FloatingMicButton() {
 
   // G2: lifted above the LiveFarmPill + floating tab bar on mobile.
   return (
-    <div className="fixed bottom-[164px] right-4 z-40 flex flex-col items-end gap-2 md:bottom-6 md:right-6">
+    <div className="fixed bottom-[calc(9.5rem+env(safe-area-inset-bottom,0px))] right-4 z-40 flex flex-col items-end gap-2 md:bottom-24 md:right-6">
       {/* Live transcript bubble while listening */}
       {listening && (
         <motion.div

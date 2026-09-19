@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { ClimateForecastDay } from "@/lib/ai-engine";
 import { useFarmStore } from "@/lib/store";
 import { DEFAULT_SETTINGS } from "@/lib/store";
+import { capitalForState } from "@/lib/india-locations";
 import { Card, CardHeader, useMounted } from "@/components/dashboard/ui";
 import { fallbackForecast, weatherForCode } from "./shared";
 
@@ -42,10 +43,32 @@ export default function ForecastCards({
 }) {
   const snapshot = useFarmStore((s) => s.snapshot);
   const location = useFarmStore((s) => s.settings.location);
+  const farmProfile = useFarmStore((s) => s.settings.farmProfile);
   const updateSettings = useFarmStore((s) => s.updateSettings);
   const mounted = useMounted();
 
-  const loc = location ?? DEFAULT_SETTINGS.location;
+  // GPS-first: farmProfile.location (wizard) wins; else stored location;
+  // else state-capital fallback so weather never points at a stale default.
+  const loc = (() => {
+    const gps = farmProfile?.location;
+    if (gps && Number.isFinite(gps.lat) && Number.isFinite(gps.lng)) {
+      return {
+        latitude: gps.lat,
+        longitude: gps.lng,
+        label:
+          [farmProfile?.district, farmProfile?.state].filter(Boolean).join(", ") ||
+          location?.label ||
+          "Farm",
+      };
+    }
+    const stored = location ?? DEFAULT_SETTINGS.location;
+    const isDefault =
+      Math.abs(stored.latitude - DEFAULT_SETTINGS.location.latitude) < 0.01 &&
+      Math.abs(stored.longitude - DEFAULT_SETTINGS.location.longitude) < 0.01;
+    if (!isDefault || !farmProfile?.state) return stored;
+    const cap = capitalForState(farmProfile.state);
+    return { latitude: cap.lat, longitude: cap.lng, label: cap.label };
+  })();
 
   const [days, setDays] = useState<ClimateForecastDay[]>(() =>
     fallbackForecast(snapshot, 5),
