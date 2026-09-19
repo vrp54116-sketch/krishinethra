@@ -17,7 +17,7 @@
 
   /* ---- G1 glass foundation tokens ---- */
   --glass-bg: rgba(255, 255, 255, 0.06);
-  --glass-bg-strong: rgba(255, 255, 255, 0.1);
+  --glass-bg-strong: rgba(255, 255, 255, 0.10);
   --glass-border: rgba(255, 255, 255, 0.12);
   --glass-highlight: rgba(255, 255, 255, 0.22);
   --glass-blur: blur(20px) saturate(170%);
@@ -48,7 +48,7 @@ body {
 .glass {
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: blur(20px) saturate(170%);
+  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   border-radius: 24px;
   box-shadow: var(--glass-shadow);
@@ -62,7 +62,7 @@ body {
   border-radius: inherit;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.10),
     transparent 40%
   );
   pointer-events: none;
@@ -71,7 +71,7 @@ body {
 .glass-strong {
   background: var(--glass-bg-strong);
   backdrop-filter: var(--glass-blur-strong);
-  -webkit-backdrop-filter: blur(28px) saturate(170%);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
   border: 1px solid var(--glass-border);
   border-radius: 24px;
   box-shadow: var(--glass-shadow);
@@ -93,8 +93,8 @@ body {
 
 .glass-inset {
   background: rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(20px) saturate(170%);
-  -webkit-backdrop-filter: blur(20px) saturate(170%);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
   box-shadow:
@@ -106,7 +106,7 @@ body {
 .glass-pill {
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: blur(20px) saturate(170%);
+  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
   border-radius: 999px;
   box-shadow: var(--glass-shadow);
@@ -293,5 +293,99 @@ body {
   .ambient-blob-c,
   .ambient-blob-d {
     animation: none;
+  }
+}
+
+/* ---- G3 glass data cards ---- */
+.g3-card-hover {
+  transition: transform 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+.g3-card-hover:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+@keyframes g3-pump-edge {
+  0%,
+  100% {
+    box-shadow: 0 0 18px rgba(16, 185, 129, 0.25), 0 8px 32px rgba(0, 0, 0, 0.4);
+    border-color: rgba(16, 185, 129, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 34px rgba(16, 185, 129, 0.55), 0 8px 32px rgba(0, 0, 0, 0.4);
+    border-color: rgba(52, 211, 153, 0.7);
+  }
+}
+.g3-pump-on {
+  animation: g3-pump-edge 2.2s ease-in-out infinite;
+}
+
+@keyframes g3-droplet-fall {
+  0% {
+    transform: translateY(-4px);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+}
+.g3-droplet {
+  animation: g3-droplet-fall 1.6s ease-in infinite;
+}
+
+@keyframes g3-wave-slide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.g3-wave {
+  animation: g3-wave-slide 3.2s linear infinite;
+}
+
+@keyframes g3-fill-shimmer {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.g3-water-fill {
+  animation: g3-fill-shimmer 3s ease-in-out infinite;
+}
+
+.g3-chart-tooltip {
+  background: rgba(10, 18, 12, 0.82);
+  backdrop-filter: blur(20px) saturate(170%);
+  -webkit-backdrop-filter: blur(20px) saturate(170%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  font-size: 12px;
+  color: #e7f5ec;
+  padding: 6px 12px;
+}
+
+.g3-score-glow {
+  text-shadow: 0 0 18px rgba(52, 211, 153, 0.55), 0 0 60px rgba(16, 185, 129, 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .g3-pump-on,
+  .g3-droplet,
+  .g3-wave,
+  .g3-water-fill {
+    animation: none;
+  }
+  .g3-card-hover {
+    transition: none;
   }
 }

@@ -5,9 +5,13 @@ import { cn } from "@/lib/utils";
 
 export type GlassInputProps = React.InputHTMLAttributes<HTMLInputElement>;
 
-export function GlassInput({ className, ...rest }: GlassInputProps) {
+export const GlassInput = React.forwardRef<
+  HTMLInputElement,
+  GlassInputProps
+>(({ className, ...rest }, ref) => {
   return (
     <input
+      ref={ref}
       className={cn(
         "glass-inset w-full px-4 py-2.5 text-sm text-[#e7f5ec]",
         "placeholder:text-[#e7f5ec]/40",
@@ -18,6 +22,7 @@ export function GlassInput({ className, ...rest }: GlassInputProps) {
       {...rest}
     />
   );
-}
+});
+GlassInput.displayName = "GlassInput";
 
 export default GlassInput;

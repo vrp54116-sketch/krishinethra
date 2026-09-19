@@ -36,23 +36,30 @@ const GLOW_STYLE: Record<GlassGlow, React.CSSProperties> = {
   },
 };
 
-export function GlassCard({
-  variant = "default",
-  glow = "none",
-  className,
-  style,
-  children,
-  ...rest
-}: GlassCardProps) {
-  return (
-    <div
-      className={cn(VARIANT_CLASS[variant], className)}
-      style={{ ...GLOW_STYLE[glow], ...style }}
-      {...rest}
-    >
-      <div className="relative z-[1]">{children}</div>
-    </div>
-  );
-}
+export const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
+  (
+    {
+      variant = "default",
+      glow = "none",
+      className,
+      style,
+      children,
+      ...rest
+    },
+    ref,
+  ) => {
+    return (
+      <div
+        ref={ref}
+        className={cn(VARIANT_CLASS[variant], className)}
+        style={{ ...GLOW_STYLE[glow], ...style }}
+        {...rest}
+      >
+        <div className="relative z-[1]">{children}</div>
+      </div>
+    );
+  },
+);
+GlassCard.displayName = "GlassCard";
 
 export default GlassCard;

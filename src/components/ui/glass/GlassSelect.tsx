@@ -7,14 +7,14 @@ import { cn } from "@/lib/utils";
 export type GlassSelectProps =
   React.SelectHTMLAttributes<HTMLSelectElement>;
 
-export function GlassSelect({
-  className,
-  children,
-  ...rest
-}: GlassSelectProps) {
+export const GlassSelect = React.forwardRef<
+  HTMLSelectElement,
+  GlassSelectProps
+>(({ className, children, ...rest }, ref) => {
   return (
     <span className={cn("relative inline-flex w-full")}>
       <select
+        ref={ref}
         className={cn(
           "glass-inset w-full appearance-none pr-10 pl-4 py-2.5 text-sm text-[#e7f5ec]",
           "outline-none transition-all duration-200 cursor-pointer",
@@ -32,6 +32,7 @@ export function GlassSelect({
       />
     </span>
   );
-}
+});
+GlassSelect.displayName = "GlassSelect";
 
 export default GlassSelect;

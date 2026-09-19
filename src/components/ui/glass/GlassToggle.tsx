@@ -12,13 +12,10 @@ export interface GlassToggleProps {
   className?: string;
 }
 
-export function GlassToggle({
-  checked,
-  onChange,
-  disabled = false,
-  label,
-  className,
-}: GlassToggleProps) {
+export const GlassToggle = React.forwardRef<
+  HTMLButtonElement,
+  GlassToggleProps
+>(({ checked, onChange, disabled = false, label, className }, ref) => {
   const toggle = React.useCallback(() => {
     if (disabled) return;
     onChange(!checked);
@@ -33,6 +30,7 @@ export function GlassToggle({
 
   return (
     <button
+      ref={ref}
       type="button"
       role="switch"
       aria-checked={checked}
@@ -74,7 +72,7 @@ export function GlassToggle({
           transition={{ type: "spring", stiffness: 500, damping: 32 }}
           style={{
             background: checked
-              ? "linear-gradient(180deg, #34d399 0%, #059669 100%)"
+              ? "linear-gradient(180deg, #10b981 0%, #059669 100%)"
               : "linear-gradient(180deg, #2b3833 0%, #141d19 100%)",
             boxShadow: checked
               ? "3px 3px 8px rgba(0,0,0,0.5), -2px -2px 6px rgba(255,255,255,0.10), 0 0 14px rgba(16,185,129,0.55), inset 0 1px 0 rgba(255,255,255,0.4)"
@@ -87,6 +85,7 @@ export function GlassToggle({
       ) : null}
     </button>
   );
-}
+});
+GlassToggle.displayName = "GlassToggle";
 
 export default GlassToggle;
