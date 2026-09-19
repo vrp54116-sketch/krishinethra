@@ -1,16 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
 import AppToaster from "@/components/layout/AppToaster";
 import ServiceWorkerRegister from "@/components/pwa/ServiceWorkerRegister";
 import DemoSeedBoot from "@/components/pwa/DemoSeedBoot";
 import { AlertPipelineListener } from "@/lib/notifications";
+import { AmbientBackground } from "@/components/ui/glass";
 import "./globals.css";
 
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
+// NOTE: next/font/google was removed — its Turbopack build-time fetch of
+// fonts.gstatic.com fails in offline/blocked CI ("Can't resolve
+// @vercel/turbopack-next/internal/font/google/font"). Inter is loaded at
+// runtime via <link> below with a system-font fallback, so the build is
+// fully offline-safe.
 
 export const metadata: Metadata = {
   title: {
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#000000",
+  themeColor: "#050807",
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
@@ -56,8 +56,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`dark ${inter.variable} h-full`}>
+    <html lang="en" className="dark h-full">
       <head>
+        {/* Inter via runtime stylesheet (non-blocking, offline-safe fallback) */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
         {/* Legacy iOS PWA tags for older Safari versions */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="KrishiNethra" />
@@ -68,7 +75,8 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
-      <body className="min-h-full bg-[#000000] font-sans text-[#e7f5ec] antialiased">
+      <body className="min-h-full bg-[#050807] font-sans text-[#e7f5ec] antialiased">
+        <AmbientBackground />
         {children}
         <AppToaster />
         <AlertPipelineListener />
