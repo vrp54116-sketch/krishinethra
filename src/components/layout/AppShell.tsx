@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   BarChart3,
@@ -32,8 +32,10 @@ import { LANGUAGES } from "@/lib/types";
 import { useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import FloatingMicButton from "@/components/voice/FloatingMicButton";
+import LiveFarmPill from "@/components/layout/LiveFarmPill";
 import InstallAppButton from "@/components/pwa/InstallAppButton";
 import PageSkeleton from "@/components/layout/PageSkeleton";
+import { useMounted } from "@/components/dashboard/ui";
 
 interface NavItem {
   href: string;
@@ -154,13 +156,36 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const t = useT();
   const pathname = usePathname();
   const clock = useClock();
+  // Hydration gate: the farm store is seeded from Date.now() and the 1s
+  // simulation tick applies Math.random() noise, so live values can never
+  // match the server prerender. Everything derived from the store renders a
+  // stable placeholder until mount, making the first client paint identical
+  // to the server HTML (no hydration mismatch), then goes live.
+  const mounted = useMounted();
 
+  const router = useRouter();
   const language = useFarmStore((s) => s.settings.language);
   const setLanguage = useFarmStore((s) => s.setLanguage);
   const mode = useFarmStore((s) => s.settings.mode);
   const farmHealthScore = useFarmStore((s) => s.farmHealthScore);
   const alerts = useFarmStore((s) => s.alerts);
   const markAlertsRead = useFarmStore((s) => s.markAlertsRead);
+  const onboardingDone = useFarmStore((s) => s.onboardingDone);
+  const appPinHash = useFarmStore((s) => s.appPinHash);
+  const isAuthenticated = useFarmStore((s) => s.isAuthenticated);
+  const farmProfile = useFarmStore((s) => s.settings.farmProfile);
+
+  // Routing guard: wizard first, PIN-locked second.
+  useEffect(() => {
+    if (!mounted) return;
+    if (!onboardingDone) {
+      router.replace("/");
+      return;
+    }
+    if (appPinHash && !isAuthenticated) {
+      router.replace("/");
+    }
+  }, [mounted, onboardingDone, appPinHash, isAuthenticated, router]);
 
   const [langOpen, setLangOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
@@ -181,12 +206,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-black text-[#e7f5ec]">
-      {/* ============ DESKTOP SIDEBAR (md+) ============ */}
-      <aside className="fixed bottom-0 left-0 top-0 z-40 hidden w-60 flex-col bg-[#060b08] md:flex" style={{ borderRight: "1px solid rgba(34,197,94,0.22)" }}>
-        {/* Logo */}
+    // suppressHydrationWarning: this shell is fully client-live (localStorage
+    // store seeded from Date.now() + 1s random-noise tick), so its text can
+    // legitimately differ from the server prerender — e.g. when the browser
+    // hydrates with a stale HMR chunk. React then silently client-patches
+    // instead of showing a hydration overlay. The mounted-gates above already
+    // keep the consistent-version path exact; this is only a safety net.
+    // NOTE: no opaque bg here — the ambient blobs must show around the
+    // floating glass edges.
+    <div
+      className="min-h-screen bg-transparent text-[#e7f5ec]"
+      suppressHydrationWarning
+    >
+      {/* ============ DESKTOP SIDEBAR — floating glass panel (md+) ============ */}
+      <aside className="glass-strong fixed bottom-4 left-4 top-4 z-40 hidden w-60 flex-col rounded-3xl md:flex">
+        {/* Logo — leaf inside a glass circle with emerald glow */}
         <div className="flex items-center gap-3 px-5 pb-5 pt-6">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400 shadow-[0_0_18px_rgba(34,197,94,0.35)]">
+          <div className="glass-pill flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-emerald-300 shadow-[0_0_18px_rgba(34,197,94,0.45)]">
             <Leaf className="h-5 w-5" />
           </div>
           <div className="min-w-0">
@@ -195,7 +231,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
-        {/* Nav */}
+        {/* Nav — rounded-2xl rows; active = glass-inset pill + left glow bar */}
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
           {NAV_ITEMS.map(({ href, labelKey, icon: Icon }) => {
             const active = pathname === href || pathname?.startsWith(href + "/");
@@ -205,15 +241,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 key={href}
                 href={href}
                 className={cn(
-                  "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition-all",
+                  "relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[13px] font-medium transition-all",
                   active
-                    ? "border border-emerald-400/50 bg-emerald-500/15 text-white shadow-[0_0_18px_rgba(34,197,94,0.35)]"
-                    : "border border-transparent text-zinc-400 hover:border-emerald-500/20 hover:bg-emerald-500/5 hover:text-emerald-100",
+                    ? "glass-inset pl-4 text-emerald-200"
+                    : "border border-transparent text-zinc-400 hover:bg-white/5 hover:text-emerald-100",
                 )}
               >
+                {active && (
+                  <span
+                    aria-hidden
+                    className="absolute left-1.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]"
+                  />
+                )}
                 <Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-emerald-300" : "text-zinc-500")} />
                 <span className="truncate">{t(labelKey)}</span>
-                {showBadge && (
+                {mounted && showBadge && (
                   <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] font-bold text-white">
                     {unread > 99 ? "99+" : unread}
                   </span>
@@ -223,43 +265,73 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* Bottom: mode badge + health */}
-        <div className="border-t border-emerald-500/15 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <span
-              className={cn(
-                "rounded-full border px-3 py-1 text-[11px] font-bold tracking-widest",
-                isLive
-                  ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-300 shadow-[0_0_12px_rgba(34,197,94,0.4)]"
-                  : "border-amber-400/50 bg-amber-500/10 text-amber-300",
-              )}
-            >
-              {isLive ? t("common.live") : t("common.simulation")}
-            </span>
+        {/* Bottom: health ring in glass circle + mode badge glass pill */}
+        <div className="p-4">
+          <div className="glass-inset flex items-center justify-between gap-3 rounded-2xl p-3">
             <div className="flex flex-col items-center gap-1">
-              <HealthRing score={farmHealthScore} />
+              <div className="glass-pill rounded-full p-1.5">
+                {mounted ? (
+                  <HealthRing score={farmHealthScore} />
+                ) : (
+                  <div
+                    aria-hidden
+                    className="animate-pulse rounded-full bg-white/10"
+                    style={{ width: 56, height: 56 }}
+                  />
+                )}
+              </div>
               <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
                 {t("common.farmHealth")}
               </span>
             </div>
+            <span
+              className="glass-pill rounded-full px-3 py-1.5 text-[11px] font-bold tracking-widest"
+              style={
+                isLive
+                  ? {
+                      borderColor: "rgba(52,211,153,0.5)",
+                      color: "#a7f3d0",
+                      boxShadow: "0 0 12px rgba(34,197,94,0.4)",
+                    }
+                  : {
+                      borderColor: "rgba(251,191,36,0.45)",
+                      color: "#fcd34d",
+                    }
+              }
+            >
+              {isLive ? t("common.live") : t("common.simulation")}
+            </span>
           </div>
         </div>
       </aside>
 
       {/* ============ MAIN COLUMN ============ */}
-      <div className="flex min-h-screen flex-col md:pl-60">
-        {/* Top header */}
-        <header className="sticky top-0 z-30 border-b border-emerald-500/15 bg-black/85 backdrop-blur-md">
-          <div className="flex items-center gap-2 px-4 py-3 sm:gap-3">
+      {/* 272px = 16px margin + 240px floating sidebar + 16px gap */}
+      <div className="flex min-h-screen flex-col md:pl-[272px]">
+        {/* Top header — slim glass strip */}
+        <header className="sticky top-0 z-30 px-4 pt-4 md:px-6">
+          <div
+            className="glass mx-auto flex max-w-7xl items-center gap-2 px-3 py-2.5 sm:gap-3"
+            style={{ borderRadius: 16 }}
+          >
             {/* Mobile logo */}
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-400 md:hidden">
+            <div className="glass-pill flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-emerald-300 md:hidden">
               <Leaf className="h-4 w-4" />
             </div>
 
-            <h1 className="min-w-0 flex-1 truncate text-base font-bold text-white sm:text-lg">{pageTitle}</h1>
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate text-base font-bold text-white sm:text-lg">{pageTitle}</h1>
+              {mounted && (farmProfile?.farmerName || farmProfile?.farmName) && (
+                <p className="truncate text-[11px] text-emerald-200/60">
+                  {farmProfile?.farmerName ? `Namaste, ${farmProfile.farmerName.split(" ")[0]} 🌾` : ""}
+                  {farmProfile?.farmerName && farmProfile?.farmName ? " · " : ""}
+                  {farmProfile?.farmName || ""}
+                </p>
+              )}
+            </div>
 
             {/* Live clock */}
-            <span className="hidden rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 font-mono text-xs text-zinc-300 sm:block">
+            <span className="hidden rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 font-mono text-xs text-zinc-300 sm:block">
               {clock}
             </span>
 
@@ -269,7 +341,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {/* PWA install (mobile only, appears when installable) */}
             <InstallAppButton />
 
-            {/* Language switcher */}
+            {/* Language switcher — glass pill chip */}
             <div className="relative">
               <button
                 type="button"
@@ -277,7 +349,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   setAlertsOpen(false);
                   setLangOpen((v) => !v);
                 }}
-                className="flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:border-emerald-500/40"
+                className="flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:border-emerald-500/40"
                 aria-label={t("common.language")}
               >
                 <span>{activeLang?.nativeLabel ?? "English"}</span>
@@ -311,7 +383,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               )}
             </div>
 
-            {/* Alerts bell */}
+            {/* Alerts bell — glass circle button with red dot */}
             <div className="relative">
               <button
                 type="button"
@@ -320,12 +392,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   if (!alertsOpen) markAlertsRead();
                   setAlertsOpen((v) => !v);
                 }}
-                className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/[0.03] text-zinc-200 transition-colors hover:border-emerald-500/40"
+                className="relative flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-zinc-200 transition-colors hover:border-emerald-500/40"
                 aria-label={t("nav.alerts")}
               >
                 <Bell className="h-4 w-4" />
-                {unread > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                {mounted && unread > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(239,68,68,0.8)]">
                     {unread > 99 ? "99+" : unread}
                   </span>
                 )}
@@ -355,75 +427,110 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               )}
             </div>
 
-            {/* Health pill */}
+            {/* Health pill chip */}
             <Link
               href="/dashboard"
               className="hidden items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-200 xs:flex sm:flex"
               title={t("common.farmHealthScore")}
             >
-              <span className={cn("h-2 w-2 rounded-full", farmHealthScore >= 70 ? "bg-emerald-400" : farmHealthScore >= 40 ? "bg-amber-400" : "bg-red-400")} />
-              {Math.round(farmHealthScore)}
+              <span
+                className={cn(
+                  "h-2 w-2 rounded-full",
+                  !mounted
+                    ? "bg-zinc-600"
+                    : farmHealthScore >= 70
+                      ? "bg-emerald-400"
+                      : farmHealthScore >= 40
+                        ? "bg-amber-400"
+                        : "bg-red-400",
+                )}
+              />
+              {mounted ? Math.round(farmHealthScore) : "–"}
             </Link>
           </div>
         </header>
 
-        {/* Page content with transition */}
+        {/* Page content — max-w-7xl centered, 24px gutters */}
         <motion.main
           key={pathname}
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.28, ease: "easeOut" }}
-          className="flex-1 px-4 pb-24 pt-5 md:pb-10"
+          className="flex-1 px-6 pb-56 pt-5 md:pb-14"
         >
-          <Suspense fallback={<PageSkeleton rows={2} />}>{children}</Suspense>
+          <div className="mx-auto max-w-7xl">
+            <Suspense fallback={<PageSkeleton rows={2} />}>
+              {mounted ? children : <PageSkeleton rows={2} />}
+            </Suspense>
+          </div>
         </motion.main>
       </div>
+
+      {/* Signature Live Farm Pill — above tab bar / bottom-right */}
+      <LiveFarmPill />
 
       {/* Floating voice trigger — every page */}
       <FloatingMicButton />
 
-      {/* ============ MOBILE BOTTOM NAV ============ */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-emerald-500/20 bg-[#060b08]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
-        <div className="grid grid-cols-5">
-          {MOBILE_TABS.map((tab) => {
-            if ("key" in tab) {
+      {/* ============ MOBILE BOTTOM NAV — floating glass pill bar ============ */}
+      <nav
+        className="fixed inset-x-4 bottom-4 z-40 md:hidden"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="glass-strong rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+          <div className="grid grid-cols-5 px-2 py-2">
+            {MOBILE_TABS.map((tab) => {
+              if ("key" in tab) {
+                return (
+                  <button
+                    key="more"
+                    type="button"
+                    onClick={() => setMoreOpen(true)}
+                    className="flex flex-col items-center gap-1 rounded-2xl py-1.5 text-[10px] font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-emerald-200"
+                  >
+                    <MoreHorizontal className="h-5 w-5" />
+                    {t("nav.more")}
+                    <span className="h-1 w-1 rounded-full bg-transparent" />
+                  </button>
+                );
+              }
+              const Icon = tab.icon;
+              const active =
+                pathname === tab.href || pathname?.startsWith(tab.href + "/");
+              const showBadge = tab.href === "/alerts" && unread > 0;
               return (
-                <button
-                  key="more"
-                  type="button"
-                  onClick={() => setMoreOpen(true)}
-                  className="flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium text-zinc-400 transition-colors hover:text-emerald-200"
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={cn(
+                    "relative flex flex-col items-center gap-1 rounded-2xl py-1.5 text-[10px] font-medium transition-colors",
+                    active
+                      ? "text-emerald-300"
+                      : "text-gray-400 hover:bg-white/5 hover:text-emerald-100",
+                  )}
                 >
-                  <MoreHorizontal className="h-5 w-5" />
-                  {t("nav.more")}
-                </button>
-              );
-            }
-            const Icon = tab.icon;
-            const active = pathname === tab.href;
-            const showBadge = tab.href === "/alerts" && unread > 0;
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className={cn(
-                  "relative flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors",
-                  active ? "text-emerald-300" : "text-zinc-500 hover:text-emerald-100",
-                )}
-              >
-                <span className={cn(active && "drop-shadow-[0_0_8px_rgba(34,197,94,0.8)]")}>
-                  <Icon className="h-5 w-5" />
-                </span>
-                {t(tab.labelKey)}
-                {active && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(34,197,94,0.9)]" />}
-                {showBadge && (
-                  <span className="absolute right-1/2 top-1 flex h-4 min-w-4 translate-x-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                    {unread > 99 ? "99+" : unread}
+                  <span className={cn(active && "drop-shadow-[0_0_8px_rgba(34,197,94,0.8)]")}>
+                    <Icon className="h-5 w-5" />
                   </span>
-                )}
-              </Link>
-            );
-          })}
+                  {t(tab.labelKey)}
+                  {/* soft emerald glow dot under active icon */}
+                  <span
+                    className={cn(
+                      "h-1 w-1 rounded-full",
+                      active
+                        ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]"
+                        : "bg-transparent",
+                    )}
+                  />
+                  {mounted && showBadge && (
+                    <span className="absolute right-1/2 top-0.5 flex h-4 min-w-4 translate-x-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                      {unread > 99 ? "99+" : unread}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </nav>
 
@@ -469,7 +576,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     >
                       <Icon className="h-5 w-5 text-emerald-300" />
                       {t(labelKey)}
-                      {showBadge && (
+                      {mounted && showBadge && (
                         <span className="absolute right-2 top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
                           {unread > 99 ? "99+" : unread}
                         </span>
