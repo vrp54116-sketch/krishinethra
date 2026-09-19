@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# KrishiNethra AI 🌾 — Har Khet Ka AI Doctor
 
-## Getting Started
+Offline-first smart farm command center. Live sensor simulation, AI crop doctor,
+smart irrigation, weather, spray planner, fertilizer, market, schemes, diary,
+tasks, KrishiGPT assistant, reports, alerts and voice control — all running from
+`localStorage`, installable as a PWA, and ready to swap to real ESP32 hardware
+with zero UI changes.
 
-First, run the development server:
+## Features
+
+- **Dashboard** — farm health score, live sensor grid, pump control, AI
+  suggestions, alerts feed, water/energy today, quick actions.
+- **Farm Map** — zones A/B/C with crop + moisture status.
+- **Crop Doctor (Camera)** — leaf scanner with severity heatmap, natural +
+  chemical treatment, spray-plan generation, pan-tilt pad (simulated or live).
+- **Irrigation** — manual/auto/schedule pump, weekly slots, tank gauge, usage
+  tracker, energy monitor, AI explainer.
+- **Climate** — 6 live sensors, 5-day Open-Meteo forecast with offline fallback
+  badge, AI advisor, 12h history graphs, crop comfort panel.
+- **Spray Planner** — weather-aware plans with rain-safe windows.
+- **Fertilizer** — dose calculator + 15-day cycle tracking.
+- **Market** — mandi prices, trends, sell-vs-hold guidance for your crops.
+- **Schemes** — govt scheme recommendations matched to farm profile.
+- **Diary / Tasks / Assistant / Reports / Alerts / Voice / Settings** — full
+  exhibition loop: 4 diary entries, 5 tasks, active spray plan, disease scans,
+  30-day reports, 6 alerts, KrishiGPT chat, Telegram forwarding, multi-language
+  (EN/HI/GU/MR) + voice I/O.
+- **PWA** — `app/manifest.ts`, generated 192/512 icons, apple touch icon,
+  service worker (`public/sw.js`) with app-shell cache + `/offline` fallback,
+  header **Install App** button (`beforeinstallprompt`, mobile).
+- **Resilience** — per-page loading skeletons (Suspense), on-theme
+  `error.tsx` / `not-found.tsx`; Open-Meteo and Telegram failures degrade
+  silently with offline badges; charts memoized + throttled to ≤1 render/sec.
+
+## Local dev
 
 ```bash
+npm i
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000), enter any 4-digit PIN, and
+explore `/dashboard`. First load seeds a rich demo state (diary, tasks, spray
+plan, scans, 30-day summaries, alerts) so the app feels alive immediately. All
+data persists in `localStorage` key `krishinethra-v1`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build   # must pass cleanly
+npm start       # serve the production build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deploy to Vercel
 
-## Learn More
+No `vercel.json` needed — default Next.js works.
 
-To learn more about Next.js, take a look at the following resources:
+1. Push this repo to GitHub.
+2. Go to [vercel.com](https://vercel.com) → **Add New → Project** → import the repo.
+3. (Optional) set env vars:
+   - `TELEGRAM_BOT_TOKEN` — Telegram bot token for alert forwarding fallback.
+   - `TELEGRAM_CHAT_ID` — Telegram chat ID for alert forwarding fallback.
+   - `HARDWARE_GATEWAY_URL` — default ESP32/RPi gateway base URL for LIVE mode
+     (can also be set per-device in Settings → Hardware Bridge).
+4. Click **Deploy**. That's it.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+> Telegram also works per-device: Settings → Alerts → paste bot token + chat ID
+> and toggle forwarding. Env vars are just the server-side fallback.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Connecting real hardware later
 
-## Deploy on Vercel
+The app runs in **Simulation** mode by default and flips to **LIVE** mode in
+Settings → Hardware Bridge without any UI changes — the 2s poller merges
+gateway snapshots into the same store slices the simulator writes to.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Contract: [`docs/HARDWARE_CONTRACT.md`](docs/HARDWARE_CONTRACT.md) — the exact
+  JSON for `GET /status`, `GET /sensors`, `POST /pump`, `POST /servo` plus the
+  `/api/hw/*` bridge envelope (`{ ok, data, source }`, never throws).
+- Quickstart: [`docs/ESP32_QUICKSTART.md`](docs/ESP32_QUICKSTART.md) — flash,
+  wire and point `HARDWARE_GATEWAY_URL` (or Settings → Hardware Bridge) at the
+  device, then flip mode to LIVE.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project layout
+
+- `src/app/` — routes (`/` landing, `(app)/dashboard … /settings`, `/offline`,
+  `manifest.ts`, `loading.tsx`, `error.tsx`, `not-found.tsx`).
+- `src/components/` — dashboard, climate, irrigation, camera, map + layout shell.
+- `src/lib/store.ts` — one zustand store (persisted), simulation tick (1s),
+  history push throttled to 5s, LIVE 2s poller, rich first-run seed.
+- `public/` — PWA icons (`icon-192.png`, `icon-512.png`, `apple-touch-icon.png`)
+  generated by `scripts/gen-icons.mjs`, plus `sw.js`.
