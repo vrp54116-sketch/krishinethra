@@ -151,11 +151,11 @@ export default function PumpControl() {
       />
 
       {/* Status visual */}
-      <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-black/40 px-4 py-3">
+      <div className="flex items-center gap-3 rounded-[16px] border border-white/10 bg-[rgba(18,26,22,0.66)] px-4 py-3 backdrop-blur-md">
         <span
           className={cn(
             "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
-            pump.running ? "bg-sky-500/15 text-sky-300" : "bg-white/[0.04] text-zinc-500",
+            pump.running ? "bg-sky-500/15 text-sky-400" : "bg-white/[0.04] text-[#9CA3AF]",
           )}
         >
           <Droplets className="h-5 w-5" />
@@ -164,12 +164,12 @@ export default function PumpControl() {
           <p className="text-sm font-bold text-white">
             {pump.running ? t("dashboard.pumping") : t("dashboard.pumpIdle")}
             {pump.running && isManual && manualRemaining != null && (
-              <span className="ml-2 font-mono text-xs font-medium text-emerald-300">
+              <span className="ml-2 font-mono text-xs font-medium text-[#34D399]">
                 {Math.max(0, Math.ceil(manualRemaining))}s left
               </span>
             )}
           </p>
-          <p className="truncate text-xs text-zinc-500">
+          <p className="truncate text-xs text-[#9CA3AF]">
             Flow {snapshot.flowRateLpm.toFixed(2)} L/min · {snapshot.pumpCurrentA.toFixed(2)} A
           </p>
         </div>
@@ -206,10 +206,10 @@ export default function PumpControl() {
           onClick={() => handlePower(true)}
           disabled={!isManual || pump.running}
           className={cn(
-            "flex items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-extrabold transition-all",
+            "flex items-center justify-center gap-2 rounded-[16px] px-4 py-3.5 text-sm font-bold transition-all",
             isManual && !pump.running
-              ? "bg-emerald-500 text-black shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:bg-emerald-400 active:scale-[0.98]"
-              : "cursor-not-allowed border border-white/10 bg-white/[0.03] text-zinc-600",
+              ? "btn-primary-aurora text-black"
+              : "cursor-not-allowed border border-white/10 bg-white/[0.03] text-[#9CA3AF]/60",
           )}
         >
           <Power className="h-4 w-4" /> ON
@@ -219,31 +219,31 @@ export default function PumpControl() {
           onClick={() => handlePower(false)}
           disabled={!isManual || !pump.running}
           className={cn(
-            "flex items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-extrabold transition-all",
+            "flex items-center justify-center gap-2 rounded-[16px] px-4 py-3.5 text-sm font-bold transition-all",
             isManual && pump.running
-              ? "border border-red-400/50 bg-red-500/15 text-red-200 shadow-[0_0_20px_rgba(239,68,68,0.3)] hover:bg-red-500/25 active:scale-[0.98]"
-              : "cursor-not-allowed border border-white/10 bg-white/[0.03] text-zinc-600",
+              ? "border border-rose-500/40 bg-rose-500/15 text-rose-200 shadow-[0_0_20px_rgba(251,113,133,0.3)] hover:bg-rose-500/25 active:scale-[0.98]"
+              : "cursor-not-allowed border border-white/10 bg-white/[0.03] text-[#9CA3AF]/60",
           )}
         >
           <Square className="h-4 w-4" /> OFF
         </button>
       </div>
       {!isManual && (
-        <p className="mt-1.5 text-center text-[11px] text-zinc-600">
+        <p className="mt-1.5 text-center text-[11px] text-[#9CA3AF]">
           Switch to Manual mode to use ON / OFF directly.
         </p>
       )}
 
       {/* Quick run buttons */}
       <div className="mt-3 flex items-center gap-2">
-        <Timer className="h-4 w-4 shrink-0 text-zinc-500" />
+        <Timer className="h-4 w-4 shrink-0 text-[#9CA3AF]" />
         <div className="grid flex-1 grid-cols-3 gap-2">
           {[5, 10, 30].map((sec) => (
             <button
               key={sec}
               type="button"
               onClick={() => handleQuickRun(sec)}
-              className="rounded-lg border border-white/10 bg-white/[0.03] px-2 py-2 text-xs font-bold text-zinc-200 transition-all hover:border-emerald-500/40 hover:text-emerald-200 active:scale-[0.97]"
+              className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-2 text-xs font-bold text-[#F3F4F6] transition-all hover:border-[#34D399]/40 hover:text-[#34D399] active:scale-[0.97]"
             >
               {sec}s
             </button>
@@ -253,12 +253,12 @@ export default function PumpControl() {
 
       {/* Live Auto-AI explanation */}
       {pump.mode === "auto" && (
-        <div className="mt-3 space-y-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.05] p-3">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-300">
+        <div className="mt-3 space-y-1.5 rounded-[16px] border border-[#34D399]/20 bg-[#34D399]/[0.05] p-3 backdrop-blur-md">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[#34D399]">
             Auto AI reasoning · live
           </p>
           {autoLines().map((l, i) => (
-            <p key={i} className={cn("font-mono text-[11px] leading-relaxed", l.hot ? "text-amber-300" : "text-zinc-400")}>
+            <p key={i} className={cn("font-mono text-[11px] leading-relaxed", l.hot ? "text-amber-300" : "text-[#9CA3AF]")}>
               {l.hot ? "● " : "○ "}{l.text}
             </p>
           ))}

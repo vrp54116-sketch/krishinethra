@@ -43,7 +43,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#050807",
+  themeColor: "#070B09",
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,
@@ -75,7 +75,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
-      <body className="min-h-full bg-[#050807] font-sans text-[#e7f5ec] antialiased">
+      <body className="min-h-full bg-[#070B09] font-sans text-[#F3F4F6] antialiased">
         <AmbientBackground />
         {children}
         <AppToaster />

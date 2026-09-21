@@ -48,16 +48,16 @@ function UsageTrackerInner() {
       <CardHeader title={t("irrigation.usageTitle")} subtitle={t("dashboard.waterUsed")} />
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-xl border border-white/5 bg-black/40 p-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Today</p>
-          <p className="mt-1 text-2xl font-extrabold tracking-tight text-white">
+        <div className="rounded-xl border border-white/10 bg-black/40 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Today</p>
+          <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
             <AnimatedNumber value={totalWaterUsedL} decimals={2} />
             <span className="ml-1 text-xs font-semibold text-zinc-400">L</span>
           </p>
         </div>
-        <div className="rounded-xl border border-white/5 bg-black/40 p-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">Last 30 days</p>
-          <p className="mt-1 text-2xl font-extrabold tracking-tight text-white">
+        <div className="rounded-xl border border-white/10 bg-black/40 p-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Last 30 days</p>
+          <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
             <AnimatedNumber value={monthlyTotal} decimals={1} />
             <span className="ml-1 text-xs font-semibold text-zinc-400">L</span>
           </p>
@@ -68,22 +68,26 @@ function UsageTrackerInner() {
       <div className="mt-2 h-44 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={week} margin={{ top: 8, right: 4, bottom: 0, left: -14 }}>
-            <XAxis dataKey="day" tick={{ fill: "#71717a", fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
-            <YAxis tick={{ fill: "#52525b", fontSize: 10 }} axisLine={false} tickLine={false} width={34} />
+            <XAxis dataKey="day" tick={{ fill: "#9CA3AF", fontSize: 10 }} axisLine={false} tickLine={false} interval={0} />
+            <YAxis tick={{ fill: "#9CA3AF", fontSize: 10 }} axisLine={false} tickLine={false} width={34} />
             <Tooltip
               cursor={{ fill: "rgba(56,189,248,0.08)" }}
               contentStyle={{
-                background: "#0a120c",
-                border: "1px solid rgba(56,189,248,0.25)",
-                borderRadius: 12,
+                background: "rgba(18,26,22,0.85)",
+                backdropFilter: "blur(20px) saturate(170%)",
+                WebkitBackdropFilter: "blur(20px) saturate(170%)",
+                border: "1px solid rgba(255,255,255,0.15)",
+                borderRadius: 999,
                 fontSize: 12,
-                color: "#e7f5ec",
+                color: "#F3F4F6",
+                padding: "6px 14px",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
               }}
               formatter={(v) => [`${Number(v).toFixed(2)} L`, "Water"]}
             />
             <Bar dataKey="litres" radius={[5, 5, 2, 2]} isAnimationActive={false}>
               {week.map((d) => (
-                <Cell key={d.day} fill={d.today ? "#38bdf8" : "rgba(56,189,248,0.35)"} />
+                <Cell key={d.day} fill={d.today ? "#38BDF8" : "rgba(56,189,248,0.35)"} />
               ))}
             </Bar>
           </BarChart>

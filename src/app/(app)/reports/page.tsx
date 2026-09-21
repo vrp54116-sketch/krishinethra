@@ -109,11 +109,14 @@ function diseaseColor(name: string, idx: number): string {
 }
 
 const tooltipStyle = {
-  background: "#0a120c",
-  border: "1px solid rgba(34,197,94,0.3)",
-  borderRadius: 12,
+  background: "rgba(18,26,22,0.85)",
+  border: "1px solid rgba(255,255,255,0.15)",
+  borderRadius: 999,
   fontSize: 12,
-  color: "#e7f5ec",
+  color: "#F3F4F6",
+  padding: "6px 14px",
+  backdropFilter: "blur(12px)",
+  boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
 } as const;
 
 export default function ReportsPage() {
@@ -363,23 +366,23 @@ export default function ReportsPage() {
                   <button
                     type="button"
                     onClick={() => window.print()}
-                    className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-extrabold text-black shadow-[0_0_18px_rgba(34,197,94,0.4)] transition-all hover:bg-emerald-400 active:scale-[0.98]"
+                    className="btn-primary-aurora flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold text-black"
                   >
                     <Printer className="h-3.5 w-3.5" strokeWidth={2.75} /> Report
                   </button>
                   <button
                     type="button"
                     onClick={() => exportDailyCSV(period, range)}
-                    className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-extrabold text-emerald-200 transition-all hover:bg-emerald-500/20 active:scale-[0.98]"
+                    className="flex items-center justify-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-3.5 py-2 text-xs font-bold text-[#F3F4F6] backdrop-blur-md transition-all hover:bg-white/[0.1] hover:border-[#818CF8]/40 active:scale-[0.98]"
                   >
-                    <FileSpreadsheet className="h-3.5 w-3.5" /> CSV
+                    <FileSpreadsheet className="h-3.5 w-3.5 text-[#818CF8]" /> CSV
                   </button>
                   <button
                     type="button"
                     onClick={exportFarmBackup}
-                    className="flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-extrabold text-zinc-200 transition-all hover:border-emerald-500/40 hover:text-white active:scale-[0.98]"
+                    className="flex items-center justify-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-3.5 py-2 text-xs font-bold text-[#F3F4F6] backdrop-blur-md transition-all hover:bg-white/[0.1] hover:border-[#818CF8]/40 active:scale-[0.98]"
                   >
-                    <DatabaseBackup className="h-3.5 w-3.5" /> Backup
+                    <DatabaseBackup className="h-3.5 w-3.5 text-[#818CF8]" /> Backup
                   </button>
                 </div>
               </div>
@@ -389,49 +392,49 @@ export default function ReportsPage() {
 
         {/* Water / money saved hero */}
         <Rise delay={0.04}>
-          <section className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-600/25 via-[#0a120c] to-[#0a120c] p-4 sm:p-6">
-            <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-emerald-500/20 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-teal-400/10 blur-3xl" />
+          <section className="relative overflow-hidden rounded-[20px] border border-white/10 bg-gradient-to-br from-[#818CF8]/15 via-[rgba(18,26,22,0.75)] to-[rgba(18,26,22,0.85)] p-4 backdrop-blur-xl sm:p-6 shadow-[0_8px_32px_rgba(0,0,0,0.36)]">
+            <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#818CF8]/15 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-[#34D399]/10 blur-3xl" />
             <div className="relative">
-              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-emerald-300">
+              <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-[#818CF8]">
                 <Waves className="h-3.5 w-3.5" /> Water saved · Money saved · {rangeTitle.toLowerCase()}
               </p>
               <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-emerald-400/25 bg-black/50 p-4">
-                  <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                    <Droplets className="h-3.5 w-3.5 text-sky-300" /> Litres saved
+                <div className="rounded-[16px] border border-white/10 bg-[rgba(18,26,22,0.66)] p-4 backdrop-blur-md">
+                  <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF]">
+                    <Droplets className="h-3.5 w-3.5 text-sky-400" /> Litres saved
                   </p>
-                  <p className="mt-1 text-3xl font-black tabular-nums tracking-tight text-white sm:text-4xl">
+                  <p className="mt-1 text-3xl font-semibold tabular-nums tracking-tight bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent sm:text-4xl">
                     <AnimatedNumber value={Math.max(0, savings.savedL)} decimals={1} />
-                    <span className="ml-1 text-sm font-bold text-zinc-400">L</span>
+                    <span className="ml-1 text-sm font-bold text-[#9CA3AF]">L</span>
                   </p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
+                  <p className="mt-1 text-[11px] leading-relaxed text-[#9CA3AF]">
                     {kpis.totalWater.toFixed(1)} L used vs {savings.baselineWater.toFixed(0)} L manual habit ({REPORT_MANUAL_BASELINE_L_PER_DAY} L/day) ·{" "}
-                    <span className="font-bold text-emerald-300">{savings.savedPct.toFixed(0)}% less</span>
+                    <span className="font-bold text-[#34D399]">{savings.savedPct.toFixed(0)}% less</span>
                   </p>
                 </div>
-                <div className="rounded-2xl border border-emerald-400/25 bg-black/50 p-4">
-                  <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                    <IndianRupee className="h-3.5 w-3.5 text-emerald-300" /> Rupees saved
+                <div className="rounded-[16px] border border-white/10 bg-[rgba(18,26,22,0.66)] p-4 backdrop-blur-md">
+                  <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF]">
+                    <IndianRupee className="h-3.5 w-3.5 text-emerald-400" /> Rupees saved
                   </p>
-                  <p className="mt-1 text-3xl font-black tabular-nums tracking-tight text-white sm:text-4xl">
+                  <p className="mt-1 text-3xl font-semibold tabular-nums tracking-tight bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent sm:text-4xl">
                     ₹<AnimatedNumber value={savings.totalSavedRs} decimals={2} />
                   </p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
+                  <p className="mt-1 text-[11px] leading-relaxed text-[#9CA3AF]">
                     Water ₹{savings.waterSavedRs.toFixed(2)} + energy ₹{savings.energySavedRs.toFixed(2)} · @ ₹{REPORT_WATER_RATE_RS_PER_L}/L & ₹{REPORT_ENERGY_RATE_RS_PER_KWH}/kWh
                   </p>
                 </div>
-                <div className="rounded-2xl border border-emerald-400/25 bg-black/50 p-4">
-                  <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                    <Leaf className="h-3.5 w-3.5 text-emerald-300" /> Climate bonus
+                <div className="rounded-[16px] border border-white/10 bg-[rgba(18,26,22,0.66)] p-4 backdrop-blur-md">
+                  <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF]">
+                    <Leaf className="h-3.5 w-3.5 text-emerald-400" /> Climate bonus
                   </p>
-                  <p className="mt-1 text-3xl font-black tabular-nums tracking-tight text-white sm:text-4xl">
+                  <p className="mt-1 text-3xl font-semibold tabular-nums tracking-tight bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent sm:text-4xl">
                     <AnimatedNumber value={savings.co2Kg} decimals={2} />
-                    <span className="ml-1 text-sm font-bold text-zinc-400">kg CO₂</span>
+                    <span className="ml-1 text-sm font-bold text-[#9CA3AF]">kg CO₂</span>
                   </p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-zinc-500">
+                  <p className="mt-1 text-[11px] leading-relaxed text-[#9CA3AF]">
                     ≈ avoided by pumping {savings.savedKwh.toFixed(3)} kWh less — like planting{" "}
-                    <span className="font-bold text-emerald-300">
+                    <span className="font-bold text-[#34D399]">
                       {(savings.co2Kg / 21).toFixed(1)} saplings
                     </span>{" "}
                     for a year.
@@ -542,16 +545,16 @@ export default function ReportsPage() {
               <div className="h-60 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={healthData} margin={{ top: 8, right: 12, bottom: 0, left: -18 }}>
-                    <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
                     <XAxis
                       dataKey="date"
-                      tick={{ fill: "#71717a", fontSize: 10 }}
+                      tick={{ fill: "#9CA3AF", fontSize: 10 }}
                       axisLine={false}
                       tickLine={false}
                       interval={range === "30d" ? 4 : 0}
                     />
                     <YAxis
-                      tick={{ fill: "#52525b", fontSize: 10 }}
+                      tick={{ fill: "#9CA3AF", fontSize: 10 }}
                       axisLine={false}
                       tickLine={false}
                       width={40}
@@ -568,16 +571,16 @@ export default function ReportsPage() {
                     <Line
                       type="monotone"
                       dataKey="score"
-                      stroke="#22c55e"
+                      stroke="#818CF8"
                       strokeWidth={2.5}
-                      dot={period.length <= 8 ? { r: 3.5, fill: "#22c55e", strokeWidth: 0 } : false}
-                      activeDot={{ r: 5, fill: "#22c55e" }}
+                      dot={period.length <= 8 ? { r: 3.5, fill: "#818CF8", strokeWidth: 0 } : false}
+                      activeDot={{ r: 5, fill: "#818CF8" }}
                       isAnimationActive={false}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-              <p className="mt-2 text-[11px] text-zinc-600">
+              <p className="mt-2 text-[11px] text-[#9CA3AF]">
                 Best {period.length > 0 ? shortLabel([...period].sort((a, b) => b.healthScore - a.healthScore)[0].date) : "—"} · Worst{" "}
                 {period.length > 0 ? shortLabel([...period].sort((a, b) => a.healthScore - b.healthScore)[0].date) : "—"}
               </p>
@@ -593,16 +596,16 @@ export default function ReportsPage() {
               <div className="h-60 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={waterData} margin={{ top: 8, right: 12, bottom: 0, left: -14 }}>
-                    <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
                     <XAxis
                       dataKey="date"
-                      tick={{ fill: "#71717a", fontSize: 10 }}
+                      tick={{ fill: "#9CA3AF", fontSize: 10 }}
                       axisLine={false}
                       tickLine={false}
                       interval={range === "30d" ? 4 : 0}
                     />
                     <YAxis
-                      tick={{ fill: "#52525b", fontSize: 10 }}
+                      tick={{ fill: "#9CA3AF", fontSize: 10 }}
                       axisLine={false}
                       tickLine={false}
                       width={36}
@@ -618,14 +621,14 @@ export default function ReportsPage() {
                         name === "actual" ? "Smart use" : name === "saved" ? "Saved" : "Manual baseline",
                       ]}
                     />
-                    <Legend wrapperStyle={{ fontSize: 11, color: "#a1a1aa" }} />
-                    <Bar dataKey="actual" stackId="w" fill="#22c55e" radius={[0, 0, 0, 0]} name="Smart use" isAnimationActive={false} />
-                    <Bar dataKey="saved" stackId="w" fill="rgba(34,197,94,0.22)" radius={[5, 5, 0, 0]} name="Saved" isAnimationActive={false} />
-                    <Line type="monotone" dataKey="baseline" stroke="#f59e0b" strokeWidth={1.8} strokeDasharray="6 4" dot={false} name="Manual 6 L" />
+                    <Legend wrapperStyle={{ fontSize: 11, color: "#9CA3AF" }} />
+                    <Bar dataKey="actual" stackId="w" fill="#34D399" radius={[0, 0, 0, 0]} name="Smart use" isAnimationActive={false} />
+                    <Bar dataKey="saved" stackId="w" fill="rgba(52,211,153,0.22)" radius={[5, 5, 0, 0]} name="Saved" isAnimationActive={false} />
+                    <Line type="monotone" dataKey="baseline" stroke="#FBBF24" strokeWidth={1.8} strokeDasharray="6 4" dot={false} name="Manual 6 L" />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
-              <p className="mt-2 text-[11px] text-zinc-600">
+              <p className="mt-2 text-[11px] text-[#9CA3AF]">
                 Green cap above each bar is water NOT pumped — the gap to the dashed manual habit.
               </p>
             </Card>
@@ -650,17 +653,17 @@ export default function ReportsPage() {
                         <stop offset="100%" stopColor="#38bdf8" stopOpacity={0.03} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+                    <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
                     <XAxis
                       dataKey="date"
-                      tick={{ fill: "#71717a", fontSize: 10 }}
+                      tick={{ fill: "#9CA3AF", fontSize: 10 }}
                       axisLine={false}
                       tickLine={false}
                       interval={range === "30d" ? 4 : 0}
                     />
                     <YAxis
                       yAxisId="t"
-                      tick={{ fill: "#52525b", fontSize: 10 }}
+                      tick={{ fill: "#9CA3AF", fontSize: 10 }}
                       axisLine={false}
                       tickLine={false}
                       width={36}
@@ -669,7 +672,7 @@ export default function ReportsPage() {
                     <YAxis
                       yAxisId="h"
                       orientation="right"
-                      tick={{ fill: "#52525b", fontSize: 10 }}
+                      tick={{ fill: "#9CA3AF", fontSize: 10 }}
                       axisLine={false}
                       tickLine={false}
                       width={36}
@@ -686,7 +689,7 @@ export default function ReportsPage() {
                         name === "temp" ? "Temp" : "Humidity",
                       ]}
                     />
-                    <Legend wrapperStyle={{ fontSize: 11, color: "#a1a1aa" }} />
+                    <Legend wrapperStyle={{ fontSize: 11, color: "#9CA3AF" }} />
                     <Area yAxisId="t" type="monotone" dataKey="temp" stroke="#fb9235" strokeWidth={2.2} fill="url(#rep-temp)" dot={false} name="Temp °C" isAnimationActive={false} />
                     <Area yAxisId="h" type="monotone" dataKey="humidity" stroke="#38bdf8" strokeWidth={2.2} fill="url(#rep-hum)" dot={false} name="Humidity %" isAnimationActive={false} />
                   </AreaChart>
@@ -722,13 +725,13 @@ export default function ReportsPage() {
                 </div>
                 <ul className="w-full min-w-0 space-y-1.5">
                   {diseaseData.map((d) => (
-                    <li key={d.name} className="flex items-center gap-2 text-xs font-semibold text-zinc-300">
+                    <li key={d.name} className="flex items-center gap-2 text-xs font-semibold text-[#F3F4F6]">
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: d.hex, boxShadow: `0 0 8px ${d.hex}` }} />
                       <span className="min-w-0 flex-1 truncate">{d.name}</span>
-                      <span className="font-mono tabular-nums text-zinc-400">{d.value}</span>
+                      <span className="font-mono tabular-nums text-[#9CA3AF]">{d.value}</span>
                     </li>
                   ))}
-                  <li className="pt-1 text-[11px] text-zinc-500">
+                  <li className="pt-1 text-[11px] text-[#9CA3AF]">
                     {kpis.resolutionPct == null
                       ? "Log a leaf scan from /camera to populate this donut."
                       : `${kpis.resolutionPct.toFixed(0)}% of findings marked resolved.`}
@@ -756,23 +759,23 @@ export default function ReportsPage() {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2.5 text-xs font-extrabold text-black shadow-[0_0_18px_rgba(34,197,94,0.4)] transition-all hover:bg-emerald-400 active:scale-[0.98]"
+                className="btn-primary-aurora flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-black"
               >
                 <Download className="h-3.5 w-3.5" strokeWidth={2.75} /> Download Report
               </button>
               <button
                 type="button"
                 onClick={() => exportDailyCSV(period, range)}
-                className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2.5 text-xs font-extrabold text-emerald-200 transition-all hover:bg-emerald-500/20 active:scale-[0.98]"
+                className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2.5 text-xs font-bold text-[#F3F4F6] backdrop-blur-md transition-all hover:bg-white/[0.1] hover:border-[#818CF8]/40 active:scale-[0.98]"
               >
-                <FileSpreadsheet className="h-3.5 w-3.5" /> Export CSV
+                <FileSpreadsheet className="h-3.5 w-3.5 text-[#818CF8]" /> Export CSV
               </button>
               <button
                 type="button"
                 onClick={exportFarmBackup}
-                className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs font-extrabold text-zinc-200 transition-all hover:border-emerald-500/40 hover:text-white active:scale-[0.98]"
+                className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2.5 text-xs font-bold text-[#F3F4F6] backdrop-blur-md transition-all hover:bg-white/[0.1] hover:border-[#818CF8]/40 active:scale-[0.98]"
               >
-                <DatabaseBackup className="h-3.5 w-3.5" /> Backup JSON
+                <DatabaseBackup className="h-3.5 w-3.5 text-[#818CF8]" /> Backup JSON
               </button>
             </div>
           </Card>

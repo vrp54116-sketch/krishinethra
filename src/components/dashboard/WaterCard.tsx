@@ -62,10 +62,10 @@ function WaterCardInner() {
       <CardHeader title={t("dashboard.waterToday")} subtitle={t("dashboard.waterUsed")} />
 
       <div className="flex items-end gap-2">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/15 text-sky-300">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300">
           <Droplets className="h-5 w-5" />
         </span>
-        <p className="text-3xl font-extrabold tracking-tight text-white">
+        <p className="text-3xl font-semibold tracking-tight tabular-nums">
           <AnimatedNumber value={totalWaterUsedL} decimals={2} />
           <span className="ml-1 text-sm font-semibold text-zinc-400">L</span>
         </p>
@@ -77,31 +77,35 @@ function WaterCardInner() {
           <BarChart data={week} margin={{ top: 8, right: 4, bottom: 0, left: -18 }}>
             <XAxis
               dataKey="day"
-              tick={{ fill: "#71717a", fontSize: 10 }}
+              tick={{ fill: "#9CA3AF", fontSize: 10 }}
               axisLine={false}
               tickLine={false}
               interval={0}
             />
             <YAxis
-              tick={{ fill: "#52525b", fontSize: 10 }}
+              tick={{ fill: "#9CA3AF", fontSize: 10 }}
               axisLine={false}
               tickLine={false}
               width={36}
             />
             <Tooltip
-              cursor={{ fill: "rgba(34,197,94,0.08)" }}
+              cursor={{ fill: "rgba(52,211,153,0.08)" }}
               contentStyle={{
-                background: "#0a120c",
-                border: "1px solid rgba(34,197,94,0.25)",
-                borderRadius: 12,
+                background: "rgba(18,26,22,0.85)",
+                backdropFilter: "blur(20px) saturate(170%)",
+                WebkitBackdropFilter: "blur(20px) saturate(170%)",
+                border: "1px solid rgba(255,255,255,0.15)",
+                borderRadius: 999,
                 fontSize: 12,
-                color: "#e7f5ec",
+                color: "#F3F4F6",
+                padding: "6px 14px",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
               }}
               formatter={(v) => [`${Number(v).toFixed(2)} L`, "Water"]}
             />
             <Bar dataKey="litres" radius={[5, 5, 2, 2]} isAnimationActive={false}>
               {week.map((d) => (
-                <Cell key={d.day} fill={d.today ? "#22c55e" : "rgba(34,197,94,0.35)"} />
+                <Cell key={d.day} fill={d.today ? "#34D399" : "rgba(52,211,153,0.35)"} />
               ))}
             </Bar>
           </BarChart>

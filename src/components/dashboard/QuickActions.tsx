@@ -30,7 +30,7 @@ export default function QuickActions() {
   };
 
   const actions: Action[] = [
-    { key: "scan", label: t("dashboard.scanLeaf"), sub: "Crop doctor", icon: Camera, tint: "bg-violet-500/15 text-violet-300", href: "/camera" },
+    { key: "scan", label: t("dashboard.scanLeaf"), sub: "Crop doctor", icon: Camera, tint: "bg-rose-500/15 text-rose-300", href: "/camera" },
     { key: "irrigate", label: t("dashboard.irrigateZoneB"), sub: "Run pump 10s", icon: Droplets, tint: "bg-sky-500/15 text-sky-300", run: irrigateZoneB },
     { key: "gpt", label: t("dashboard.openGPT"), sub: "Ask anything", icon: MessageCircle, tint: "bg-emerald-500/15 text-emerald-300", href: "/assistant" },
     { key: "map", label: t("dashboard.viewMap"), sub: "Field zones", icon: Map, tint: "bg-amber-500/15 text-amber-300", href: "/map" },
@@ -46,11 +46,11 @@ export default function QuickActions() {
               <Icon className="h-5 w-5" />
             </span>
             <span className="mt-2 block text-sm font-bold text-white">{a.label}</span>
-            <span className="block text-[11px] text-zinc-500">{a.sub}</span>
+            <span className="block text-[11px] text-[#9CA3AF]">{a.sub}</span>
           </>
         );
         const cls =
-          "card-surface rounded-2xl p-4 text-left transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/40 hover:shadow-[0_0_28px_rgba(34,197,94,0.22)] active:scale-[0.98]";
+          "card-surface rounded-[20px] p-4 text-left transition-all duration-300 hover:-translate-y-1 active:scale-[0.98]";
         return a.href ? (
           <Link key={a.key} href={a.href} className={cls}>
             {inner}

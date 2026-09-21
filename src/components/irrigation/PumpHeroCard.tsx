@@ -151,7 +151,7 @@ export default function PumpHeroCard() {
         <Impeller running={pump.running} />
 
         <div className="min-w-0 flex-1 text-center sm:text-left">
-          <p className="text-xl font-extrabold tracking-tight text-white sm:text-2xl">
+          <p className="text-xl font-semibold tabular-nums tracking-tight text-white sm:text-2xl">
             {pump.running ? t("dashboard.pumping") : t("dashboard.pumpIdle")}
             {pump.running && manualRemaining != null && (
               <span className="ml-2 font-mono text-sm font-medium text-sky-300">
@@ -159,7 +159,7 @@ export default function PumpHeroCard() {
               </span>
             )}
           </p>
-          <p className="mt-0.5 text-xs text-zinc-500">
+          <p className="mt-0.5 text-xs text-[#9CA3AF]">
             {snapshot.pumpCurrentA.toFixed(2)} A · Zone B {snapshot.soilMoistureB.toFixed(1)}% · Tank {snapshot.tankLevelPercent.toFixed(0)}%
           </p>
 
@@ -178,7 +178,7 @@ export default function PumpHeroCard() {
                 <span className="ml-1 text-[11px] font-semibold text-sky-300">water flowing</span>
               </>
             ) : (
-              <span className="text-[11px] text-zinc-600">no flow — pump is off</span>
+              <span className="text-[11px] text-[#9CA3AF]">no flow — pump is off</span>
             )}
           </div>
         </div>
@@ -202,10 +202,10 @@ export default function PumpHeroCard() {
           onClick={() => handlePower(true)}
           disabled={!isManual || pump.running}
           className={cn(
-            "flex items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-extrabold transition-all",
+            "flex items-center justify-center gap-2 rounded-[16px] px-4 py-3.5 text-sm font-bold transition-all",
             isManual && !pump.running
-              ? "bg-emerald-500 text-black shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:bg-emerald-400 active:scale-[0.98]"
-              : "cursor-not-allowed border border-white/10 bg-white/[0.03] text-zinc-600",
+              ? "btn-primary-aurora text-black"
+              : "cursor-not-allowed border border-white/10 bg-white/[0.03] text-[#9CA3AF]/60",
           )}
         >
           <Power className="h-4 w-4" /> {t("common.on")}
@@ -215,10 +215,10 @@ export default function PumpHeroCard() {
           onClick={() => handlePower(false)}
           disabled={!isManual || !pump.running}
           className={cn(
-            "flex items-center justify-center gap-2 rounded-xl px-4 py-3.5 text-sm font-extrabold transition-all",
+            "flex items-center justify-center gap-2 rounded-[16px] px-4 py-3.5 text-sm font-bold transition-all",
             isManual && pump.running
-              ? "border border-red-400/50 bg-red-500/15 text-red-200 shadow-[0_0_20px_rgba(239,68,68,0.3)] hover:bg-red-500/25 active:scale-[0.98]"
-              : "cursor-not-allowed border border-white/10 bg-white/[0.03] text-zinc-600",
+              ? "border border-rose-500/40 bg-rose-500/15 text-rose-200 shadow-[0_0_20px_rgba(251,113,133,0.3)] hover:bg-rose-500/25 active:scale-[0.98]"
+              : "cursor-not-allowed border border-white/10 bg-white/[0.03] text-[#9CA3AF]/60",
           )}
         >
           <Square className="h-4 w-4" /> {t("common.off")}
@@ -234,10 +234,10 @@ export default function PumpHeroCard() {
             onClick={() => handleQuickRun(sec)}
             disabled={!isManual}
             className={cn(
-              "rounded-xl border px-2 py-2.5 text-xs font-bold transition-all active:scale-[0.97]",
+              "rounded-full border px-2 py-2.5 text-xs font-bold transition-all active:scale-[0.97]",
               isManual
-                ? "border-white/10 bg-white/[0.03] text-zinc-200 hover:border-emerald-500/40 hover:text-emerald-200"
-                : "cursor-not-allowed border-white/10 bg-white/[0.02] text-zinc-600",
+                ? "border-white/10 bg-white/[0.04] text-[#F3F4F6] hover:border-[#38BDF8]/40 hover:text-[#38BDF8]"
+                : "cursor-not-allowed border-white/10 bg-white/[0.02] text-[#9CA3AF]/60",
             )}
           >
             {sec}s

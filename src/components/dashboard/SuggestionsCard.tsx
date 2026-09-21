@@ -37,19 +37,19 @@ const ICONS: Record<SuggestionIcon, LucideIcon> = {
 
 const SEVERITY: Record<SuggestionSeverity, { dot: string; border: string; icon: string }> = {
   critical: {
-    dot: "bg-red-400",
-    border: "border-red-500/25",
-    icon: "bg-red-500/15 text-red-300",
+    dot: "bg-[#FB7185]",
+    border: "border-[#FB7185]/30",
+    icon: "bg-[#FB7185]/15 text-[#FB7185]",
   },
   warning: {
-    dot: "bg-amber-400",
-    border: "border-amber-500/25",
-    icon: "bg-amber-500/15 text-amber-300",
+    dot: "bg-[#FBBF24]",
+    border: "border-[#FBBF24]/30",
+    icon: "bg-[#FBBF24]/15 text-[#FBBF24]",
   },
   info: {
-    dot: "bg-emerald-400",
-    border: "border-emerald-500/20",
-    icon: "bg-emerald-500/15 text-emerald-300",
+    dot: "bg-[#34D399]",
+    border: "border-[#34D399]/25",
+    icon: "bg-[#34D399]/15 text-[#34D399]",
   },
 };
 
@@ -115,7 +115,7 @@ export default function SuggestionsCard() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.25, delay: i * 0.04 }}
               className={cn(
-                "flex items-center gap-3 rounded-xl border bg-black/30 p-3 transition-colors hover:bg-black/50",
+                "flex items-center gap-3 rounded-[16px] border bg-[rgba(18,26,22,0.66)] p-3 backdrop-blur-md transition-colors hover:bg-[rgba(18,26,22,0.85)]",
                 sev.border,
               )}
             >
@@ -127,12 +127,12 @@ export default function SuggestionsCard() {
                   <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", sev.dot)} />
                   <span className="truncate">{sug.title}</span>
                 </p>
-                <p className="mt-0.5 line-clamp-2 text-xs text-zinc-400">{sug.message}</p>
+                <p className="mt-0.5 line-clamp-2 text-xs text-[#9CA3AF]">{sug.message}</p>
               </div>
               {sug.actionHref && (
                 <Link
                   href={sug.actionHref}
-                  className="flex shrink-0 items-center gap-0.5 rounded-lg border border-white/10 px-2 py-1.5 text-[11px] font-bold text-emerald-300 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/10"
+                  className="flex shrink-0 items-center gap-0.5 rounded-full border border-white/10 px-3 py-1 text-[11px] font-bold text-[#34D399] transition-colors hover:border-[#34D399]/40 hover:bg-[#34D399]/10"
                 >
                   {sug.actionLabel ?? "Open"}
                   <ChevronRight className="h-3.5 w-3.5" />

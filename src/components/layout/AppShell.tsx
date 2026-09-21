@@ -36,6 +36,7 @@ import LiveFarmPill from "@/components/layout/LiveFarmPill";
 import InstallAppButton from "@/components/pwa/InstallAppButton";
 import PageSkeleton from "@/components/layout/PageSkeleton";
 import { useMounted } from "@/components/dashboard/ui";
+import { getSectionAccent } from "@/lib/theme";
 
 function RouteTransitionWrapper({
   children,
@@ -223,6 +224,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const activeItem = NAV_ITEMS.find((n) => pathname === n.href || pathname?.startsWith(n.href + "/"));
   const pageTitle = activeItem ? t(activeItem.titleKey) : t("titles.dashboard");
+  const currentAccent = getSectionAccent(pathname);
 
   const isLive = mode === "live";
   const activeLang = LANGUAGES.find((l) => l.code === language);
@@ -242,14 +244,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     // NOTE: no opaque bg here — the ambient blobs must show around the
     // floating glass edges.
     <div
-      className="min-h-screen bg-transparent text-[#e7f5ec]"
+      className="min-h-screen bg-transparent text-[#F3F4F6]"
       suppressHydrationWarning
     >
       {/* ============ DESKTOP SIDEBAR — floating glass panel (md+) ============ */}
       <aside className="glass-strong fixed left-4 top-4 z-40 hidden h-[calc(100vh-32px)] w-60 flex-col rounded-3xl md:flex">
         {/* Logo — leaf inside a glass circle with emerald glow */}
         <div className="flex items-center gap-3 px-5 pb-5 pt-6">
-          <div className="glass-pill flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 shadow-[0_0_20px_rgba(34,197,94,0.45)]">
+          <div className="glass-pill flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 shadow-[0_0_20px_rgba(52,211,153,0.45)]">
             <Leaf className="h-5 w-5 text-emerald-400" />
           </div>
           <div className="min-w-0">
@@ -263,6 +265,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {NAV_ITEMS.map(({ href, labelKey, icon: Icon }) => {
             const active = pathname === href || pathname?.startsWith(href + "/");
             const showBadge = href === "/alerts" && unread > 0;
+            const itemAccent = getSectionAccent(href);
             return (
               <Link
                 key={href}
@@ -270,20 +273,36 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 className={cn(
                   "relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[13px] font-medium transition-all",
                   active
-                    ? "glass-inset pl-4 text-emerald-300 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]"
-                    : "border border-transparent text-zinc-400 hover:bg-white/5 hover:text-emerald-100",
+                    ? "glass-inset pl-4 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]"
+                    : "border border-transparent text-zinc-400 hover:bg-white/5 hover:text-white",
                 )}
+                style={
+                  active
+                    ? {
+                        color: itemAccent.color,
+                        borderColor: itemAccent.borderActive,
+                        backgroundColor: itemAccent.bgLight,
+                      }
+                    : undefined
+                }
               >
                 {active && (
                   <span
                     aria-hidden
-                    className="absolute left-1.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]"
+                    className="absolute left-1.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full"
+                    style={{
+                      backgroundColor: itemAccent.color,
+                      boxShadow: `0 0 10px ${itemAccent.color}`,
+                    }}
                   />
                 )}
-                <Icon className={cn("h-[18px] w-[18px] shrink-0", active ? "text-emerald-400" : "text-zinc-500")} />
+                <Icon
+                  className="h-[18px] w-[18px] shrink-0 transition-colors"
+                  style={{ color: active ? itemAccent.color : "#9CA3AF" }}
+                />
                 <span className="truncate">{t(labelKey)}</span>
                 {mounted && showBadge && (
-                  <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(239,68,68,0.7)]">
+                  <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(251,113,133,0.7)]">
                     {unread > 99 ? "99+" : unread}
                   </span>
                 )}
@@ -340,17 +359,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* ============ MAIN COLUMN ============ */}
       {/* 272px = 16px margin + 240px floating sidebar + 16px gap */}
-      <div className="flex min-h-screen flex-col md:pl-[272px]">
+      <div
+        className="flex min-h-screen flex-col md:pl-[272px]"
+        style={
+          {
+            "--section-accent": currentAccent.color,
+            "--section-accent-rgb": currentAccent.rgb,
+          } as React.CSSProperties
+        }
+      >
         {/* Top header — slim glass strip */}
         <header className="sticky top-0 z-40 px-4 pt-4 md:px-6">
           <div className="glass mx-auto flex max-w-7xl items-center gap-2 px-3.5 py-2.5 rounded-2xl sm:gap-3 bg-[#070B09]/80 backdrop-blur-xl border border-white/10 shadow-lg">
             {/* Mobile logo */}
-            <div className="glass-pill flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-emerald-300 md:hidden border border-emerald-500/30 bg-emerald-500/10 shadow-[0_0_12px_rgba(34,197,94,0.4)]">
+            <div className="glass-pill flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-emerald-300 md:hidden border border-emerald-500/30 bg-emerald-500/10 shadow-[0_0_12px_rgba(52,211,153,0.4)]">
               <Leaf className="h-4 w-4" />
             </div>
 
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-base font-bold text-white sm:text-lg">{pageTitle}</h1>
+              <h1 className="truncate text-xl sm:text-[28px] font-semibold text-white tracking-tight leading-tight">{pageTitle}</h1>
               {mounted && (farmProfile?.farmerName || farmProfile?.farmName) && (
                 <p className="truncate text-[11px] font-medium text-emerald-200/60">
                   {farmProfile?.farmerName ? `Namaste, ${farmProfile.farmerName.split(" ")[0]} 🌾` : ""}
@@ -527,46 +554,50 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               const active =
                 pathname === tab.href || pathname?.startsWith(tab.href + "/");
               const showBadge = tab.href === "/alerts" && unread > 0;
+              const tabAccent = getSectionAccent(tab.href);
               return (
                 <Link
                   key={tab.href}
                   href={tab.href}
-                  className={cn(
-                    "relative flex flex-col items-center justify-center gap-0.5 rounded-2xl py-1 transition-colors",
-                    active
-                      ? "text-emerald-400"
-                      : "text-gray-400 hover:bg-white/5 hover:text-emerald-100",
-                  )}
+                  className="relative flex flex-col items-center justify-center gap-0.5 rounded-2xl py-1 transition-colors"
                 >
                   <div className="relative flex flex-col items-center">
                     <Icon
-                      className={cn(
-                        "h-5 w-5 transition-transform",
+                      className="h-5 w-5 transition-transform"
+                      style={
                         active
-                          ? "text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.85)]"
-                          : "text-gray-400",
-                      )}
+                          ? {
+                              color: tabAccent.color,
+                              filter: `drop-shadow(0 0 8px ${tabAccent.color})`,
+                            }
+                          : { color: "#9CA3AF" }
+                      }
                     />
-                    {/* soft emerald glow dot under icon */}
+                    {/* section accent glow dot under icon */}
                     <span
-                      className={cn(
-                        "mt-0.5 h-1 w-1 rounded-full transition-all",
+                      className="mt-0.5 h-1 w-1 rounded-full transition-all"
+                      style={
                         active
-                          ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.95)]"
-                          : "bg-transparent",
-                      )}
+                          ? {
+                              backgroundColor: tabAccent.color,
+                              boxShadow: `0 0 8px ${tabAccent.color}`,
+                            }
+                          : { backgroundColor: "transparent" }
+                      }
                     />
                     {mounted && showBadge && (
-                      <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(239,68,68,0.8)]">
+                      <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(251,113,133,0.8)]">
                         {unread > 99 ? "99+" : unread}
                       </span>
                     )}
                   </div>
                   <span
-                    className={cn(
-                      "text-[10px] leading-tight font-medium transition-colors",
-                      active ? "font-semibold text-emerald-400" : "text-gray-400",
-                    )}
+                    className="text-[10px] leading-tight font-medium transition-colors"
+                    style={
+                      active
+                        ? { color: tabAccent.color, fontWeight: 700 }
+                        : { color: "#9CA3AF" }
+                    }
                   >
                     {t(tab.labelKey)}
                   </span>
@@ -610,17 +641,35 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <div className="grid grid-cols-3 gap-2.5">
                 {NAV_ITEMS.filter((n) => !MOBILE_TABS.some((m) => "href" in m && m.href === n.href)).map(({ href, labelKey, icon: Icon }) => {
                   const showBadge = href === "/alerts" && unread > 0;
+                  const itemAccent = getSectionAccent(href);
+                  const active = pathname === href || pathname?.startsWith(href + "/");
                   return (
                     <Link
                       key={href}
                       href={href}
                       onClick={() => setMoreOpen(false)}
-                      className="glass-inset relative flex flex-col items-center gap-2 rounded-2xl p-3 text-center text-[11px] font-medium text-zinc-300 transition-all hover:border-emerald-500/40 hover:text-emerald-200 hover:shadow-[0_0_16px_rgba(34,197,94,0.2)]"
+                      className={cn(
+                        "glass-inset relative flex flex-col items-center gap-2 rounded-2xl p-3 text-center text-[11px] font-medium transition-all hover:bg-white/5",
+                        active ? "border" : "text-zinc-300",
+                      )}
+                      style={
+                        active
+                          ? {
+                              borderColor: itemAccent.borderActive,
+                              backgroundColor: itemAccent.bgLight,
+                              color: itemAccent.color,
+                              boxShadow: `0 0 16px ${itemAccent.glowSubtle}`,
+                            }
+                          : undefined
+                      }
                     >
-                      <Icon className="h-5 w-5 text-emerald-300" />
+                      <Icon
+                        className="h-5 w-5"
+                        style={{ color: active ? itemAccent.color : "#9CA3AF" }}
+                      />
                       <span className="truncate w-full">{t(labelKey)}</span>
                       {mounted && showBadge && (
-                        <span className="absolute right-2 top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(239,68,68,0.8)]">
+                        <span className="absolute right-2 top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(251,113,133,0.8)]">
                           {unread > 99 ? "99+" : unread}
                         </span>
                       )}

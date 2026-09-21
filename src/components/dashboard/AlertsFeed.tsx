@@ -9,9 +9,9 @@ import { useT } from "@/lib/i18n";
 import { Card, CardHeader, formatRelativeTime } from "./ui";
 
 const LEVEL_BORDER: Record<string, string> = {
-  critical: "border-l-red-500",
-  warning: "border-l-amber-400",
-  info: "border-l-emerald-500",
+  critical: "border-l-[#FB7185]",
+  warning: "border-l-[#FBBF24]",
+  info: "border-l-[#34D399]",
 };
 
 export default function AlertsFeed() {
@@ -45,14 +45,14 @@ export default function AlertsFeed() {
               <button
                 type="button"
                 onClick={markAlertsRead}
-                className="rounded-lg border border-white/10 px-2 py-1.5 text-[11px] font-bold text-zinc-300 transition-colors hover:border-emerald-500/40 hover:text-emerald-200"
+                className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-bold text-[#F3F4F6] transition-colors hover:border-[#34D399]/40 hover:text-[#34D399]"
               >
                 {t("common.markAllRead")}
               </button>
             )}
             <Link
               href="/alerts"
-              className="rounded-lg border border-white/10 px-2 py-1.5 text-[11px] font-bold text-zinc-300 transition-colors hover:border-emerald-500/40 hover:text-emerald-200"
+              className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-bold text-[#F3F4F6] transition-colors hover:border-[#34D399]/40 hover:text-[#34D399]"
             >
               {t("common.viewAll")}
             </Link>
@@ -99,21 +99,21 @@ export default function AlertsFeed() {
                 onClick={() => markAlertRead(a.id)}
                 title="Mark as read"
                 className={cn(
-                  "w-full rounded-xl border border-white/5 border-l-4 bg-black/30 p-3 text-left transition-all hover:bg-black/50",
-                  LEVEL_BORDER[a.level] ?? "border-l-emerald-500",
-                  !a.read && "bg-white/[0.03]",
+                  "w-full rounded-[16px] border border-white/10 border-l-4 bg-[rgba(18,26,22,0.66)] p-3 text-left backdrop-blur-md transition-all hover:bg-[rgba(18,26,22,0.85)]",
+                  LEVEL_BORDER[a.level] ?? "border-l-[#34D399]",
+                  !a.read && "bg-[rgba(18,26,22,0.85)] border-white/15",
                 )}
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="flex min-w-0 items-center gap-1.5 truncate text-[13px] font-bold text-white">
-                    {!a.read && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />}
+                    {!a.read && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#34D399]" />}
                     <span className="truncate">{a.title}</span>
                   </p>
-                  <span className="shrink-0 font-mono text-[10px] text-zinc-500">
+                  <span className="shrink-0 font-mono text-[10px] text-[#9CA3AF]">
                     {formatRelativeTime(a.timestamp, now)}
                   </span>
                 </div>
-                <p className="mt-0.5 line-clamp-2 text-xs text-zinc-400">{a.message}</p>
+                <p className="mt-0.5 line-clamp-2 text-xs text-[#9CA3AF]">{a.message}</p>
               </button>
             </li>
           ))}

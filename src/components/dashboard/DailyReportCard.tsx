@@ -122,7 +122,7 @@ export default function DailyReportCard() {
             <h2 className="truncate text-sm font-bold tracking-tight text-white sm:text-base">
               {t("dashboard.dailyReport")}
             </h2>
-            <p className="truncate text-xs text-zinc-500">{todayLabel}</p>
+            <p className="truncate text-xs text-[#9CA3AF]">{todayLabel}</p>
           </div>
         </div>
         <button
@@ -132,8 +132,8 @@ export default function DailyReportCard() {
           className={cn(
             "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-all",
             speaking
-              ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-200 shadow-[0_0_16px_rgba(34,197,94,0.4)]"
-              : "border-white/10 bg-white/[0.03] text-zinc-300 hover:border-emerald-500/40 hover:text-emerald-200",
+              ? "border-[#34D399]/60 bg-[#34D399]/20 text-[#34D399] shadow-[0_0_16px_rgba(52,211,153,0.4)]"
+              : "border-white/10 bg-white/[0.04] text-[#9CA3AF] hover:border-[#34D399]/40 hover:text-[#34D399]",
           )}
         >
           {speaking ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
@@ -144,7 +144,7 @@ export default function DailyReportCard() {
           random noise), so render a stable skeleton until mount — same
           hydration-gate pattern as the AppShell live values. */}
       {mounted ? (
-        <p className="flex-1 text-sm leading-relaxed text-zinc-200">{report}</p>
+        <p className="flex-1 text-sm leading-relaxed text-[#F3F4F6]">{report}</p>
       ) : (
         <div className="flex-1 space-y-2" aria-hidden>
           <div className="h-3 animate-pulse rounded bg-white/10" />
@@ -158,11 +158,11 @@ export default function DailyReportCard() {
           {[0, 1, 2, 3, 4].map((i) => (
             <span
               key={i}
-              className="h-4 w-1 animate-pulse rounded-full bg-emerald-400"
+              className="h-4 w-1 animate-pulse rounded-full bg-[#34D399]"
               style={{ animationDelay: `${i * 0.15}s` }}
             />
           ))}
-          <span className="ml-1 text-[11px] font-medium text-emerald-300">
+          <span className="ml-1 text-[11px] font-medium text-[#34D399]">
             Speaking…
           </span>
         </div>

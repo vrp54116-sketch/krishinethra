@@ -127,20 +127,20 @@ function HistoryGraphsInner() {
           <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
             <defs>
               <linearGradient id={`climate-${active.id}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={active.color} stopOpacity={0.55} />
-                <stop offset="100%" stopColor={active.color} stopOpacity={0.02} />
+                <stop offset="0%" stopColor={active.color} stopOpacity={0.45} />
+                <stop offset="100%" stopColor={active.color} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="rgba(255,255,255,0.05)" vertical={false} />
+            <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
             <XAxis
               dataKey="tick"
-              tick={{ fill: "#71717a", fontSize: 10 }}
+              tick={{ fill: "#9CA3AF", fontSize: 10 }}
               axisLine={false}
               tickLine={false}
               interval={0}
             />
             <YAxis
-              tick={{ fill: "#52525b", fontSize: 10 }}
+              tick={{ fill: "#9CA3AF", fontSize: 10 }}
               axisLine={false}
               tickLine={false}
               width={44}
@@ -149,11 +149,15 @@ function HistoryGraphsInner() {
             <Tooltip
               cursor={{ stroke: "rgba(255,255,255,0.2)", strokeDasharray: "4 4" }}
               contentStyle={{
-                background: "#0a120c",
-                border: `1px solid ${active.color}55`,
-                borderRadius: 12,
+                background: "rgba(18,26,22,0.85)",
+                backdropFilter: "blur(20px) saturate(170%)",
+                WebkitBackdropFilter: "blur(20px) saturate(170%)",
+                border: `1px solid ${active.color}60`,
+                borderRadius: 999,
                 fontSize: 12,
-                color: "#e7f5ec",
+                color: "#F3F4F6",
+                padding: "6px 14px",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
               }}
               labelFormatter={(_, payload) => {
                 const p = payload?.[0]?.payload as { label?: string } | undefined;
@@ -176,7 +180,7 @@ function HistoryGraphsInner() {
           </AreaChart>
         </ResponsiveContainer>
       </div>
-      <p className="mt-2 text-[11px] text-zinc-600">
+      <p className="mt-2 text-[11px] text-zinc-400">
         Hover any point for the exact reading — the curve ends at the current live
         sensor value.
       </p>

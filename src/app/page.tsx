@@ -105,7 +105,7 @@ function FarmBackground() {
         />
       ))}
       <div className="farm-grid absolute inset-0" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#070B09]/80 via-transparent to-[#070B09]/40" />
     </div>
   );
 }
@@ -139,14 +139,14 @@ function PinUnlock() {
   };
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-black px-4 py-12">
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-transparent px-4 py-12">
       <FarmBackground />
       <motion.div
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         className="relative z-10 w-full max-w-md"
       >
-        <div className="card-surface rounded-3xl p-8 text-center sm:p-10">
+        <div className="glass-strong rounded-[24px] p-8 text-center sm:p-10 border border-white/10 shadow-2xl">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/15 text-4xl">
             {avatar || "🧑‍🌾"}
           </div>
@@ -182,22 +182,22 @@ function PinUnlock() {
                 }}
                 aria-label={`PIN digit ${i + 1}`}
                 className={cn(
-                  "h-14 w-14 rounded-2xl border bg-black text-center text-2xl font-bold text-white outline-none transition-all placeholder:text-zinc-700",
+                  "h-14 w-14 rounded-2xl border bg-black/60 text-center text-2xl font-bold text-white outline-none transition-all placeholder:text-zinc-700",
                   error
                     ? "animate-pulse border-red-400/70"
-                    : "border-emerald-500/20 focus:border-emerald-400/70 focus:shadow-[0_0_20px_rgba(34,197,94,0.35)]",
+                    : "border-emerald-500/20 focus:border-emerald-400/70 focus:shadow-[0_0_20px_rgba(52,211,153,0.35)]",
                 )}
                 placeholder="•"
               />
             ))}
           </div>
           {error && (
-            <p className="mt-3 text-xs font-bold text-red-300">{t("onboarding.wrongPin")}</p>
+            <p className="mt-3 text-xs font-bold text-rose-300">{t("onboarding.wrongPin")}</p>
           )}
           <button
             type="button"
             onClick={submit}
-            className="glow-green mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 py-4 text-base font-bold text-black transition-colors hover:bg-emerald-400"
+            className="btn-primary-aurora glow-green mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold text-black cursor-pointer transition-all hover:brightness-110"
           >
             <LockKeyhole className="h-5 w-5" /> {t("onboarding.unlockButton")}
           </button>
@@ -207,7 +207,7 @@ function PinUnlock() {
               resetOnboarding();
               toast.info(t("onboarding.editLater"));
             }}
-            className="mt-3 text-xs text-zinc-500 underline-offset-2 hover:text-emerald-300 hover:underline"
+            className="mt-3 text-xs text-zinc-400 underline-offset-2 hover:text-emerald-300 hover:underline cursor-pointer"
           >
             {t("common.edit")} registration
           </button>
@@ -371,7 +371,7 @@ function Wizard() {
   });
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center overflow-hidden bg-black px-4 pb-10 pt-6 sm:pt-10">
+    <main className="relative flex min-h-screen flex-col items-center overflow-hidden bg-transparent px-4 pb-10 pt-6 sm:pt-10">
       <FarmBackground />
       <div className="relative z-10 w-full max-w-xl">
         {/* Progress */}
@@ -383,7 +383,7 @@ function Wizard() {
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-white/10">
           <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-lime-300 shadow-[0_0_16px_rgba(34,197,94,0.6)]"
+            className="h-full rounded-full bg-gradient-to-r from-[#34D399] via-[#2DD4BF] to-[#A3E635] shadow-[0_0_16px_rgba(52,211,153,0.65)]"
             animate={{ width: `${(step / 5) * 100}%` }}
             transition={{ type: "spring", stiffness: 120, damping: 20 }}
           />
@@ -417,13 +417,13 @@ function Wizard() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -64 * dir }}
             transition={{ duration: 0.28, ease: "easeOut" }}
-            className="card-surface rounded-3xl p-6 sm:p-8"
+            className="glass-strong rounded-[24px] p-6 sm:p-8 border border-white/10 shadow-2xl"
           >
             {step > 1 && (
               <button
                 type="button"
                 onClick={() => go(step - 1)}
-                className="mb-4 inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-zinc-300 transition-colors hover:border-emerald-500/40 hover:text-white"
+                className="mb-4 inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-zinc-300 transition-colors hover:border-emerald-500/40 hover:text-white cursor-pointer"
               >
                 <ArrowLeft className="h-3.5 w-3.5" /> {t("onboarding.back")}
               </button>
@@ -474,7 +474,7 @@ function Wizard() {
                         onClick={() => setLanguage(l.code)}
                         aria-pressed={active}
                         className={cn(
-                          "rounded-2xl border p-4 transition-all active:scale-[0.97]",
+                          "rounded-2xl border p-4 transition-all active:scale-[0.97] cursor-pointer",
                           active
                             ? "border-emerald-400/70 bg-emerald-500/15 shadow-[0_0_24px_rgba(34,197,94,0.4)]"
                             : "border-white/10 bg-white/[0.02] hover:border-emerald-500/40",
@@ -496,7 +496,7 @@ function Wizard() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => go(2)}
-                  className="glow-green mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 py-4 text-base font-bold text-black transition-colors hover:bg-emerald-400"
+                  className="btn-primary-aurora glow-green mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold text-black transition-colors hover:brightness-110 cursor-pointer"
                 >
                   {t("onboarding.getStarted")} <ArrowRight className="h-5 w-5" />
                 </motion.button>
@@ -614,9 +614,9 @@ function Wizard() {
                   disabled={!step2Valid}
                   onClick={() => go(3)}
                   className={cn(
-                    "mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold transition-all",
+                    "mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold transition-all cursor-pointer",
                     step2Valid
-                      ? "glow-green bg-emerald-500 text-black hover:bg-emerald-400"
+                      ? "btn-primary-aurora glow-green text-black hover:brightness-110"
                       : "cursor-not-allowed bg-white/10 text-zinc-500",
                   )}
                 >
@@ -783,9 +783,9 @@ function Wizard() {
                   disabled={!step3Valid}
                   onClick={() => go(4)}
                   className={cn(
-                    "mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold transition-all",
+                    "mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold transition-all cursor-pointer",
                     step3Valid
-                      ? "glow-green bg-emerald-500 text-black hover:bg-emerald-400"
+                      ? "btn-primary-aurora glow-green text-black hover:brightness-110"
                       : "cursor-not-allowed bg-white/10 text-zinc-500",
                   )}
                 >
@@ -921,9 +921,9 @@ function Wizard() {
                   disabled={!step4Valid}
                   onClick={() => go(5)}
                   className={cn(
-                    "mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold transition-all",
+                    "mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold transition-all cursor-pointer",
                     step4Valid
-                      ? "glow-green bg-emerald-500 text-black hover:bg-emerald-400"
+                      ? "btn-primary-aurora glow-green text-black hover:brightness-110"
                       : "cursor-not-allowed bg-white/10 text-zinc-500",
                   )}
                 >
@@ -1045,7 +1045,7 @@ function Wizard() {
                 <button
                   type="button"
                   onClick={finish}
-                  className="glow-green mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 py-4 text-base font-bold text-black transition-all hover:bg-emerald-400 active:scale-[0.99]"
+                  className="btn-primary-aurora glow-green mt-5 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold text-black transition-all hover:brightness-110 active:scale-[0.99] cursor-pointer"
                 >
                   {t("onboarding.startFarming")}
                 </button>
@@ -1075,7 +1075,7 @@ export default function LandingPage() {
 
   if (!mounted) {
     return (
-      <main className="relative flex min-h-screen items-center justify-center bg-black">
+      <main className="relative flex min-h-screen items-center justify-center bg-[#070B09]">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-500/30 border-t-emerald-400" />
       </main>
     );
@@ -1084,7 +1084,7 @@ export default function LandingPage() {
   if (onboardingDone) {
     if (appPinHash && !isAuthenticated) return <PinUnlock />;
     return (
-      <main className="relative flex min-h-screen items-center justify-center bg-black">
+      <main className="relative flex min-h-screen items-center justify-center bg-[#070B09]">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-500/30 border-t-emerald-400" />
       </main>
     );

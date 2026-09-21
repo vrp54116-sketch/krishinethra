@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 type GlassCardVariant = "default" | "strong" | "inset";
-type GlassGlow = "green" | "amber" | "red" | "none";
+type GlassGlow = "green" | "amber" | "red" | "rose" | "accent" | "none";
 
 export interface GlassCardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: GlassCardVariant;
@@ -12,27 +12,37 @@ export interface GlassCardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const VARIANT_CLASS: Record<GlassCardVariant, string> = {
-  default: "glass",
-  strong: "glass-strong",
-  inset: "glass-inset",
+  default: "glass rounded-[20px]",
+  strong: "glass-strong rounded-[20px]",
+  inset: "glass-inset rounded-[16px]",
 };
 
 const GLOW_STYLE: Record<GlassGlow, React.CSSProperties> = {
   none: {},
   green: {
-    borderColor: "rgba(16,185,129,0.35)",
+    borderColor: "rgba(52,211,153,0.35)",
     boxShadow:
-      "0 0 32px rgba(16,185,129,0.18), 0 8px 32px rgba(0,0,0,0.4)",
+      "0 0 32px rgba(52,211,153,0.18), 0 8px 32px rgba(0,0,0,0.4)",
   },
   amber: {
-    borderColor: "rgba(245,158,11,0.35)",
+    borderColor: "rgba(251,191,36,0.35)",
     boxShadow:
-      "0 0 32px rgba(245,158,11,0.16), 0 8px 32px rgba(0,0,0,0.4)",
+      "0 0 32px rgba(251,191,36,0.16), 0 8px 32px rgba(0,0,0,0.4)",
   },
   red: {
-    borderColor: "rgba(239,68,68,0.35)",
+    borderColor: "rgba(251,113,133,0.35)",
     boxShadow:
-      "0 0 32px rgba(239,68,68,0.18), 0 8px 32px rgba(0,0,0,0.4)",
+      "0 0 32px rgba(251,113,133,0.18), 0 8px 32px rgba(0,0,0,0.4)",
+  },
+  rose: {
+    borderColor: "rgba(251,113,133,0.35)",
+    boxShadow:
+      "0 0 32px rgba(251,113,133,0.18), 0 8px 32px rgba(0,0,0,0.4)",
+  },
+  accent: {
+    borderColor: "rgba(var(--section-accent-rgb, 52, 211, 153), 0.40)",
+    boxShadow:
+      "0 0 24px rgba(var(--section-accent-rgb, 52, 211, 153), 0.18), 0 8px 32px rgba(0,0,0,0.4)",
   },
 };
 

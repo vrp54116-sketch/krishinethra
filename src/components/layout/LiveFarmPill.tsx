@@ -45,31 +45,31 @@ export default function LiveFarmPill() {
   );
 
   const zoneBMoisture = mounted
-    ? Math.round(snapshot.soilMoistureB)
-    : null;
-  const tempC = mounted ? Math.round(snapshot.tempC) : 32;
+    ? Math.round(snapshot.soilMoistureB ?? 57)
+    : 57;
+  const tempC = mounted ? Math.round(snapshot.tempC ?? 35) : 35;
   const tankPct = mounted ? Math.round(snapshot.tankLevelPercent) : 78;
 
-  const liveText = mounted
-    ? `Zone B ${zoneBMoisture ?? 22}% • Pump ${running ? "ON" : "OFF"} • ${tempC}°C`
-    : "Zone B 22% • Pump OFF • 32°C";
+  const liveText = `Zone B ${zoneBMoisture}% • Pump ${running ? "ON" : "OFF"} • ${tempC}°C`;
 
   const togglePump = () => {
     if (running) setPumpManual(false);
     else setPumpManual(true, defaultDuration);
   };
 
-  const glowStyle = running
-    ? {
-        borderColor: "rgba(52,211,153,0.65)",
-        boxShadow:
-          "0 0 24px rgba(16,185,129,0.45), 0 8px 32px rgba(0,0,0,0.55)",
-      }
+  const edgeClass = running
+    ? "g3-pump-on"
+    : hasCritical
+      ? "g3-alert-critical"
+      : "";
+
+  const edgeStyle: React.CSSProperties = running
+    ? {}
     : hasCritical
       ? {
-          borderColor: "rgba(251,191,36,0.65)",
+          borderColor: "rgba(251,113,133,0.7)",
           boxShadow:
-            "0 0 24px rgba(245,158,11,0.45), 0 8px 32px rgba(0,0,0,0.55)",
+            "0 0 24px rgba(251,113,133,0.45), 0 8px 32px rgba(0,0,0,0.55)",
         }
       : {
           borderColor: "rgba(255,255,255,0.12)",
@@ -86,8 +86,11 @@ export default function LiveFarmPill() {
         className="fixed inset-x-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-50 md:inset-x-auto md:bottom-6 md:right-6 md:w-[390px]"
       >
         <div
-          className="glass-strong flex items-center gap-2.5 py-2 pl-2.5 pr-2 rounded-full backdrop-blur-xl transition-all"
-          style={glowStyle}
+          className={cn(
+            "glass-strong flex items-center gap-2.5 py-2 pl-2.5 pr-2 rounded-full backdrop-blur-xl transition-all border",
+            edgeClass,
+          )}
+          style={edgeStyle}
         >
           {/* Pill body — tap to expand quick controls */}
           <button
@@ -100,12 +103,18 @@ export default function LiveFarmPill() {
               className={cn(
                 "glass-pill flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all",
                 running
-                  ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.6)]"
-                  : "border-white/10 bg-white/[0.05] text-zinc-400",
+                  ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-300 shadow-[0_0_14px_rgba(52,211,153,0.6)]"
+                  : hasCritical
+                    ? "border-rose-400/60 bg-rose-500/20 text-rose-300 shadow-[0_0_14px_rgba(251,113,133,0.6)]"
+                    : "border-white/10 bg-white/[0.05] text-zinc-400",
               )}
             >
               <Droplets
-                className={cn("h-4 w-4", running && "animate-spin text-emerald-300")}
+                className={cn(
+                  "h-4 w-4",
+                  running && "animate-spin text-emerald-300",
+                  hasCritical && !running && "text-rose-300",
+                )}
                 style={running ? { animationDuration: "2.2s" } : undefined}
               />
             </span>
@@ -116,12 +125,18 @@ export default function LiveFarmPill() {
               <span
                 className={cn(
                   "block text-[10px] font-medium tracking-wide",
-                  running ? "text-emerald-300" : "text-zinc-500",
+                  running
+                    ? "text-emerald-300"
+                    : hasCritical
+                      ? "text-rose-300"
+                      : "text-zinc-400",
                 )}
               >
                 {running
                   ? t("dashboard.pumping")
-                  : t("dashboard.pumpIdle")}
+                  : hasCritical
+                    ? "Critical Alert Active"
+                    : t("dashboard.pumpIdle")}
               </span>
             </span>
           </button>
@@ -137,7 +152,7 @@ export default function LiveFarmPill() {
             className={cn(
               "glass-pill flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all active:scale-90 cursor-pointer",
               running
-                ? "border-emerald-400/60 bg-emerald-500/25 text-emerald-200 shadow-[0_0_12px_rgba(16,185,129,0.6)]"
+                ? "border-emerald-400/60 bg-emerald-500/25 text-emerald-200 shadow-[0_0_12px_rgba(52,211,153,0.6)]"
                 : "border-white/10 bg-white/[0.05] text-zinc-300 hover:border-emerald-500/40 hover:text-emerald-200",
             )}
           >
@@ -150,7 +165,7 @@ export default function LiveFarmPill() {
               router.push("/camera");
             }}
             aria-label={t("dashboard.scanLeaf")}
-            className="glass-pill flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-zinc-300 transition-all hover:border-emerald-500/40 hover:text-emerald-200 active:scale-90 cursor-pointer"
+            className="glass-pill flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-zinc-300 transition-all hover:border-rose-400/40 hover:text-rose-200 active:scale-90 cursor-pointer"
           >
             <ScanLine className="h-4 w-4" />
           </button>

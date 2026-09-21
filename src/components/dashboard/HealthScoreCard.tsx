@@ -58,22 +58,22 @@ export default function HealthScoreCard() {
             <Info className="h-4 w-4" />
           </button>
           {showBreakdown && (
-            <div className="absolute right-0 top-full z-[60] mt-2 w-72 rounded-2xl border border-emerald-500/30 bg-[#0a120c]/95 p-3.5 text-left shadow-[0_12px_36px_rgba(0,0,0,0.85)] backdrop-blur-xl">
+            <div className="absolute right-0 top-full z-[60] mt-2 w-72 rounded-[20px] border border-white/15 bg-[rgba(18,26,22,0.94)] p-3.5 text-left shadow-[0_16px_40px_rgba(0,0,0,0.7)] backdrop-blur-2xl">
               <div className="mb-2.5 flex items-center justify-between border-b border-white/10 pb-2">
-                <span className="text-xs font-bold text-white">Score Breakdown</span>
-                <span className="font-mono text-xs font-extrabold text-emerald-400">
+                <span className="text-xs font-bold text-[#F3F4F6]">Score Breakdown</span>
+                <span className="font-mono text-xs font-extrabold text-[#34D399]">
                   {Math.round(farmHealthScore)} / 100
                 </span>
               </div>
 
               {/* Chips banner: Moisture 22/25 • Temp 18/20 • Humidity 13/15 • AQI 11/15 • Disease 4/25 */}
-              <div className="mb-3 flex flex-wrap items-center gap-1 rounded-xl border border-white/10 bg-black/50 p-2 text-[11px] font-medium leading-relaxed text-zinc-300">
+              <div className="mb-3 flex flex-wrap items-center gap-1 rounded-[12px] border border-white/10 bg-[rgba(18,26,22,0.6)] p-2 text-[11px] font-medium leading-relaxed text-[#F3F4F6]">
                 {factors.map((f, i) => (
                   <span key={f.key} className="inline-flex items-center gap-1">
-                    <span className="rounded-md bg-emerald-500/20 px-1.5 py-0.5 font-bold text-emerald-300">
+                    <span className="rounded-md bg-[#34D399]/20 px-1.5 py-0.5 font-bold text-[#34D399]">
                       {f.chip}
                     </span>
-                    {i < factors.length - 1 && <span className="text-zinc-600 font-bold">•</span>}
+                    {i < factors.length - 1 && <span className="text-[#9CA3AF] font-bold">•</span>}
                   </span>
                 ))}
               </div>
@@ -140,14 +140,14 @@ export default function HealthScoreCard() {
           <AnimatedNumber
             value={farmHealthScore}
             decimals={0}
-            className={cn("text-5xl font-extrabold tabular-nums", text)}
+            className={cn("text-5xl font-semibold tabular-nums", text)}
           />
-          <span className="text-xs text-zinc-500">/ 100</span>
+          <span className="text-xs text-[#9CA3AF]">/ 100</span>
           <span className={cn("mt-1 text-sm font-bold", text)}>{word}</span>
         </div>
       </div>
 
-      <p className="mt-3 max-w-[26ch] text-xs leading-relaxed text-zinc-500">
+      <p className="mt-3 max-w-[26ch] text-xs leading-relaxed text-[#9CA3AF]">
         Weighted from moisture, temperature, humidity, air quality &amp; disease.
       </p>
     </Card>

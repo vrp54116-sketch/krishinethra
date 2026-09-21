@@ -520,7 +520,7 @@ export default function DiaryPage() {
               <button
                 type="button"
                 onClick={() => setModalOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-extrabold text-black shadow-[0_0_20px_rgba(34,197,94,0.4)] transition-all hover:bg-emerald-400 active:scale-[0.98]"
+                className="btn-primary-aurora flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold text-black"
               >
                 <Plus className="h-4 w-4" strokeWidth={3} /> Add Entry
               </button>
@@ -528,18 +528,18 @@ export default function DiaryPage() {
           />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
             <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-xl border border-white/5 bg-black/40 p-4 text-center">
-                <p className="text-3xl font-extrabold tabular-nums text-white">{diary.length}</p>
-                <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-zinc-500">Total entries</p>
+              <div className="rounded-[16px] border border-white/10 bg-[rgba(18,26,22,0.66)] p-4 text-center backdrop-blur-md">
+                <p className="text-3xl font-semibold tabular-nums bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent">{diary.length}</p>
+                <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF]">Total entries</p>
               </div>
-              <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.05] p-4 text-center">
-                <p className="text-3xl font-extrabold tabular-nums text-emerald-300">{thisMonthCount}</p>
-                <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-zinc-500">This month</p>
+              <div className="rounded-[16px] border border-[#A3E635]/30 bg-[#A3E635]/[0.08] p-4 text-center backdrop-blur-md">
+                <p className="text-3xl font-semibold tabular-nums text-[#A3E635]">{thisMonthCount}</p>
+                <p className="mt-1 text-[11px] font-bold uppercase tracking-wider text-[#9CA3AF]">This month</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-black/40 p-3">
+            <div className="flex items-center gap-3 rounded-[16px] border border-white/10 bg-[rgba(18,26,22,0.66)] p-3 backdrop-blur-md">
               {donutData.length === 0 ? (
-                <p className="px-4 py-6 text-xs text-zinc-500">No entries yet.</p>
+                <p className="px-4 py-6 text-xs text-[#9CA3AF]">No entries yet.</p>
               ) : (
                 <>
                   <div className="h-32 w-32 shrink-0">
@@ -551,19 +551,28 @@ export default function DiaryPage() {
                           ))}
                         </Pie>
                         <Tooltip
-                          contentStyle={{ background: "#0a120c", border: "1px solid rgba(34,197,94,0.25)", borderRadius: 12, fontSize: 12 }}
+                          contentStyle={{
+                            background: "rgba(18,26,22,0.85)",
+                            border: "1px solid rgba(255,255,255,0.15)",
+                            borderRadius: 999,
+                            fontSize: 12,
+                            color: "#F3F4F6",
+                            padding: "6px 14px",
+                            backdropFilter: "blur(12px)",
+                            boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                          }}
                           labelStyle={{ color: "#fff" }}
-                          itemStyle={{ color: "#e7f5ec" }}
+                          itemStyle={{ color: "#F3F4F6" }}
                         />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
                   <ul className="min-w-36 space-y-1">
                     {DIARY_TYPES.map((t) => (
-                      <li key={t} className="flex items-center gap-1.5 text-[11px] font-semibold text-zinc-300">
+                      <li key={t} className="flex items-center gap-1.5 text-[11px] font-semibold text-[#F3F4F6]">
                         <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: TYPE_META[t].hex }} />
                         <span className="flex-1">{TYPE_META[t].label}</span>
-                        <span className="font-mono tabular-nums text-zinc-400">{typeCounts[t]}</span>
+                        <span className="font-mono tabular-nums text-[#9CA3AF]">{typeCounts[t]}</span>
                       </li>
                     ))}
                   </ul>

@@ -227,22 +227,22 @@ function SensorCard({ def }: { def: SensorDef }) {
         </StatusPill>
       </div>
 
-      <p className="mt-2 truncate text-xs font-medium text-zinc-400">{def.label}</p>
-      <p className="text-2xl font-extrabold tracking-tight text-white">
+      <p className="mt-2 truncate text-xs font-medium text-[#9CA3AF]">{def.label}</p>
+      <p className="text-2xl font-semibold tabular-nums tracking-tight text-white">
         <AnimatedNumber value={def.value} decimals={def.decimals} />
-        <span className="ml-0.5 text-sm font-semibold text-zinc-400">{def.unit}</span>
+        <span className="ml-0.5 text-sm font-semibold text-[#9CA3AF]">{def.unit}</span>
       </p>
 
       {def.custom === "tank" ? (
         <div className="mt-2 flex items-end gap-3">
           {/* Vertical fill gauge */}
-          <div className="relative h-20 w-8 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-white/[0.04]">
+          <div className="relative h-20 w-8 shrink-0 overflow-hidden rounded-[10px] border border-white/10 bg-white/[0.04]">
             <motion.div
-              className="absolute inset-x-0 bottom-0 rounded-b-md bg-gradient-to-t from-emerald-600 to-emerald-400"
+              className="absolute inset-x-0 bottom-0 rounded-b-[8px] bg-gradient-to-t from-emerald-600 to-[#34D399]"
               initial={false}
               animate={{ height: `${Math.max(0, Math.min(100, def.value))}%` }}
               transition={{ duration: 0.6, ease: "easeOut" }}
-              style={{ boxShadow: "0 0 12px rgba(34,197,94,0.5)" }}
+              style={{ boxShadow: "0 0 12px rgba(52,211,153,0.5)" }}
             />
           </div>
           <div className="min-w-0 flex-1">
@@ -261,7 +261,7 @@ function SensorCard({ def }: { def: SensorDef }) {
   if (def.alertPulse) {
     return (
       <motion.section
-        className="card-surface rounded-2xl border-amber-400/60 p-4 transition-transform duration-300 hover:-translate-y-1 sm:p-5"
+        className="card-surface rounded-[20px] border-amber-400/60 p-4 transition-transform duration-300 hover:-translate-y-1 sm:p-5"
         animate={{
           boxShadow: [
             "0 0 12px rgba(245,158,11,0.25)",
@@ -277,7 +277,7 @@ function SensorCard({ def }: { def: SensorDef }) {
   }
 
   return (
-    <section className="card-surface rounded-2xl p-4 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/40 hover:shadow-[0_0_28px_rgba(34,197,94,0.22)] sm:p-5">
+    <section className="card-surface rounded-[20px] p-4 transition-all duration-300 hover:-translate-y-1 sm:p-5">
       {body}
     </section>
   );
