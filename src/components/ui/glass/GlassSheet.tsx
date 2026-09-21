@@ -33,7 +33,7 @@ export function GlassSheet({
     <AnimatePresence>
       {open ? (
         <motion.div
-          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-0 sm:p-6 bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center p-0 sm:p-6 bg-black/50 backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

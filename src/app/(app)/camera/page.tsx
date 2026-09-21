@@ -3,21 +3,17 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { Info, ScanSearch, Video } from "lucide-react";
+import { History, Info, ScanSearch, Video } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import SimulatedCamera from "@/components/camera/SimulatedCamera";
 import PanTiltPad from "@/components/camera/PanTiltPad";
-import LeafScanner from "@/components/camera/LeafScanner";
+import LeafScanner, { diseaseDot } from "@/components/camera/LeafScanner";
+import SegmentedControl from "@/components/ui/SegmentedControl";
+import { StatusPill } from "@/components/dashboard/ui";
 
-type CameraTab = "live" | "scanner";
-
-/** Tab defs use translation keys so the header language toggle applies instantly. */
-const TABS: { id: CameraTab; labelKey: string; icon: typeof Video }[] = [
-  { id: "live", labelKey: "camera.liveView", icon: Video },
-  { id: "scanner", labelKey: "camera.leafScanner", icon: ScanSearch },
-];
+type CameraTab = "live" | "scanner" | "history";
 
 /** LIVE-mode MJPEG frame (Raspberry Pi camera) in the same CCTV frame. */
 function StreamFrame({ url }: { url: string }) {
@@ -62,28 +58,26 @@ function CameraInner() {
   const setTab = (t: CameraTab) => setManualTab(t);
   const cameraSource = useFarmStore((s) => s.settings.cameraSource);
   const cameraStreamUrl = useFarmStore((s) => s.settings.cameraStreamUrl);
+  const scans = useFarmStore((s) => s.scans);
   const useStream = cameraSource === "stream" && cameraStreamUrl.trim().length > 0;
+
+  const tabs: Array<{ id: CameraTab; label: string; icon: typeof Video }> = [
+    { id: "live", label: t("camera.liveView") || "Live CCTV", icon: Video },
+    { id: "scanner", label: t("camera.leafScanner") || "Leaf Scanner", icon: ScanSearch },
+    { id: "history", label: "Scan History", icon: History },
+  ];
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-5">
-      {/* Tabs */}
-      <div className="grid w-full grid-cols-2 gap-1 rounded-xl border border-white/10 bg-black/40 p-1 sm:w-fit sm:min-w-96">
-        {TABS.map(({ id, labelKey, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            aria-pressed={tab === id}
-            className={cn(
-              "flex items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-bold transition-all sm:text-sm",
-              tab === id
-                ? "bg-emerald-500 text-black shadow-[0_0_16px_rgba(34,197,94,0.4)]"
-                : "text-zinc-400 hover:bg-white/5 hover:text-white",
-            )}
-          >
-            <Icon className="h-4 w-4" /> {t(labelKey)}
-          </button>
-        ))}
+      {/* Tabs with SegmentedControl */}
+      <div className="w-full sm:w-fit sm:min-w-[420px]">
+        <SegmentedControl
+          options={tabs}
+          value={tab}
+          onChange={setTab}
+          layoutId="camera-tabs"
+          aria-label="Camera modes"
+        />
       </div>
 
       {tab === "live" ? (
@@ -111,7 +105,7 @@ function CameraInner() {
             </p>
           </div>
         </motion.div>
-      ) : (
+      ) : tab === "scanner" ? (
         <motion.div
           key="scanner"
           initial={{ opacity: 0, y: 12 }}
@@ -119,6 +113,66 @@ function CameraInner() {
           transition={{ duration: 0.3 }}
         >
           <LeafScanner />
+        </motion.div>
+      ) : (
+        <motion.div
+          key="history"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="card-surface rounded-2xl p-5"
+        >
+          <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <h3 className="flex items-center gap-2 text-base font-bold text-white">
+              <History className="h-5 w-5 text-emerald-300" /> Plant Disease Diagnosis History
+            </h3>
+            <span className="rounded-full bg-white/5 px-2.5 py-1 font-mono text-xs text-zinc-400">
+              {scans.length} scan{scans.length === 1 ? "" : "s"} recorded
+            </span>
+          </div>
+          {scans.length === 0 ? (
+            <p className="py-10 text-center text-sm text-zinc-500">
+              No scans recorded yet. Use the Leaf Scanner tab to analyze crop leaves.
+            </p>
+          ) : (
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {scans.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex flex-col justify-between rounded-2xl border border-white/5 bg-black/40 p-4 transition-all hover:border-emerald-500/30"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="h-3 w-3 rounded-full"
+                          style={{ backgroundColor: diseaseDot(s.disease) }}
+                        />
+                        <h4 className="text-sm font-bold text-white">{s.disease}</h4>
+                      </div>
+                      <StatusPill tone={s.severity === "none" ? "good" : s.severity === "mild" ? "info" : "warn"}>
+                        {s.severity}
+                      </StatusPill>
+                    </div>
+                    <p className="mt-2 text-xs text-zinc-400">
+                      Confidence: {(s.confidence * 100).toFixed(0)}% · {s.imageName}
+                    </p>
+                    {s.treatmentNatural?.[0] && (
+                      <p className="mt-2 rounded-lg bg-white/[0.03] p-2 text-[11px] leading-relaxed text-zinc-300">
+                        🌱 {s.treatmentNatural[0]}
+                      </p>
+                    )}
+                  </div>
+                  <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-2 text-[10px] text-zinc-500">
+                    <span>{new Date(s.timestamp).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+                    <span className={s.resolved ? "text-emerald-400 font-bold" : "text-amber-400 font-bold"}>
+                      {s.resolved ? "Resolved" : "Active Plan"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </motion.div>
       )}
     </div>

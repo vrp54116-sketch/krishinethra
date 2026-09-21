@@ -15,3 +15,5 @@ export type { GlassModalProps } from "./GlassModal";
 export { GlassSheet } from "./GlassSheet";
 export type { GlassSheetProps } from "./GlassSheet";
 export { AmbientBackground } from "./AmbientBackground";
+export { default as SegmentedControl } from "../SegmentedControl";
+export type { SegmentedControlProps, SegmentedControlOption } from "../SegmentedControl";

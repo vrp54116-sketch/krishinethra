@@ -102,6 +102,69 @@ export function zoneStatusForMoisture(
   return "healthy";
 }
 
+/**
+ * Worst-of calculation: moisture status, active disease in that zone, active pest in that zone.
+ * Zone with active leaf-rust or active disease/pest plan shows "warning" or "critical", never "healthy".
+ */
+export function computeZoneStatus(
+  zoneId: string,
+  moisture: number,
+  thresholds: { moistureLow: number; moistureHigh: number },
+  sprayPlans?: Array<{ zone: string; disease: string; status: string }>,
+  alerts?: Array<{ zone?: string; level: string; read: boolean }>,
+): Zone["status"] {
+  const moistureStatus = zoneStatusForMoisture(
+    moisture,
+    thresholds.moistureLow,
+    thresholds.moistureHigh,
+  );
+
+  let diseasePestStatus: Zone["status"] = "healthy";
+
+  if (sprayPlans) {
+    const activePlans = sprayPlans.filter(
+      (p) => p.zone.toUpperCase() === zoneId.toUpperCase() && p.status === "active",
+    );
+    for (const p of activePlans) {
+      const d = p.disease.toLowerCase();
+      if (
+        d.includes("rust") ||
+        d.includes("blight") ||
+        d.includes("rot") ||
+        d.includes("severe") ||
+        d.includes("critical")
+      ) {
+        diseasePestStatus = "critical";
+        break;
+      }
+      diseasePestStatus = "warning";
+    }
+  }
+
+  if (alerts) {
+    for (const a of alerts) {
+      if (!a.read && a.zone && a.zone.toUpperCase() === zoneId.toUpperCase()) {
+        if (a.level === "critical") {
+          diseasePestStatus = "critical";
+          break;
+        }
+        if (a.level === "warning" && diseasePestStatus !== "critical") {
+          diseasePestStatus = "warning";
+        }
+      }
+    }
+  }
+
+  // Worst-of logic: critical > warning > healthy
+  if (moistureStatus === "critical" || diseasePestStatus === "critical") {
+    return "critical";
+  }
+  if (moistureStatus === "warning" || diseasePestStatus === "warning") {
+    return "warning";
+  }
+  return "healthy";
+}
+
 /* ------------------------------------------------------------------ */
 /* Snapshot seeding                                                    */
 /* ------------------------------------------------------------------ */
@@ -414,15 +477,25 @@ export function diseaseAlert(
 /* ------------------------------------------------------------------ */
 
 /**
- * Weighted health: moisture closeness to 45% (40%), temperature comfort
- * (20%), humidity comfort (20%), AQI (20%) — minus 15 per active
- * unresolved disease scan. Clamped to 0–100.
+ * Rebalanced health score weights:
+ * moisture 25, temperature 20, humidity 15, AQI 15, disease/pest 25 (total 100).
  */
-export function computeFarmHealthScore(
+export interface HealthBreakdownResult {
+  moisturePts: number;
+  tempPts: number;
+  humidityPts: number;
+  aqiPts: number;
+  diseasePts: number;
+  totalScore: number;
+  chipString: string;
+}
+
+export function computeHealthBreakdown(
   snapshot: SensorSnapshot,
   zones: Zone[],
   unresolvedDiseaseCount: number,
-): number {
+  activeSprayPlansCount: number = 0,
+): HealthBreakdownResult {
   const moistureAvg =
     zones.length > 0
       ? zones.reduce((sum, z) => sum + z.soilMoisture, 0) / zones.length
@@ -443,7 +516,44 @@ export function computeFarmHealthScore(
 
   const aqiScore = clamp(100 - ((snapshot.aqi - 60) * 100) / 140, 0, 100);
 
-  const raw =
-    moistureScore * 0.4 + tempScore * 0.2 + humidityScore * 0.2 + aqiScore * 0.2;
-  return Math.round(clamp(raw - unresolvedDiseaseCount * 15, 0, 100));
+  const totalIssues = Math.max(unresolvedDiseaseCount, activeSprayPlansCount);
+  const diseaseScore = clamp(100 - totalIssues * 35, 0, 100);
+
+  const moisturePts = Math.round((moistureScore / 100) * 25);
+  const tempPts = Math.round((tempScore / 100) * 20);
+  const humidityPts = Math.round((humidityScore / 100) * 15);
+  const aqiPts = Math.round((aqiScore / 100) * 15);
+  const diseasePts = Math.round((diseaseScore / 100) * 25);
+
+  const totalScore = clamp(
+    moisturePts + tempPts + humidityPts + aqiPts + diseasePts,
+    0,
+    100,
+  );
+
+  const chipString = `Moisture ${moisturePts}/25 • Temp ${tempPts}/20 • Humidity ${humidityPts}/15 • AQI ${aqiPts}/15 • Disease ${diseasePts}/25`;
+
+  return {
+    moisturePts,
+    tempPts,
+    humidityPts,
+    aqiPts,
+    diseasePts,
+    totalScore,
+    chipString,
+  };
+}
+
+export function computeFarmHealthScore(
+  snapshot: SensorSnapshot,
+  zones: Zone[],
+  unresolvedDiseaseCount: number,
+  activeSprayPlansCount: number = 0,
+): number {
+  return computeHealthBreakdown(
+    snapshot,
+    zones,
+    unresolvedDiseaseCount,
+    activeSprayPlansCount,
+  ).totalScore;
 }

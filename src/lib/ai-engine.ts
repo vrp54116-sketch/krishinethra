@@ -74,6 +74,12 @@ export interface HealthFactor {
   label: string;
   /** 0–100 sub-score. */
   score: number;
+  /** Weighted points earned out of max */
+  pts: number;
+  /** Max weighted points */
+  max: number;
+  /** Chip string e.g. "Moisture 22/25" */
+  chip: string;
   detail: string;
 }
 
@@ -81,6 +87,7 @@ export function getHealthBreakdown(
   snapshot: SensorSnapshot,
   zones: Zone[],
   unresolvedDiseaseCount: number,
+  activeSprayPlansCount: number = 0,
 ): HealthFactor[] {
   const moistureAvg =
     zones.length > 0
@@ -101,41 +108,64 @@ export function getHealthBreakdown(
         : clamp(100 - (snapshot.humidity - 70) * 3, 0, 100);
 
   const aqiScore = clamp(100 - ((snapshot.aqi - 60) * 100) / 140, 0, 100);
-  const diseaseScore = clamp(100 - unresolvedDiseaseCount * 25, 0, 100);
+
+  const totalInfestations = Math.max(unresolvedDiseaseCount, activeSprayPlansCount);
+  const diseaseScore = clamp(100 - totalInfestations * 35, 0, 100);
+
+  const moisturePts = Math.round((moistureScore / 100) * 25);
+  const tempPts = Math.round((tempScore / 100) * 20);
+  const humidityPts = Math.round((humidityScore / 100) * 15);
+  const aqiPts = Math.round((aqiScore / 100) * 15);
+  const diseasePts = Math.round((diseaseScore / 100) * 25);
 
   return [
     {
       key: "moisture",
       label: "Soil moisture",
       score: Math.round(moistureScore),
-      detail: `Field average ${f1(moistureAvg)}% (ideal ≈ 45%)`,
+      pts: moisturePts,
+      max: 25,
+      chip: `Moisture ${moisturePts}/25`,
+      detail: `Field avg ${f1(moistureAvg)}% (ideal ≈ 45%)`,
     },
     {
       key: "temperature",
       label: "Temperature",
       score: Math.round(tempScore),
+      pts: tempPts,
+      max: 20,
+      chip: `Temp ${tempPts}/20`,
       detail: `${f1(snapshot.tempC)}°C — comfortable up to 32°C`,
     },
     {
       key: "humidity",
       label: "Humidity",
       score: Math.round(humidityScore),
+      pts: humidityPts,
+      max: 15,
+      chip: `Humidity ${humidityPts}/15`,
       detail: `${f1(snapshot.humidity)}% — ideal band 50–70%`,
     },
     {
       key: "aqi",
       label: "Air quality",
       score: Math.round(aqiScore),
+      pts: aqiPts,
+      max: 15,
+      chip: `AQI ${aqiPts}/15`,
       detail: `AQI ${snapshot.aqi} — clean near 60`,
     },
     {
       key: "disease",
       label: "Crop disease",
       score: Math.round(diseaseScore),
+      pts: diseasePts,
+      max: 25,
+      chip: `Disease ${diseasePts}/25`,
       detail:
-        unresolvedDiseaseCount === 0
+        totalInfestations === 0
           ? "No active infections"
-          : `${unresolvedDiseaseCount} unresolved scan${unresolvedDiseaseCount > 1 ? "s" : ""} (−15 health each)`,
+          : `${totalInfestations} active issue${totalInfestations > 1 ? "s" : ""}`,
     },
   ];
 }

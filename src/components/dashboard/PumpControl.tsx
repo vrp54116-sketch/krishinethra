@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { Card, CardHeader } from "./ui";
+import SegmentedControl from "@/components/ui/SegmentedControl";
 
 type Mode = "manual" | "auto" | "schedule";
 
@@ -25,6 +26,7 @@ export default function PumpControl() {
   const setPumpManual = useFarmStore((s) => s.setPumpManual);
   const setPumpMode = useFarmStore((s) => s.setPumpMode);
   const addAlert = useFarmStore((s) => s.addAlert);
+  const alerts = useFarmStore((s) => s.alerts);
 
   const logPump = (title: string, message: string) => {
     addAlert({ level: "info", title, message });
@@ -55,9 +57,18 @@ export default function PumpControl() {
   };
 
   const handleMode = (mode: Mode) => {
+    if (pump.mode === mode) return;
     setPumpMode(mode);
     const label = mode === "auto" ? "Auto AI" : mode === "manual" ? "Manual" : "Schedule";
-    logPump(`Pump mode → ${label}`, `Mode changed to ${label} by user.`);
+    const title = `Pump mode → ${label}`;
+    const recentDuplicate = alerts.some(
+      (a) => a.title === title && Date.now() - a.timestamp < 10 * 60 * 1000,
+    );
+    if (!recentDuplicate) {
+      logPump(title, `Mode changed to ${label} by user.`);
+    } else {
+      toast.success(title, { description: `Mode changed to ${label} by user.` });
+    }
   };
 
   // Live Auto-AI reasoning lines.
@@ -178,22 +189,14 @@ export default function PumpControl() {
       </div>
 
       {/* Mode segmented control */}
-      <div className="mt-3 grid grid-cols-3 gap-1 rounded-xl border border-white/10 bg-black/40 p-1">
-        {MODES.map((m) => (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => handleMode(m.id)}
-            className={cn(
-              "rounded-lg px-2 py-2 text-xs font-bold transition-all",
-              pump.mode === m.id
-                ? "bg-emerald-500 text-black shadow-[0_0_16px_rgba(34,197,94,0.4)]"
-                : "text-zinc-400 hover:bg-white/5 hover:text-white",
-            )}
-          >
-            {t(m.labelKey)}
-          </button>
-        ))}
+      <div className="mt-3">
+        <SegmentedControl
+          options={MODES.map((m) => ({ id: m.id, label: t(m.labelKey) }))}
+          value={pump.mode}
+          onChange={handleMode}
+          layoutId="pump-mode-dashboard"
+          aria-label="Pump mode"
+        />
       </div>
 
       {/* Big ON/OFF (Manual mode) */}

@@ -144,7 +144,7 @@ export default function ZoneDetailPanel({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm"
           />
           <motion.aside
             initial={{ x: "100%", y: 0, opacity: 0.6 }}
@@ -152,7 +152,7 @@ export default function ZoneDetailPanel({
             exit={{ x: "100%", y: 0, opacity: 0.6 }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className={cn(
-              "fixed z-50 flex flex-col border-emerald-500/25 bg-[#060b08]",
+              "fixed z-[60] flex flex-col border-emerald-500/25 bg-[#060b08]",
               // bottom sheet on mobile, right slide-over on desktop
               "inset-x-0 bottom-0 max-h-[82vh] rounded-t-3xl border-t",
               "md:inset-x-auto md:bottom-0 md:right-0 md:top-0 md:max-h-none md:w-[380px] md:rounded-none md:border-l md:border-t-0",

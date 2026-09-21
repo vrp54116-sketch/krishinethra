@@ -22,6 +22,8 @@ export default function AppToaster() {
     <Toaster
       theme="dark"
       position={isDesktop ? "bottom-right" : "top-center"}
+      className="z-[70]"
+      style={{ zIndex: 70 }}
       toastOptions={{
         style: {
           background: "#0a120c",

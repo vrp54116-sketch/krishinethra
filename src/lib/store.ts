@@ -30,6 +30,7 @@ import type {
 import {
   ALERT_DEDUP_WINDOW_MS,
   computeFarmHealthScore,
+  computeZoneStatus,
   createInitialSnapshot,
   diseaseAlert,
   evaluateAutoPump,
@@ -151,7 +152,7 @@ function seedZones(): Zone[] {
       name: "Zone C",
       crop: "Spinach",
       soilMoisture: Math.round(((ZONE_A_BASELINE + ZONE_B_BASELINE) / 2) * 10) / 10,
-      status: "healthy",
+      status: "warning",
     },
   ];
 }
@@ -549,6 +550,8 @@ export function sizeToAcres(size: number, unit: string): number {
 }
 
 interface FarmState {
+  /** True once persisted state has finished rehydrating on client. */
+  hydrated: boolean;
   // Landing / onboarding surface (mirrored with settings.language).
   language: LanguageCode;
   isAuthenticated: boolean;
@@ -751,7 +754,11 @@ function applyLiveSnapshot(raw: SensorSnapshot): void {
   const zones: Zone[] = s.zones.map((z) => {
     const moisture =
       z.id === "A" ? snapshot.soilMoistureA : z.id === "B" ? snapshot.soilMoistureB : zoneCMoisture;
-    return { ...z, soilMoisture: moisture, status: zoneStatusForMoisture(moisture, t.moistureLow, t.moistureHigh) };
+    return {
+      ...z,
+      soilMoisture: moisture,
+      status: computeZoneStatus(z.id, moisture, t, s.sprayPlans, s.alerts),
+    };
   });
 
   const fresh = generateAlerts(snapshot, s.settings, s.alerts, pumpEvent);
@@ -944,7 +951,11 @@ function doTick(): void {
   const zones: Zone[] = s.zones.map((z) => {
     const moisture =
       z.id === "A" ? snapshot.soilMoistureA : z.id === "B" ? snapshot.soilMoistureB : zoneCMoisture;
-    return { ...z, soilMoisture: moisture, status: zoneStatusForMoisture(moisture, t.moistureLow, t.moistureHigh) };
+    return {
+      ...z,
+      soilMoisture: moisture,
+      status: computeZoneStatus(z.id, moisture, t, s.sprayPlans, s.alerts),
+    };
   });
 
   // Alerts (deduplicated inside the generator) capped at 100.
@@ -1136,6 +1147,7 @@ function freshFarmState(now: number) {
 export const useFarmStore = create<FarmState>()(
   persist(
     (set, get) => ({
+      hydrated: false,
       language: "en",
       isAuthenticated: false,
       onboardingDone: false,
@@ -1386,17 +1398,32 @@ export const useFarmStore = create<FarmState>()(
       },
 
       addAlert: (alert) => {
+        const now = alert.timestamp ?? Date.now();
         const full: Alert = {
           id: alert.id ?? uid("alert"),
-          timestamp: alert.timestamp ?? Date.now(),
+          timestamp: now,
           read: alert.read ?? false,
           level: alert.level,
           title: alert.title,
           message: alert.message,
           ...(alert.zone ? { zone: alert.zone } : {}),
         };
-        set((s) => ({ alerts: [full, ...s.alerts].slice(0, 100) }));
-        return full.id;
+        let alertId = full.id;
+        set((s) => {
+          if (full.title.startsWith("Pump mode")) {
+            const dup = s.alerts.find(
+              (a) =>
+                a.title === full.title &&
+                now - a.timestamp < ALERT_DEDUP_WINDOW_MS,
+            );
+            if (dup) {
+              alertId = dup.id;
+              return s;
+            }
+          }
+          return { alerts: [full, ...s.alerts].slice(0, 100) };
+        });
+        return alertId;
       },
 
       markAlertsRead: () =>
@@ -1897,6 +1924,7 @@ export const useFarmStore = create<FarmState>()(
         // Ephemeral runtime state is never persisted: simRunning plus the
         // whole hardware-bridge connection block (re-polled on load).
         const {
+          hydrated: _hydrated,
           simRunning: _omitted,
           hwConnected: _hwC,
           hwLastSeen: _hwL,
@@ -1905,6 +1933,7 @@ export const useFarmStore = create<FarmState>()(
           hwLatencyMs: _hwLat,
           ...rest
         } = s;
+        void _hydrated;
         void _omitted;
         void _hwC;
         void _hwL;
@@ -1914,6 +1943,10 @@ export const useFarmStore = create<FarmState>()(
         return rest;
       },
       onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.hydrated = true;
+        }
+        useFarmStore.setState({ hydrated: true });
         // Backfill location for stores persisted before it existed.
         if (state && !state.settings.location) {
           state.settings.location = { ...DEFAULT_SETTINGS.location };
@@ -2042,6 +2075,19 @@ export const useFarmStore = create<FarmState>()(
             );
           }
         }
+        if (state && Array.isArray(state.zones)) {
+          const t = state.settings?.thresholds ?? DEFAULT_SETTINGS.thresholds;
+          state.zones = state.zones.map((z) => ({
+            ...z,
+            status: computeZoneStatus(
+              z.id,
+              z.soilMoisture,
+              t,
+              state.sprayPlans ?? [],
+              state.alerts ?? [],
+            ),
+          }));
+        }
         // Auto-start the right engine after persisted settings load:
         // simulator in simulation mode, gateway poller in live mode.
         if (
@@ -2065,6 +2111,13 @@ export const useFarmStore = create<FarmState>()(
 /* ------------------------------------------------------------------ */
 
 if (typeof window !== "undefined") {
+  useFarmStore.persist.onFinishHydration(() => {
+    useFarmStore.setState({ hydrated: true });
+  });
+  if (useFarmStore.persist.hasHydrated()) {
+    useFarmStore.setState({ hydrated: true });
+  }
+
   // Fresh load (no valid persisted mode yet, or first paint): start the
   // engine matching the default/current mode.
   queueMicrotask(() => {

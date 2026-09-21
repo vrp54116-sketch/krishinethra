@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useIsPresent } from "framer-motion";
 import {
   BarChart3,
   Bell,
@@ -36,6 +36,31 @@ import LiveFarmPill from "@/components/layout/LiveFarmPill";
 import InstallAppButton from "@/components/pwa/InstallAppButton";
 import PageSkeleton from "@/components/layout/PageSkeleton";
 import { useMounted } from "@/components/dashboard/ui";
+
+function RouteTransitionWrapper({
+  children,
+  pathname,
+}: {
+  children: React.ReactNode;
+  pathname: string;
+}) {
+  const isPresent = useIsPresent();
+  return (
+    <motion.div
+      key={pathname}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className={cn(
+        "w-full",
+        !isPresent && "absolute inset-0 w-full pointer-events-none",
+      )}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 interface NavItem {
   href: string;
@@ -72,27 +97,28 @@ const MOBILE_TABS: Array<NavItem | { key: "more" }> = [
 ];
 
 function HealthRing({ score, size = 56 }: { score: number; size?: number }) {
-  const r = (size - 8) / 2;
+  const strokeWidth = size < 44 ? 4 : 5;
+  const r = (size - strokeWidth * 2) / 2;
   const c = 2 * Math.PI * r;
   const filled = (Math.max(0, Math.min(100, score)) / 100) * c;
   const color = score >= 70 ? "#22c55e" : score >= 40 ? "#f59e0b" : "#ef4444";
   return (
-    <div className="relative" style={{ width: size, height: size }}>
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={5} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={strokeWidth} />
         <circle
           cx={size / 2}
           cy={size / 2}
           r={r}
           fill="none"
           stroke={color}
-          strokeWidth={5}
+          strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={`${filled} ${c}`}
           style={{ filter: `drop-shadow(0 0 6px ${color})` }}
         />
       </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white">
+      <span className={cn("absolute inset-0 flex items-center justify-center font-bold text-white", size < 44 ? "text-[11px]" : "text-sm")}>
         {Math.round(score)}
       </span>
     </div>
@@ -164,6 +190,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const mounted = useMounted();
 
   const router = useRouter();
+  const hydrated = useFarmStore((s) => s.hydrated);
   const language = useFarmStore((s) => s.settings.language);
   const setLanguage = useFarmStore((s) => s.setLanguage);
   const mode = useFarmStore((s) => s.settings.mode);
@@ -177,7 +204,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   // Routing guard: wizard first, PIN-locked second.
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || !hydrated) return;
     if (!onboardingDone) {
       router.replace("/");
       return;
@@ -185,7 +212,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     if (appPinHash && !isAuthenticated) {
       router.replace("/");
     }
-  }, [mounted, onboardingDone, appPinHash, isAuthenticated, router]);
+  }, [mounted, hydrated, onboardingDone, appPinHash, isAuthenticated, router]);
 
   const [langOpen, setLangOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
@@ -232,7 +259,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Nav — rounded-2xl rows; active = glass-inset pill + left glow bar */}
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4">
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 pb-4 scrollbar-hide">
           {NAV_ITEMS.map(({ href, labelKey, icon: Icon }) => {
             const active = pathname === href || pathname?.startsWith(href + "/");
             const showBadge = href === "/alerts" && unread > 0;
@@ -265,27 +292,31 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* Bottom: health ring in glass circle + mode badge glass pill */}
-        <div className="p-4">
-          <div className="glass-inset flex items-center justify-between gap-3 rounded-2xl p-3">
-            <div className="flex flex-col items-center gap-1">
-              <div className="glass-pill flex h-14 w-14 items-center justify-center rounded-full border border-white/10 p-1 shadow-[0_0_12px_rgba(0,0,0,0.3)]">
+        {/* Bottom: health ring + mode badge in ONE row inside fixed-height glass card (h-[76px]) */}
+        <div className="px-3 pb-4">
+          <div className="glass-inset flex h-[76px] items-center justify-between gap-2.5 rounded-2xl px-3 py-2 border border-white/10 bg-black/40">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="glass-pill flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 shadow-[0_0_12px_rgba(0,0,0,0.3)]">
                 {mounted ? (
-                  <HealthRing score={farmHealthScore} size={48} />
+                  <HealthRing score={farmHealthScore} size={38} />
                 ) : (
                   <div
                     aria-hidden
-                    className="animate-pulse rounded-full bg-white/10"
-                    style={{ width: 48, height: 48 }}
+                    className="h-[38px] w-[38px] animate-pulse rounded-full bg-white/10"
                   />
                 )}
               </div>
-              <span className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
-                {t("common.farmHealth")}
-              </span>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-bold text-white">
+                  {mounted ? Math.round(farmHealthScore) : "–"}/100
+                </p>
+                <p className="truncate text-[10px] font-medium uppercase tracking-wider text-zinc-400">
+                  {t("common.farmHealth")}
+                </p>
+              </div>
             </div>
             <span
-              className="glass-pill rounded-full px-3 py-1.5 text-[11px] font-bold tracking-widest uppercase"
+              className="glass-pill shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold tracking-wider uppercase border"
               style={
                 isLive
                   ? {
@@ -311,8 +342,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* 272px = 16px margin + 240px floating sidebar + 16px gap */}
       <div className="flex min-h-screen flex-col md:pl-[272px]">
         {/* Top header — slim glass strip */}
-        <header className="sticky top-0 z-30 px-4 pt-4 md:px-6">
-          <div className="glass mx-auto flex max-w-7xl items-center gap-2 px-3.5 py-2.5 rounded-2xl sm:gap-3">
+        <header className="sticky top-0 z-40 px-4 pt-4 md:px-6">
+          <div className="glass mx-auto flex max-w-7xl items-center gap-2 px-3.5 py-2.5 rounded-2xl sm:gap-3 bg-[#070B09]/80 backdrop-blur-xl border border-white/10 shadow-lg">
             {/* Mobile logo */}
             <div className="glass-pill flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-emerald-300 md:hidden border border-emerald-500/30 bg-emerald-500/10 shadow-[0_0_12px_rgba(34,197,94,0.4)]">
               <Leaf className="h-4 w-4" />
@@ -448,19 +479,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Page content — max-w-7xl centered, 24px gutters (px-6) */}
-        <motion.main
-          key={pathname}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-          className="flex-1 px-6 pb-60 pt-5 md:pb-16"
-        >
-          <div className="mx-auto max-w-7xl">
-            <Suspense fallback={<PageSkeleton rows={2} />}>
-              {mounted ? children : <PageSkeleton rows={2} />}
-            </Suspense>
+        <main className="relative z-10 flex-1 px-6 pb-60 pt-5 md:pb-16">
+          <div className="relative mx-auto max-w-7xl">
+            <AnimatePresence mode="wait" initial={false}>
+              <RouteTransitionWrapper key={pathname} pathname={pathname}>
+                <Suspense fallback={<PageSkeleton rows={3} />}>
+                  {mounted && hydrated ? children : <PageSkeleton rows={3} />}
+                </Suspense>
+              </RouteTransitionWrapper>
+            </AnimatePresence>
           </div>
-        </motion.main>
+        </main>
       </div>
 
       {/* Signature Live Farm Pill — above tab bar / bottom-right */}
@@ -558,14 +587,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMoreOpen(false)}
-              className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm md:hidden"
             />
             <motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="glass-strong fixed inset-x-0 bottom-0 z-50 max-h-[80vh] overflow-y-auto rounded-t-3xl border-t border-emerald-500/25 p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:hidden backdrop-blur-2xl"
+              className="glass-strong fixed inset-x-0 bottom-0 z-[60] max-h-[80vh] overflow-y-auto rounded-t-3xl border-t border-emerald-500/25 p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:hidden backdrop-blur-2xl"
             >
               <div className="mb-4 flex items-center justify-between">
                 <span className="text-sm font-bold text-white">{t("nav.more")}</span>

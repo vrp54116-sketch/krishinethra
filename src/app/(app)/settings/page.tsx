@@ -1503,7 +1503,7 @@ export default function SettingsPage() {
 
       {/* Reset confirm modal */}
       {resetOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center">
+        <div className="fixed inset-0 z-[60] flex items-end justify-center p-4 sm:items-center">
           <button
             aria-label="Close"
             onClick={() => setResetOpen(false)}

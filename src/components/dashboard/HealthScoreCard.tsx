@@ -18,6 +18,7 @@ export default function HealthScoreCard() {
   const snapshot = useFarmStore((s) => s.snapshot);
   const zones = useFarmStore((s) => s.zones);
   const scans = useFarmStore((s) => s.scans);
+  const sprayPlans = useFarmStore((s) => s.sprayPlans);
   const [showBreakdown, setShowBreakdown] = useState(false);
 
   const { hex, text, word } = healthColor(farmHealthScore);
@@ -26,14 +27,16 @@ export default function HealthScoreCard() {
   const c = 2 * Math.PI * r;
   const clamped = Math.max(0, Math.min(100, farmHealthScore));
 
+  const activePlansCount = sprayPlans.filter((p) => p.status === "active").length;
   const factors = useMemo(
     () =>
       getHealthBreakdown(
         snapshot,
         zones,
         scans.filter((x) => !x.resolved).length,
+        activePlansCount,
       ),
-    [snapshot, zones, scans],
+    [snapshot, zones, scans, activePlansCount],
   );
 
   return (
@@ -49,34 +52,50 @@ export default function HealthScoreCard() {
             onClick={() => setShowBreakdown((v) => !v)}
             onMouseEnter={() => setShowBreakdown(true)}
             onMouseLeave={() => setShowBreakdown(false)}
-            className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 text-zinc-400 transition-colors hover:border-emerald-500/40 hover:text-emerald-300"
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-white/10 text-zinc-400 transition-colors hover:border-emerald-500/40 hover:text-emerald-300 cursor-pointer"
             aria-label="Score breakdown"
           >
             <Info className="h-4 w-4" />
           </button>
           {showBreakdown && (
-            <div className="absolute right-0 top-full z-30 mt-2 w-64 rounded-xl border border-emerald-500/25 bg-[#0a120c] p-3 text-left shadow-[0_8px_32px_rgba(0,0,0,0.8)]">
-              <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                Score breakdown
-              </p>
+            <div className="absolute right-0 top-full z-[60] mt-2 w-72 rounded-2xl border border-emerald-500/30 bg-[#0a120c]/95 p-3.5 text-left shadow-[0_12px_36px_rgba(0,0,0,0.85)] backdrop-blur-xl">
+              <div className="mb-2.5 flex items-center justify-between border-b border-white/10 pb-2">
+                <span className="text-xs font-bold text-white">Score Breakdown</span>
+                <span className="font-mono text-xs font-extrabold text-emerald-400">
+                  {Math.round(farmHealthScore)} / 100
+                </span>
+              </div>
+
+              {/* Chips banner: Moisture 22/25 • Temp 18/20 • Humidity 13/15 • AQI 11/15 • Disease 4/25 */}
+              <div className="mb-3 flex flex-wrap items-center gap-1 rounded-xl border border-white/10 bg-black/50 p-2 text-[11px] font-medium leading-relaxed text-zinc-300">
+                {factors.map((f, i) => (
+                  <span key={f.key} className="inline-flex items-center gap-1">
+                    <span className="rounded-md bg-emerald-500/20 px-1.5 py-0.5 font-bold text-emerald-300">
+                      {f.chip}
+                    </span>
+                    {i < factors.length - 1 && <span className="text-zinc-600 font-bold">•</span>}
+                  </span>
+                ))}
+              </div>
+
               <div className="space-y-2">
                 {factors.map((f) => (
                   <div key={f.key}>
                     <div className="flex items-center justify-between text-[11px]">
                       <span className="font-medium text-zinc-200">{f.label}</span>
                       <span className="font-bold tabular-nums text-white">
-                        {f.score}
+                        {f.pts} / {f.max}
                       </span>
                     </div>
                     <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/10">
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{
-                          width: `${f.score}%`,
+                          width: `${(f.pts / f.max) * 100}%`,
                           background:
-                            f.score > 75
+                            f.pts / f.max >= 0.75
                               ? "#22c55e"
-                              : f.score >= 50
+                              : f.pts / f.max >= 0.5
                                 ? "#f59e0b"
                                 : "#ef4444",
                         }}

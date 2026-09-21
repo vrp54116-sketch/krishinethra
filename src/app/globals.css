@@ -389,3 +389,19 @@ body {
     transition: none;
   }
 }
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Toast z-index enforcement: toasts z-[70] */
+[data-sonner-toaster],
+[data-sonner-toaster] * {
+  z-index: 70 !important;
+}
+

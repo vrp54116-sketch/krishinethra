@@ -37,6 +37,7 @@ import {
   YAxis,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import SegmentedControl from "@/components/ui/SegmentedControl";
 import { useFarmStore } from "@/lib/store";
 import {
   REPORT_ENERGY_RATE_RS_PER_KWH,
@@ -350,29 +351,14 @@ export default function ReportsPage() {
                 </p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <div
-                  role="tablist"
+                <SegmentedControl
+                  options={RANGE_OPTIONS}
+                  value={range}
+                  onChange={(v) => setRange(v as ReportRange)}
+                  layoutId="reports-range"
                   aria-label="Report period"
-                  className="grid grid-cols-3 gap-1 rounded-xl border border-white/10 bg-black/40 p-1"
-                >
-                  {RANGE_OPTIONS.map((o) => (
-                    <button
-                      key={o.id}
-                      role="tab"
-                      aria-selected={range === o.id}
-                      type="button"
-                      onClick={() => setRange(o.id)}
-                      className={cn(
-                        "rounded-lg px-3 py-2 text-xs font-extrabold transition-all sm:px-4",
-                        range === o.id
-                          ? "bg-emerald-500 text-black shadow-[0_0_16px_rgba(34,197,94,0.45)]"
-                          : "text-zinc-400 hover:bg-white/5 hover:text-white",
-                      )}
-                    >
-                      {o.label}
-                    </button>
-                  ))}
-                </div>
+                  className="sm:w-72"
+                />
                 <div className="grid grid-cols-3 gap-2 sm:flex">
                   <button
                     type="button"

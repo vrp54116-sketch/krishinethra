@@ -83,7 +83,7 @@ export default function LiveFarmPill() {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20, scale: 0.95 }}
         transition={{ type: "spring", stiffness: 280, damping: 24 }}
-        className="fixed inset-x-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-40 md:inset-x-auto md:bottom-6 md:right-6 md:w-[390px]"
+        className="fixed inset-x-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-50 md:inset-x-auto md:bottom-6 md:right-6 md:w-[390px]"
       >
         <div
           className="glass-strong flex items-center gap-2.5 py-2 pl-2.5 pr-2 rounded-full backdrop-blur-xl transition-all"
