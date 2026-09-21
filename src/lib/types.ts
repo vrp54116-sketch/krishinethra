@@ -218,6 +218,10 @@ export interface AppSettings {
   language: "en" | "hi" | "gu" | "mr";
   mode: "simulation" | "live";
   hardwareGatewayUrl: string;
+  /** Wireless edge bridge (MQTT) — farm password on a public broker. */
+  mqttToken: string;
+  /** Selected broker wss URL (or "auto" to walk the default list). */
+  mqttBrokerUrl: string;
   cameraSource: "simulation" | "stream";
   cameraStreamUrl: string;
   /** Pan-tilt glide speed (deg per tick, 1–10). Used by Settings → Camera. */

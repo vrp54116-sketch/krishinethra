@@ -13,6 +13,8 @@ import {
   SprayCan,
   Sprout,
   Upload,
+  Camera,
+  Images,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFarmStore } from "@/lib/store";
@@ -25,6 +27,8 @@ import {
 import type { DiseaseScan } from "@/lib/types";
 import { StatusPill, useMounted } from "@/components/dashboard/ui";
 import { LEAF_SAMPLES, sampleMeta } from "./LeafSamples";
+import PhoneCamera from "./PhoneCamera";
+import { takePendingCapture } from "./field-capture";
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                              */
@@ -107,11 +111,13 @@ export default function LeafScanner() {
   const addDiary = useFarmStore((s) => s.addDiary);
   const addSprayPlan = useFarmStore((s) => s.addSprayPlan);
 
-  const [source, setSource] = useState<"sample" | "upload">("sample");
+  const [source, setSource] = useState<"sample" | "upload" | "camera">("sample");
   const [sampleId, setSampleId] = useState<LeafSampleId>("healthy");
   const [uploadUrl, setUploadUrl] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string>("Uploaded leaf photo");
   const uploadCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const cameraCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [cameraUrl, setCameraUrl] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [scanning, setScanning] = useState(false);
@@ -126,6 +132,21 @@ export default function LeafScanner() {
     },
     [],
   );
+
+  // A frame captured on the "Phone/Laptop Camera" tab waits in the
+  // field-capture slot — adopt it so SCAN works immediately after switching.
+  useEffect(() => {
+    const p = takePendingCapture();
+    if (p) {
+      cameraCanvasRef.current = p.canvas;
+      setCameraUrl(p.dataUrl);
+      setSource("camera");
+      setFresh(null);
+      setOpenScanId(null);
+      setChemOpen(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const activeSample = sampleMeta(sampleId);
 
@@ -181,10 +202,30 @@ export default function LeafScanner() {
     reader.readAsDataURL(file);
   };
 
+  /* Field-camera frame in: PhoneCamera hands back a ready canvas. */
+  const handleCameraCapture = (canvas: HTMLCanvasElement, dataUrl: string) => {
+    if (scanning) return;
+    cameraCanvasRef.current = canvas;
+    setCameraUrl(dataUrl);
+    setSource("camera");
+    setFresh(null);
+    setOpenScanId(null);
+    setChemOpen(false);
+    toast.success("Leaf captured — press SCAN", {
+      description: "Analysis runs on-device, image never uploads.",
+    });
+  };
+
   const handleScan = () => {
     if (scanning) return;
     if (source === "upload" && !uploadCanvasRef.current) {
       toast.error("Upload a leaf photo first");
+      return;
+    }
+    if (source === "camera" && !cameraCanvasRef.current) {
+      toast.error("Capture a leaf photo first", {
+        description: "Point your phone camera at a leaf and tap Capture.",
+      });
       return;
     }
     setScanning(true);
@@ -196,14 +237,24 @@ export default function LeafScanner() {
     scanTimerRef.current = setTimeout(() => {
       try {
         const analysis: LeafAnalysisResult =
-          source === "upload"
-            ? analyzeLeaf({ canvas: uploadCanvasRef.current, seed })
+          source === "upload" || source === "camera"
+            ? analyzeLeaf({
+                canvas:
+                  source === "upload"
+                    ? uploadCanvasRef.current
+                    : cameraCanvasRef.current,
+                seed,
+              })
             : analyzeLeaf({ sampleId, seed });
         const imageName =
-          source === "upload" ? fileName : `${activeSample.name} sample`;
+          source === "upload"
+            ? fileName
+            : source === "camera"
+              ? "Field capture (phone camera)"
+              : `${activeSample.name} sample`;
         const storedId = addScan({
           id: seed,
-          source,
+          source: source === "camera" ? "upload" : source,
           imageName,
           disease: analysis.disease,
           confidence: analysis.confidence,
@@ -307,15 +358,85 @@ export default function LeafScanner() {
     source === "upload" && uploadUrl ? (
       // eslint-disable-next-line @next/next/no-img-element
       <img src={uploadUrl} alt="Uploaded leaf" className="h-full w-full object-cover" />
+    ) : source === "camera" && cameraUrl ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={cameraUrl} alt="Field-captured leaf" className="h-full w-full object-cover" />
     ) : (
       <activeSample.Component />
     );
 
+  const previewTitle =
+    source === "upload"
+      ? "Your photo"
+      : source === "camera"
+        ? "Field capture"
+        : activeSample.name;
+
+  const SOURCE_TABS = [
+    { id: "camera" as const, label: "Phone/Laptop Camera", icon: Camera },
+    { id: "upload" as const, label: "Upload", icon: Upload },
+    { id: "sample" as const, label: "Samples", icon: Images },
+  ];
+
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">
-      {/* ============ LEFT: gallery + scanner + result ============ */}
+      {/* ============ LEFT: source + gallery + scanner + result ============ */}
       <div className="min-w-0 space-y-4">
+        {/* Single hidden file picker shared by every upload button */}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => handleFile(e.target.files?.[0])}
+        />
+        {/* Source selector */}
+        <div className="grid grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-black/40 p-1">
+          {SOURCE_TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => {
+                if (scanning) return;
+                setSource(id);
+                setFresh(null);
+                setOpenScanId(null);
+                setChemOpen(false);
+              }}
+              aria-pressed={source === id}
+              className={cn(
+                "flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[11px] font-extrabold transition-all sm:text-xs",
+                source === id
+                  ? "bg-emerald-500 text-black shadow-[0_0_14px_rgba(34,197,94,0.4)]"
+                  : "text-zinc-400 hover:bg-white/5 hover:text-white",
+              )}
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="truncate">{label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Field-camera hint */}
+        <div className="flex items-start gap-3 rounded-2xl border border-emerald-400/30 bg-emerald-500/[0.07] p-4">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300">
+            <Camera className="h-4 w-4" />
+          </span>
+          <p className="text-xs leading-relaxed text-emerald-100/70">
+            Point your phone camera at a leaf and tap Capture — analysis runs
+            on-device, image never uploads.
+          </p>
+        </div>
+
+        {/* Phone / laptop camera capture */}
+        {source === "camera" && (
+          <div className="card-surface rounded-2xl p-4 sm:p-5">
+            <PhoneCamera onCapture={handleCameraCapture} disabled={scanning} />
+          </div>
+        )}
+
         {/* Sample gallery */}
+        {source === "sample" && (
         <div className="card-surface rounded-2xl p-4 sm:p-5">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-bold text-white">Sample gallery</h3>
@@ -359,13 +480,6 @@ export default function LeafScanner() {
           </div>
 
           {/* Upload */}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => handleFile(e.target.files?.[0])}
-          />
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
@@ -373,20 +487,47 @@ export default function LeafScanner() {
             className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-3 text-sm font-bold text-zinc-200 transition-all hover:border-emerald-500/50 hover:text-emerald-200 disabled:opacity-50"
           >
             <Upload className="h-4 w-4" />
-            {source === "upload" && uploadUrl
-              ? `Photo ready: ${fileName}`
-              : "Upload a real leaf photo"}
+            {uploadUrl ? `Photo ready: ${fileName}` : "Upload a real leaf photo"}
           </button>
         </div>
+        )}
+
+        {/* Upload panel */}
+        {source === "upload" && !uploadUrl && (
+          <div className="card-surface rounded-2xl p-4 sm:p-5">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={scanning}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-6 text-sm font-bold text-zinc-200 transition-all hover:border-emerald-500/50 hover:text-emerald-200 disabled:opacity-50"
+            >
+              <Upload className="h-4 w-4" />
+              Upload a real leaf photo
+            </button>
+          </div>
+        )}
+        {source === "upload" && uploadUrl && (
+          <div className="card-surface rounded-2xl p-4 sm:p-5">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={scanning}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-bold text-zinc-200 transition-all hover:border-emerald-500/40 hover:text-emerald-200 disabled:opacity-50"
+            >
+              <Upload className="h-4 w-4" />
+              Choose a different photo
+            </button>
+          </div>
+        )}
 
         {/* Preview + SCAN */}
         <div className="card-surface rounded-2xl p-4 sm:p-5">
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-bold text-white">
-              {source === "upload" ? "Your photo" : activeSample.name}
+              {previewTitle}
             </h3>
-            <StatusPill tone={source === "upload" ? "info" : "good"}>
-              {source === "upload" ? "real pixels" : "simulated"}
+            <StatusPill tone={source === "sample" ? "good" : "info"}>
+              {source === "sample" ? "simulated" : "real pixels"}
             </StatusPill>
           </div>
           <div className="relative mx-auto mt-3 aspect-square w-full max-w-72 overflow-hidden rounded-2xl border border-white/10">

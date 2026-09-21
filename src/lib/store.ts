@@ -77,6 +77,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   language: "en",
   mode: "simulation",
   hardwareGatewayUrl: "",
+  mqttToken: "patelfarm01",
+  mqttBrokerUrl: "wss://broker.emqx.io:8084/mqtt",
   cameraSource: "simulation",
   cameraStreamUrl: "",
   cameraPanSpeed: 5,
@@ -594,6 +596,26 @@ interface FarmState {
   hwUptimeSec: number | null;
   hwLatencyMs: number | null;
 
+  // Wireless edge bridge (MQTT) — TRUE WIRELESS live mode. Ephemeral link
+  // state, never persisted (token/broker live in settings and DO persist).
+  // liveSource === "mqtt" means telemetry flows from the ESP32 over MQTT.
+  liveSource: "sim" | "mqtt";
+  mqttStatus: "connecting" | "online" | "offline";
+  mqttMsgCount: number;
+  mqttLastSeen: number | null;
+  mqttRssi: number | null;
+  /** Edge-reported stale flag (telemetry.stale === 1 → sensor node silent). */
+  edgeStale: boolean;
+  /** Edge relay R2 + servo mirror (from telemetry, optimistic on toggle). */
+  edgeR2: boolean;
+  edgeServo: number;
+  edgeMode: string | null;
+  setLiveSource: (src: "sim" | "mqtt") => void;
+  setEdgeR2: (on: boolean) => void;
+  sendEdgeBuzz: () => void;
+  sendEdgeSweep: () => void;
+  sendEdgeServo: (angle: number) => void;
+
   // Pan-tilt camera state (degrees, default looks straight at the field).
   panAngle: number;
   tiltAngle: number;
@@ -874,10 +896,21 @@ function maybeSendServo(axis: "pan" | "tilt", angle: number): void {
   if (typeof window === "undefined") return;
   const st = useFarmStore.getState();
   if (st.settings.mode !== "live") return;
-  const gw = st.settings.hardwareGatewayUrl.trim();
-  if (!gw) return;
   const rounded = Math.min(180, Math.max(0, Math.round(angle)));
   const now = Date.now();
+  // Wireless edge path: pan servo mirrors over MQTT (tilt is local-only —
+  // the edge node carries a single pan servo).
+  if (st.liveSource === "mqtt" && st.mqttStatus === "online") {
+    if (axis !== "pan") return;
+    const last = lastServoSent[axis];
+    if (rounded === last.angle) return;
+    if (now - last.at < SERVO_MIN_INTERVAL_MS) return;
+    lastServoSent[axis] = { angle: rounded, at: now };
+    void import("./mqtt-bridge").then((m) => m.cmdServo(rounded));
+    return;
+  }
+  const gw = st.settings.hardwareGatewayUrl.trim();
+  if (!gw) return;
   const last = lastServoSent[axis];
   if (rounded === last.angle) return;
   if (now - last.at < SERVO_MIN_INTERVAL_MS) return;
@@ -1213,6 +1246,47 @@ export const useFarmStore = create<FarmState>()(
       hwUptimeSec: null,
       hwLatencyMs: null,
 
+      // Wireless edge bridge starts offline; MqttManager owns it.
+      liveSource: "sim",
+      mqttStatus: "offline",
+      mqttMsgCount: 0,
+      mqttLastSeen: null,
+      mqttRssi: null,
+      edgeStale: false,
+      edgeR2: false,
+      edgeServo: 90,
+      edgeMode: null,
+      setLiveSource: (src) => set({ liveSource: src }),
+      setEdgeR2: (on) => {
+        set({ edgeR2: on });
+        const st = get();
+        if (st.liveSource === "mqtt" && st.mqttStatus === "online") {
+          void import("./mqtt-bridge").then((m) => m.cmdR2(on));
+        }
+      },
+      sendEdgeBuzz: () => {
+        const st = get();
+        if (st.liveSource === "mqtt" && st.mqttStatus === "online") {
+          void import("./mqtt-bridge").then((m) => m.cmdBuzz());
+        }
+      },
+      sendEdgeSweep: () => {
+        const st = get();
+        if (st.liveSource === "mqtt" && st.mqttStatus === "online") {
+          void import("./mqtt-bridge").then((m) => m.cmdSweep());
+        }
+      },
+      sendEdgeServo: (angle) => {
+        const rounded = Math.min(180, Math.max(0, Math.round(angle)));
+        set({ edgeServo: rounded, panAngle: rounded });
+        const st = get();
+        if (st.liveSource === "mqtt" && st.mqttStatus === "online") {
+          void import("./mqtt-bridge").then((m) => m.cmdServo(rounded));
+        } else {
+          maybeSendServo("pan", rounded);
+        }
+      },
+
       setPanAngle: (angle) => {
         set({ panAngle: Math.min(180, Math.max(0, Math.round(angle))) });
         maybeSendServo("pan", angle);
@@ -1280,11 +1354,16 @@ export const useFarmStore = create<FarmState>()(
         })),
 
       setPumpManual: (on, durationSec) => {
-        // LIVE mode: mirror the relay command to the hardware gateway
-        // (fire-and-forget; local state still applies optimistically).
+        // LIVE mode: mirror the relay command to hardware (fire-and-forget;
+        // local state still applies optimistically). Wireless edge (MQTT)
+        // takes precedence; the legacy HTTP gateway is the fallback.
         const pre = get();
+        const mqttLive =
+          pre.settings.mode === "live" &&
+          pre.liveSource === "mqtt" &&
+          pre.mqttStatus === "online";
         const liveGw =
-          pre.settings.mode === "live"
+          pre.settings.mode === "live" && !mqttLive
             ? pre.settings.hardwareGatewayUrl.trim()
             : "";
         const runDuration =
@@ -1345,9 +1424,17 @@ export const useFarmStore = create<FarmState>()(
         if (liveGw) {
           void sendHwPump(liveGw, on ? "on" : "off", on ? runDuration : undefined);
         }
+        if (mqttLive) {
+          void import("./mqtt-bridge").then((m) => {
+            if (on && durationSec != null) m.cmdPumpTimed(durationSec);
+            else if (on) m.cmdPumpOn();
+            else m.cmdPumpOff();
+          });
+        }
       },
 
-      setPumpMode: (mode) =>
+      setPumpMode: (mode) => {
+        const pre = get();
         set((s) => ({
           pump: {
             ...s.pump,
@@ -1355,12 +1442,28 @@ export const useFarmStore = create<FarmState>()(
             running: mode === "auto" ? s.pump.running : s.pump.running,
           },
           manualPumpRemainingSec: null,
-        })),
+        }));
+        if (
+          pre.settings.mode === "live" &&
+          pre.liveSource === "mqtt" &&
+          pre.mqttStatus === "online"
+        ) {
+          void import("./mqtt-bridge").then((m) => {
+            if (mode === "auto") m.cmdMode("AUTO");
+            else if (mode === "manual") m.cmdMode("MANUAL");
+            // schedule mode has no edge equivalent — edge stays in last mode.
+          });
+        }
+      },
 
       startScheduledRun: (durationSec) => {
         const pre = get();
+        const mqttLive =
+          pre.settings.mode === "live" &&
+          pre.liveSource === "mqtt" &&
+          pre.mqttStatus === "online";
         const liveGw =
-          pre.settings.mode === "live"
+          pre.settings.mode === "live" && !mqttLive
             ? pre.settings.hardwareGatewayUrl.trim()
             : "";
         set((s) => {
@@ -1394,6 +1497,11 @@ export const useFarmStore = create<FarmState>()(
         });
         if (liveGw) {
           void sendHwPump(liveGw, "on", Math.max(1, Math.round(durationSec)));
+        }
+        if (mqttLive) {
+          void import("./mqtt-bridge").then((m) =>
+            m.cmdPumpTimed(Math.max(1, Math.round(durationSec))),
+          );
         }
       },
 
@@ -1617,6 +1725,15 @@ export const useFarmStore = create<FarmState>()(
           hwFirmware: null,
           hwUptimeSec: null,
           hwLatencyMs: null,
+          liveSource: "sim",
+          mqttStatus: "offline",
+          mqttMsgCount: 0,
+          mqttLastSeen: null,
+          mqttRssi: null,
+          edgeStale: false,
+          edgeR2: false,
+          edgeServo: 90,
+          edgeMode: null,
         });
       },
 
@@ -1922,7 +2039,8 @@ export const useFarmStore = create<FarmState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => {
         // Ephemeral runtime state is never persisted: simRunning plus the
-        // whole hardware-bridge connection block (re-polled on load).
+        // whole hardware-bridge connection block (re-polled on load) plus
+        // the wireless MQTT link block (re-connected on demand).
         const {
           hydrated: _hydrated,
           simRunning: _omitted,
@@ -1931,6 +2049,15 @@ export const useFarmStore = create<FarmState>()(
           hwFirmware: _hwF,
           hwUptimeSec: _hwU,
           hwLatencyMs: _hwLat,
+          liveSource: _ls,
+          mqttStatus: _mqS,
+          mqttMsgCount: _mqC,
+          mqttLastSeen: _mqL,
+          mqttRssi: _mqR,
+          edgeStale: _eS,
+          edgeR2: _eR2,
+          edgeServo: _eSv,
+          edgeMode: _eM,
           ...rest
         } = s;
         void _hydrated;
@@ -1940,6 +2067,15 @@ export const useFarmStore = create<FarmState>()(
         void _hwF;
         void _hwU;
         void _hwLat;
+        void _ls;
+        void _mqS;
+        void _mqC;
+        void _mqL;
+        void _mqR;
+        void _eS;
+        void _eR2;
+        void _eSv;
+        void _eM;
         return rest;
       },
       onRehydrateStorage: () => (state) => {
@@ -1994,6 +2130,10 @@ export const useFarmStore = create<FarmState>()(
           if (st.soundEnabled == null) st.soundEnabled = DEFAULT_SETTINGS.soundEnabled;
           if (st.voiceLang == null) st.voiceLang = DEFAULT_SETTINGS.voiceLang;
           if (st.hardwareGatewayUrl == null) st.hardwareGatewayUrl = "";
+          if (st.mqttToken == null || st.mqttToken === "")
+            st.mqttToken = DEFAULT_SETTINGS.mqttToken;
+          if (st.mqttBrokerUrl == null || st.mqttBrokerUrl === "")
+            st.mqttBrokerUrl = DEFAULT_SETTINGS.mqttBrokerUrl;
           if (st.cameraStreamUrl == null) st.cameraStreamUrl = "";
           if (st.cameraSource == null) st.cameraSource = "simulation";
           if (st.dataGovApiKey == null) st.dataGovApiKey = DEFAULT_SETTINGS.dataGovApiKey;
@@ -2088,8 +2228,23 @@ export const useFarmStore = create<FarmState>()(
             ),
           }));
         }
+        // Wireless link block is ephemeral — always start clean.
+        if (state) {
+          state.liveSource = "sim";
+          state.mqttStatus = "offline";
+          state.mqttMsgCount = 0;
+          state.mqttLastSeen = null;
+          state.mqttRssi = null;
+          state.edgeStale = false;
+          state.edgeR2 = false;
+          state.edgeServo = 90;
+          state.edgeMode = null;
+          state.hwConnected = false;
+        }
         // Auto-start the right engine after persisted settings load:
-        // simulator in simulation mode, gateway poller in live mode.
+        // simulator in simulation mode. LIVE mode boots as simulation until
+        // the wireless edge (MQTT) proves fresh — MqttManager owns the flip,
+        // so a stale persisted "live" never strands the UI without data.
         if (
           typeof window !== "undefined" &&
           state?.settings.mode === "simulation"
@@ -2099,7 +2254,7 @@ export const useFarmStore = create<FarmState>()(
           typeof window !== "undefined" &&
           state?.settings.mode === "live"
         ) {
-          state.startLivePolling();
+          state.startSimulation();
         }
       },
     },
@@ -2119,30 +2274,40 @@ if (typeof window !== "undefined") {
   }
 
   // Fresh load (no valid persisted mode yet, or first paint): start the
-  // engine matching the default/current mode.
+  // engine matching the default/current mode. LIVE always boots the
+  // simulator until the wireless edge proves fresh (MqttManager flips).
   queueMicrotask(() => {
     const s = useFarmStore.getState();
     if (s.settings.mode === "simulation" && getSimInterval() == null) {
       s.startSimulation();
-    } else if (s.settings.mode === "live" && getLiveInterval() == null) {
-      s.startLivePolling();
+    } else if (s.settings.mode === "live" && getSimInterval() == null) {
+      s.startSimulation();
     }
   });
 
   // Follow mode / gateway switches at runtime (simulation <-> live).
   // Simulation default is untouched: the sim runs if and only if the mode
-  // is simulation; the live poller runs if and only if mode is live.
+  // is simulation. Legacy HTTP-gateway polling only runs for live mode with
+  // liveSource === "sim"; wireless MQTT live mode is fed by the broker, so
+  // both local engines stay stopped while the edge streams.
   let prevMode = useFarmStore.getState().settings.mode;
   let prevGw = useFarmStore.getState().settings.hardwareGatewayUrl;
+  let prevLiveSource = useFarmStore.getState().liveSource;
   useFarmStore.subscribe((s) => {
     const modeChanged = s.settings.mode !== prevMode;
     const gwChanged = s.settings.hardwareGatewayUrl !== prevGw;
-    if (modeChanged || (gwChanged && s.settings.mode === "live")) {
+    const srcChanged = s.liveSource !== prevLiveSource;
+    if (modeChanged || (gwChanged && s.settings.mode === "live") || srcChanged) {
       prevMode = s.settings.mode;
       prevGw = s.settings.hardwareGatewayUrl;
+      prevLiveSource = s.liveSource;
       if (s.settings.mode === "simulation") {
         s.stopLivePolling();
         s.startSimulation();
+      } else if (s.liveSource === "mqtt") {
+        // Wireless edge owns the data — halt local engines.
+        s.stopSimulation();
+        s.stopLivePolling();
       } else {
         s.stopSimulation();
         s.startLivePolling();

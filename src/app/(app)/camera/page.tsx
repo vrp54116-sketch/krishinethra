@@ -3,12 +3,15 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
-import { History, Info, ScanSearch, Video } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Camera, History, Info, ScanSearch, Video } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import SimulatedCamera from "@/components/camera/SimulatedCamera";
 import PanTiltPad from "@/components/camera/PanTiltPad";
+import PhoneCamera from "@/components/camera/PhoneCamera";
+import { setPendingCapture } from "@/components/camera/field-capture";
 import LeafScanner, { diseaseDot } from "@/components/camera/LeafScanner";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import { StatusPill } from "@/components/dashboard/ui";
@@ -48,6 +51,7 @@ export default function CameraPage() {
 
 function CameraInner() {
   const t = useT();
+  const router = useRouter();
   const searchParams = useSearchParams();
   // Voice command deep-link: /camera?tab=scanner opens the leaf scanner.
   // Derived (no effect): a fresh mount reads the query, manual taps override.
@@ -62,7 +66,7 @@ function CameraInner() {
   const useStream = cameraSource === "stream" && cameraStreamUrl.trim().length > 0;
 
   const tabs: Array<{ id: CameraTab; label: string; icon: typeof Video }> = [
-    { id: "live", label: t("camera.liveView") || "Live CCTV", icon: Video },
+    { id: "live", label: "Phone/Laptop Camera", icon: Camera },
     { id: "scanner", label: t("camera.leafScanner") || "Leaf Scanner", icon: ScanSearch },
     { id: "history", label: "Scan History", icon: History },
   ];
@@ -92,6 +96,26 @@ function CameraInner() {
             <StreamFrame url={cameraStreamUrl} />
           ) : (
             <>
+              <PhoneCamera
+                onCapture={(canvas, dataUrl) => {
+                  setPendingCapture(canvas, dataUrl);
+                  toast.success("Leaf captured — opening scanner", {
+                    description: "Press SCAN to run on-device analysis.",
+                  });
+                  setTab("scanner");
+                  router.push("/camera?tab=scanner");
+                }}
+              />
+              <div className="flex items-start gap-3 rounded-2xl border border-emerald-400/30 bg-emerald-500/[0.07] p-4">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300">
+                  <Info className="h-4 w-4" />
+                </span>
+                <p className="text-xs leading-relaxed text-emerald-100/70">
+                  Point your phone camera at a leaf and tap Capture — analysis
+                  runs on-device, image never uploads. This is the field
+                  scanner: walk the field and scan leaves live.
+                </p>
+              </div>
               <SimulatedCamera />
               <PanTiltPad />
             </>

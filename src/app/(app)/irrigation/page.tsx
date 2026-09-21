@@ -8,6 +8,7 @@ import UsageTracker from "@/components/irrigation/UsageTracker";
 import EnergyMonitor from "@/components/irrigation/EnergyMonitor";
 import HistoryTable from "@/components/irrigation/HistoryTable";
 import SchedulePanel from "@/components/irrigation/SchedulePanel";
+import EdgeStaleBanner from "@/components/mqtt/EdgeStaleBanner";
 
 function Rise({
   children,
@@ -35,6 +36,11 @@ function Rise({
 export default function IrrigationPage() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-5">
+      {/* 0. HARDWARE SAFETY — sensor node silent (edge-stale) */}
+      <Rise>
+        <EdgeStaleBanner />
+      </Rise>
+
       {/* 1. PUMP HERO + EXPLAINABLE AI */}
       <div className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-2">
         <Rise>

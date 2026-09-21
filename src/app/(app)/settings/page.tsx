@@ -30,6 +30,7 @@ import { Card, CardHeader, useMounted } from "@/components/dashboard/ui";
 import { MANDI_PRICES, mandiById } from "@/lib/market-data";
 import { INDIAN_STATES, districtsForState } from "@/lib/india-locations";
 import { exportFarmBackup } from "@/lib/report-export";
+import WirelessEdgeCard from "@/components/mqtt/WirelessEdgeCard";
 
 function Rise({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   return (
@@ -1194,6 +1195,11 @@ export default function SettingsPage() {
             {t("settings.liveNote")}
           </p>
         </Card>
+      </Rise>
+
+      {/* ============ 6a. WIRELESS EDGE BRIDGE (MQTT) ============ */}
+      <Rise delay={0.125}>
+        <WirelessEdgeCard />
       </Rise>
 
       {/* ============ 6b. DATA SOURCES (live mandi) ============ */}

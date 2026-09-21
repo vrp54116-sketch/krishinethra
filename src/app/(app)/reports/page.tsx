@@ -54,6 +54,8 @@ import {
   exportDailyCSV,
   exportFarmBackup,
 } from "@/lib/report-export";
+import ShareFarmLink from "@/components/mqtt/ShareFarmLink";
+import DemoTourButton from "@/components/mqtt/DemoTourButton";
 
 function Rise({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   return (
@@ -777,6 +779,27 @@ export default function ReportsPage() {
               >
                 <DatabaseBackup className="h-3.5 w-3.5 text-[#818CF8]" /> Backup JSON
               </button>
+            </div>
+          </Card>
+        </Rise>
+
+        {/* Share + demo tour (judges scan the QR to open this deployment) */}
+        <Rise delay={0.26}>
+          <Card
+            className="border-emerald-500/30 no-print"
+          >
+            <CardHeader
+              title="Share Live Farm"
+              subtitle="Judges scan the QR, paste the farm token, press Connect"
+              action={
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300">
+                  <Sparkles className="h-4 w-4" />
+                </span>
+              }
+            />
+            <ShareFarmLink />
+            <div className="mt-2">
+              <DemoTourButton className="w-full" />
             </div>
           </Card>
         </Rise>
