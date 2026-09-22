@@ -75,7 +75,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
-      <body className="min-h-full bg-[#070B09] font-sans text-[#F3F4F6] antialiased">
+      <body className="h-full bg-[#070B09] font-sans text-[#F3F4F6] antialiased overflow-hidden">
         <AmbientBackground />
         {children}
         <AppToaster />

@@ -17,7 +17,7 @@ export default function RootError({
   }, [error]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-transparent px-4 py-12 text-center">
+    <main className="flex h-full overflow-y-auto flex-col items-center justify-center bg-transparent px-4 py-12 text-center">
       <div className="card-surface w-full max-w-md rounded-[20px] p-8">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-500/15 text-rose-300 shadow-[0_0_20px_rgba(251,113,133,0.25)]">
           <TriangleAlert className="h-8 w-8" />

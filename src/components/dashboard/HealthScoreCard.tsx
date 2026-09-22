@@ -9,8 +9,8 @@ import { useT } from "@/lib/i18n";
 import { getHealthBreakdown } from "@/lib/ai-engine";
 import { AnimatedNumber, Card, healthColor } from "./ui";
 
-const RING_SIZE = 188;
-const STROKE = 15;
+const RING_SIZE = 120;
+const STROKE = 10;
 
 export default function HealthScoreCard() {
   const t = useT();
@@ -40,9 +40,9 @@ export default function HealthScoreCard() {
   );
 
   return (
-    <Card className="relative flex flex-col items-center justify-center overflow-visible text-center">
+    <Card className="relative flex flex-col items-center justify-between overflow-visible text-center max-h-[220px] h-[220px] p-3.5 sm:p-4">
       <div className="flex w-full items-center justify-between">
-        <h2 className="text-sm font-bold tracking-tight text-white sm:text-base">
+        <h2 className="text-xs font-bold tracking-tight text-white sm:text-sm">
           {t("common.farmHealthScore")}
         </h2>
         {/* Breakdown tooltip trigger (tap-friendly for mobile) */}
@@ -66,7 +66,7 @@ export default function HealthScoreCard() {
                 </span>
               </div>
 
-              {/* Chips banner: Moisture 22/25 • Temp 18/20 • Humidity 13/15 • AQI 11/15 • Disease 4/25 */}
+              {/* Chips banner */}
               <div className="mb-3 flex flex-wrap items-center gap-1 rounded-[12px] border border-white/10 bg-[rgba(18,26,22,0.6)] p-2 text-[11px] font-medium leading-relaxed text-[#F3F4F6]">
                 {factors.map((f, i) => (
                   <span key={f.key} className="inline-flex items-center gap-1">
@@ -111,7 +111,7 @@ export default function HealthScoreCard() {
       </div>
 
       {/* Animated circular progress */}
-      <div className="relative mt-2" style={{ width: RING_SIZE, height: RING_SIZE }}>
+      <div className="relative my-auto" style={{ width: RING_SIZE, height: RING_SIZE }}>
         <svg width={RING_SIZE} height={RING_SIZE} className="-rotate-90">
           <circle
             cx={RING_SIZE / 2}
@@ -140,15 +140,15 @@ export default function HealthScoreCard() {
           <AnimatedNumber
             value={farmHealthScore}
             decimals={0}
-            className={cn("text-5xl font-semibold tabular-nums", text)}
+            className={cn("text-3xl font-bold tabular-nums", text)}
           />
-          <span className="text-xs text-[#9CA3AF]">/ 100</span>
-          <span className={cn("mt-1 text-sm font-bold", text)}>{word}</span>
+          <span className="text-[10px] text-[#9CA3AF]">/ 100</span>
+          <span className={cn("text-xs font-semibold", text)}>{word}</span>
         </div>
       </div>
 
-      <p className="mt-3 max-w-[26ch] text-xs leading-relaxed text-[#9CA3AF]">
-        Weighted from moisture, temperature, humidity, air quality &amp; disease.
+      <p className="max-w-[32ch] text-[11px] leading-tight text-[#9CA3AF] truncate">
+        Moisture, climate, AQI &amp; crop health
       </p>
     </Card>
   );

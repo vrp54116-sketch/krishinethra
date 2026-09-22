@@ -23,7 +23,7 @@ const QUICK_DURATIONS = [
  * desktop: live droplet + "Zone B 22% • Pump OFF • 32°C" + pump toggle
  * and leaf-scan shortcut. Tapping the body opens quick controls.
  */
-export default function LiveFarmPill() {
+export default function LiveFarmPill({ className }: { className?: string } = {}) {
   const t = useT();
   const router = useRouter();
   const mounted = useMounted();
@@ -83,7 +83,10 @@ export default function LiveFarmPill() {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20, scale: 0.95 }}
         transition={{ type: "spring", stiffness: 280, damping: 24 }}
-        className="fixed inset-x-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-50 md:inset-x-auto md:bottom-6 md:right-6 md:w-[390px]"
+        className={cn(
+          "fixed inset-x-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-50 md:inset-x-auto md:bottom-6 md:right-6 md:w-[390px]",
+          className,
+        )}
       >
         <div
           className={cn(

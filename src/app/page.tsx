@@ -139,7 +139,7 @@ function PinUnlock() {
   };
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-transparent px-4 py-12">
+    <main className="relative flex h-full overflow-y-auto flex-col items-center justify-center overflow-x-hidden bg-transparent px-4 py-12">
       <FarmBackground />
       <motion.div
         initial={{ opacity: 0, y: 24 }}
@@ -371,7 +371,7 @@ function Wizard() {
   });
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center overflow-hidden bg-transparent px-4 pb-10 pt-6 sm:pt-10">
+    <main className="relative flex h-full overflow-y-auto flex-col items-center overflow-x-hidden bg-transparent px-4 pb-10 pt-6 sm:pt-10">
       <FarmBackground />
       <div className="relative z-10 w-full max-w-xl">
         {/* Progress */}
@@ -1075,7 +1075,7 @@ export default function LandingPage() {
 
   if (!mounted) {
     return (
-      <main className="relative flex min-h-screen items-center justify-center bg-[#070B09]">
+      <main className="relative flex h-full items-center justify-center bg-[#070B09]">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-500/30 border-t-emerald-400" />
       </main>
     );
@@ -1084,7 +1084,7 @@ export default function LandingPage() {
   if (onboardingDone) {
     if (appPinHash && !isAuthenticated) return <PinUnlock />;
     return (
-      <main className="relative flex min-h-screen items-center justify-center bg-[#070B09]">
+      <main className="relative flex h-full items-center justify-center bg-[#070B09]">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-500/30 border-t-emerald-400" />
       </main>
     );

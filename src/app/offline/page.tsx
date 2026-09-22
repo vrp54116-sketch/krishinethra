@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function OfflinePage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-transparent px-4 py-12 text-center">
+    <main className="flex h-full overflow-y-auto flex-col items-center justify-center bg-transparent px-4 py-12 text-center">
       <div className="card-surface w-full max-w-md rounded-[20px] p-8">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#34D399]/15 text-[#34D399] shadow-[0_0_20px_rgba(52,211,153,0.25)]">
           <WifiOff className="h-8 w-8" />

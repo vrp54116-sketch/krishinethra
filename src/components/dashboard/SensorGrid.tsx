@@ -205,7 +205,7 @@ export default function SensorGrid() {
   return (
     <div>
       <CardHeader title={t("dashboard.liveSensors")} subtitle={t("dashboard.liveSensorsSub")} />
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {sensors.map((s) => (
           <SensorCard key={s.key} def={s} />
         ))}
