@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import AppToaster from "@/components/layout/AppToaster";
 import ServiceWorkerRegister from "@/components/pwa/ServiceWorkerRegister";
 import DemoSeedBoot from "@/components/pwa/DemoSeedBoot";
@@ -82,6 +83,7 @@ export default function RootLayout({
         <AlertPipelineListener />
         <ServiceWorkerRegister />
         <DemoSeedBoot />
+        <Analytics />
       </body>
     </html>
   );
