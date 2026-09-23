@@ -1,10 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
-import { Check, Copy, Link2, QrCode } from "lucide-react";
+import { Check, Link2, QrCode } from "lucide-react";
 import { useFarmStore } from "@/lib/store";
+
+function subscribeNoop() {
+  return () => {};
+}
+function getClientOrigin(): string {
+  return typeof window !== "undefined" ? window.location.origin : "";
+}
+function getServerOrigin(): string {
+  return "";
+}
 
 /**
  * ShareFarmLink — PWA + share: copies the hosted (Vercel) URL plus the farm
@@ -22,13 +32,9 @@ export function farmShareText(origin: string, token: string): string {
 
 export default function ShareFarmLink({ compact = false }: { compact?: boolean }) {
   const token = useFarmStore((s) => s.settings.mqttToken);
-  const [origin, setOrigin] = useState("");
+  const origin = useSyncExternalStore(subscribeNoop, getClientOrigin, getServerOrigin);
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(!compact);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") setOrigin(window.location.origin);
-  }, []);
 
   const url = origin || "https://your-vercel-app.vercel.app";
 

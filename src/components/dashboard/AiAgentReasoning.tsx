@@ -11,7 +11,6 @@ interface ReasoningState {
   type: "on" | "off" | "rain_lock" | "stale_lock" | "manual_hold";
   headline: string;
   rule: string;
-  timestamp: number;
 }
 
 export default function AiAgentReasoning({ className }: { className?: string }) {
@@ -19,14 +18,6 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
   const pump = useFarmStore((s) => s.pump);
   const thresholds = useFarmStore((s) => s.settings.thresholds);
   const manualRemaining = useFarmStore((s) => s.manualPumpRemainingSec);
-
-  const [lastReasoning, setLastReasoning] = useState<ReasoningState>({
-    id: "init",
-    type: "off",
-    headline: "Monitoring soil metrics — threshold normal",
-    rule: "System armed in autonomous auto mode",
-    timestamp: Date.now(),
-  });
 
   const [elapsedSec, setElapsedSec] = useState(0);
 
@@ -46,7 +37,6 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
         type: "stale_lock",
         headline: "Sensor node stale (UNO link dead 5s+) → Auto-irrigation locked for safety",
         rule: "Fail-safe watchdog triggered: irrigation suppressed until link restored",
-        timestamp: Date.now(),
       };
     }
 
@@ -56,7 +46,6 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
         type: "rain_lock",
         headline: "Rain detected → Pump locked OFF (water savings: ~12L today)",
         rule: `Rain sensor active • Precip: ${snapshot.rainMm.toFixed(1)} mm • Conserving reservoir`,
-        timestamp: Date.now(),
       };
     }
 
@@ -67,7 +56,6 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
           type: "on",
           headline: `Soil ${soil}% < ${lowThresh}% threshold AND No rain detected → Pump ON (Auto mode)`,
           rule: `Active hydration cycle • Moisture target: ${highThresh}% • Auto shutoff armed`,
-          timestamp: Date.now(),
         };
       } else {
         if (soil >= highThresh) {
@@ -76,7 +64,6 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
             type: "off",
             headline: `Soil ${soil}% > ${highThresh}% threshold → Pump OFF`,
             rule: "Optimal root zone saturation reached • Pump idle",
-            timestamp: Date.now(),
           };
         } else {
           return {
@@ -84,7 +71,6 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
             type: "off",
             headline: `Soil ${soil}% within acceptable zone [${lowThresh}% - ${highThresh}%] → Pump OFF`,
             rule: "Autonomous guard cycle active • Continuous soil moisture surveillance",
-            timestamp: Date.now(),
           };
         }
       }
@@ -96,7 +82,6 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
           type: "on",
           headline: "Manual override active → Pump running under operator control",
           rule: `Manual burst timer: ${manualRemaining != null ? Math.ceil(manualRemaining) : 0}s remaining • Safety cut-off at 10m`,
-          timestamp: Date.now(),
         };
       } else {
         return {
@@ -104,7 +89,6 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
           type: "manual_hold",
           headline: "Manual mode enabled → Pump idle waiting for command",
           rule: "Autonomous decisions paused • Operator manual dispatch ready",
-          timestamp: Date.now(),
         };
       }
     }
@@ -120,13 +104,11 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
     thresholds.moistureHigh,
   ]);
 
-  // Update lastReasoning when headline changes
-  useEffect(() => {
-    if (currentReasoning.headline !== lastReasoning.headline) {
-      setLastReasoning(currentReasoning);
-      setElapsedSec(0);
-    }
-  }, [currentReasoning, lastReasoning.headline]);
+  const [lastHeadline, setLastHeadline] = useState(currentReasoning.headline);
+  if (lastHeadline !== currentReasoning.headline) {
+    setLastHeadline(currentReasoning.headline);
+    setElapsedSec(0);
+  }
 
   // Live timer for "Last updated: X seconds ago"
   useEffect(() => {
@@ -189,7 +171,7 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
     }
   };
 
-  const tone = getToneDetails(lastReasoning.type);
+  const tone = getToneDetails(currentReasoning.type);
 
   return (
     <div
@@ -204,11 +186,11 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
       <div
         className={cn(
           "pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full blur-3xl opacity-25 transition-all duration-700",
-          lastReasoning.type === "on"
+          currentReasoning.type === "on"
             ? "bg-emerald-500"
-            : lastReasoning.type === "rain_lock" || lastReasoning.type === "stale_lock"
+            : currentReasoning.type === "rain_lock" || currentReasoning.type === "stale_lock"
               ? "bg-rose-500"
-              : lastReasoning.type === "manual_hold"
+              : currentReasoning.type === "manual_hold"
                 ? "bg-amber-500"
                 : "bg-sky-500",
         )}
@@ -250,7 +232,7 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
       <div className="mt-4 relative min-h-[76px] flex flex-col justify-center">
         <AnimatePresence mode="wait">
           <motion.div
-            key={lastReasoning.id + lastReasoning.headline}
+            key={currentReasoning.id + currentReasoning.headline}
             initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, y: -12, filter: "blur(4px)" }}
@@ -262,11 +244,11 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
             className="flex flex-col gap-1.5"
           >
             <p className={cn("text-base md:text-lg font-semibold tracking-tight", tone.textColor)}>
-              {lastReasoning.headline}
+              {currentReasoning.headline}
             </p>
             <div className="flex items-center gap-2 text-xs text-zinc-400 font-mono">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-white/40" />
-              <span>{lastReasoning.rule}</span>
+              <span>{currentReasoning.rule}</span>
             </div>
           </motion.div>
         </AnimatePresence>

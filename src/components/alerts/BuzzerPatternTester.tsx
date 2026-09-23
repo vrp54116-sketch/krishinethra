@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, Volume2, VolumeX, Sparkles, AlertCircle, AlertTriangle, Info, Play } from "lucide-react";
+import { Bell, Sparkles, AlertCircle, AlertTriangle, Info, Play } from "lucide-react";
 import { useFarmStore } from "@/lib/store";
 import { cmdBuzzPattern } from "@/lib/mqtt-bridge";
-import { LiquidButton, LiquidToggle } from "@/components/ui/glass";
+import { LiquidToggle } from "@/components/ui/glass";
 import { cn } from "@/lib/utils";
 
 // Web Audio sound synthesizer for buzzer feedback
 function playBuzzerAudio(beeps: number, durationMs: number) {
   try {
-    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtx) return;
     const ctx = new AudioCtx();
 

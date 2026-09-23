@@ -510,7 +510,7 @@ export interface HealthBreakdownResult {
 
 export function computeHealthBreakdown(
   snapshot: SensorSnapshot,
-  zones: Zone[] = [],
+  _zones: Zone[] = [],
   unresolvedDiseaseCount: number = 0,
   activeSprayPlansCount: number = 0,
 ): HealthBreakdownResult {

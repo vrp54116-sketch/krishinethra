@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
-import { CloudRain, Droplets, CheckCircle, ShieldCheck, Calendar } from "lucide-react";
+import { CloudRain, ShieldCheck, Calendar } from "lucide-react";
 import { useFarmStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 

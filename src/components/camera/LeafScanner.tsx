@@ -139,13 +139,14 @@ export default function LeafScanner() {
     const p = takePendingCapture();
     if (p) {
       cameraCanvasRef.current = p.canvas;
-      setCameraUrl(p.dataUrl);
-      setSource("camera");
-      setFresh(null);
-      setOpenScanId(null);
-      setChemOpen(false);
+      queueMicrotask(() => {
+        setCameraUrl(p.dataUrl);
+        setSource("camera");
+        setFresh(null);
+        setOpenScanId(null);
+        setChemOpen(false);
+      });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const activeSample = sampleMeta(sampleId);

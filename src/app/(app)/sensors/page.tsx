@@ -15,19 +15,16 @@ import {
 import {
   Activity,
   ArrowDownToLine,
-  Calendar,
-  Clock,
   Droplets,
   Gauge,
   Layers,
   Thermometer,
   Wind,
   CloudRain,
-  CheckCircle2,
-  AlertTriangle,
+  type LucideIcon,
 } from "lucide-react";
 import { useFarmStore } from "@/lib/store";
-import { LiquidButton, LiquidToggle } from "@/components/ui/glass";
+import type { SensorHistoryPoint } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type SensorKey = "soil" | "temp" | "hum" | "aqi" | "rain" | "tank";
@@ -39,8 +36,19 @@ interface SensorMetric {
   color: string;
   gradientFrom: string;
   gradientTo: string;
-  icon: any;
-  getValue: (point: any) => number;
+  icon: LucideIcon;
+  getValue: (point: SensorHistoryPoint) => number;
+}
+
+interface ChartPoint {
+  time: string;
+  timestamp: number;
+  soil: number;
+  temp: number;
+  hum: number;
+  aqi: number;
+  rain: number;
+  tank: number;
 }
 
 const METRICS: SensorMetric[] = [
@@ -112,10 +120,10 @@ export default function SensorsPage() {
   const [selectedMetric, setSelectedMetric] = useState<SensorKey>("soil");
   const [viewMode, setViewMode] = useState<"area" | "line">("area");
 
-  // Format 1-hour dataset (last 60 data points or synthetic points)
-  const chartData = useMemo(() => {
+  // Format 1-hour dataset (last 60 data points or deterministic points)
+  const chartData = useMemo<ChartPoint[]>(() => {
     if (sensorHistory && sensorHistory.length > 0) {
-      return sensorHistory.slice(-60).map((pt, idx) => {
+      return sensorHistory.slice(-60).map((pt) => {
         const timeLabel = new Date(pt.timestamp).toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",
@@ -134,10 +142,10 @@ export default function SensorsPage() {
       });
     }
 
-    // Fallback generator for smooth charts if store history is fresh
-    const now = Date.now();
+    // Deterministic fallback for smooth charts if store history is fresh
+    const baseTime = snapshot.timestamp ?? 1700000000000;
     return Array.from({ length: 30 }).map((_, i) => {
-      const t = new Date(now - (30 - i) * 60 * 1000);
+      const t = new Date(baseTime - (30 - i) * 60 * 1000);
       return {
         time: t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         timestamp: t.getTime(),
@@ -145,8 +153,8 @@ export default function SensorsPage() {
         temp: Number(((snapshot.temp ?? 30) + Math.sin(i * 0.3) * 1.5).toFixed(1)),
         hum: Math.round(snapshot.hum ?? 60) + Math.cos(i * 0.4) * 3,
         aqi: Math.round(snapshot.aqi ?? 85) + Math.sin(i * 0.5) * 5,
-        rain: snapshot.rain ? 1.8 + Math.random() * 0.6 : 0,
-        tank: Math.round(snapshot.tankLevelPercent ?? 78) - (i * 0.1),
+        rain: snapshot.rain ? 1.8 + (i % 3) * 0.2 : 0,
+        tank: Math.round(snapshot.tankLevelPercent ?? 78) - i * 0.1,
       };
     });
   }, [sensorHistory, snapshot]);
@@ -163,7 +171,7 @@ export default function SensorsPage() {
     };
 
     METRICS.forEach((m) => {
-      const values = chartData.map((d: any) => Number(d[m.key]) || 0);
+      const values = chartData.map((d) => Number(d[m.key]) || 0);
       if (values.length > 0) {
         const min = Math.min(...values);
         const max = Math.max(...values);
@@ -229,7 +237,7 @@ export default function SensorsPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={handleExportCSV}
-            className="liquid-button inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-semibold text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 transition-all shadow-lg hover:shadow-emerald-500/10"
+            className="liquid-button inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-semibold text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/30 transition-all shadow-lg hover:shadow-emerald-500/10 cursor-pointer"
           >
             <ArrowDownToLine className="h-4 w-4" />
             <span>Export CSV</span>
@@ -249,7 +257,7 @@ export default function SensorsPage() {
               key={m.key}
               onClick={() => setSelectedMetric(m.key)}
               className={cn(
-                "liquid-glass-card text-left p-4 rounded-2xl border transition-all duration-200 flex flex-col justify-between gap-3 group relative overflow-hidden",
+                "liquid-glass-card text-left p-4 rounded-2xl border transition-all duration-200 flex flex-col justify-between gap-3 group relative overflow-hidden cursor-pointer",
                 isSelected
                   ? "border-emerald-400/40 bg-emerald-500/[0.08] shadow-[0_0_24px_rgba(16,185,129,0.15)] ring-1 ring-emerald-400/30"
                   : "border-white/10 hover:border-white/20 bg-white/[0.03]",
@@ -318,7 +326,7 @@ export default function SensorsPage() {
             <button
               onClick={() => setViewMode("area")}
               className={cn(
-                "px-3 py-1 rounded-lg text-xs font-medium transition-all",
+                "px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer",
                 viewMode === "area"
                   ? "bg-white/15 text-white shadow-sm"
                   : "text-zinc-400 hover:text-white",
@@ -329,7 +337,7 @@ export default function SensorsPage() {
             <button
               onClick={() => setViewMode("line")}
               className={cn(
-                "px-3 py-1 rounded-lg text-xs font-medium transition-all",
+                "px-3 py-1 rounded-lg text-xs font-medium transition-all cursor-pointer",
                 viewMode === "line"
                   ? "bg-white/15 text-white shadow-sm"
                   : "text-zinc-400 hover:text-white",
@@ -376,7 +384,7 @@ export default function SensorsPage() {
                     fontSize: "12px",
                     color: "#fff",
                   }}
-                  formatter={(val: any) => [`${val} ${activeMetric.unit}`, activeMetric.name]}
+                  formatter={(val: unknown) => [`${String(val)} ${activeMetric.unit}`, activeMetric.name]}
                   labelStyle={{ color: "#a1a1aa", marginBottom: "4px" }}
                 />
                 <Area
@@ -415,7 +423,7 @@ export default function SensorsPage() {
                     fontSize: "12px",
                     color: "#fff",
                   }}
-                  formatter={(val: any) => [`${val} ${activeMetric.unit}`, activeMetric.name]}
+                  formatter={(val: unknown) => [`${String(val)} ${activeMetric.unit}`, activeMetric.name]}
                   labelStyle={{ color: "#a1a1aa", marginBottom: "4px" }}
                 />
                 <Line

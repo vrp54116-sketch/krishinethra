@@ -1,18 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Terminal, ArrowDownToLine, Trash2, CheckCircle2, Clock, Activity } from "lucide-react";
+import { Terminal, ArrowDownToLine, Trash2, CheckCircle2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { clearCommandLog, exportCommandLogCSV, getCommandLog } from "@/lib/command-logger";
 import type { CommandLogEntry } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export default function CommandLogCard({ className }: { className?: string }) {
-  const [logs, setLogs] = useState<CommandLogEntry[]>([]);
+  const [logs, setLogs] = useState<CommandLogEntry[]>(() => getCommandLog());
 
   useEffect(() => {
-    setLogs(getCommandLog());
-
     const handleLogged = () => {
       setLogs(getCommandLog());
     };

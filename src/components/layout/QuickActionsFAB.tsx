@@ -8,9 +8,7 @@ import {
   Droplets,
   OctagonX,
   Plus,
-  Power,
   RefreshCw,
-  Sparkles,
   Square,
   X,
 } from "lucide-react";
@@ -73,7 +71,9 @@ export default function QuickActionsFAB() {
     cmdBuzzPattern(2, 150);
     // Web Audio beep feedback
     try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) {
         const ctx = new AudioCtx();
         const osc = ctx.createOscillator();

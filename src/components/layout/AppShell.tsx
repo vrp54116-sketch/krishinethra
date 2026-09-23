@@ -24,7 +24,6 @@ import {
   SprayCan,
   TrendingUp,
   Wifi,
-  WifiOff,
   Activity,
   X,
   type LucideIcon,

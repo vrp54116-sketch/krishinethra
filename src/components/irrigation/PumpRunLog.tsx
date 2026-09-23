@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Clock, Droplets, Sparkles, ShieldAlert, CheckCircle2, History } from "lucide-react";
+import { Clock, Droplets, CheckCircle2, History } from "lucide-react";
 import { useFarmStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +17,6 @@ interface PumpLogItem {
 
 export default function PumpRunLog({ className }: { className?: string }) {
   const pump = useFarmStore((s) => s.pump);
-  const snapshot = useFarmStore((s) => s.snapshot);
   const alerts = useFarmStore((s) => s.alerts);
   const manualRemaining = useFarmStore((s) => s.manualPumpRemainingSec);
 
@@ -30,7 +29,7 @@ export default function PumpRunLog({ className }: { className?: string }) {
       .filter((a) => a.title.toLowerCase().includes("pump") || a.title.toLowerCase().includes("irrigation"))
       .slice(0, 10);
 
-    pumpAlerts.forEach((a, i) => {
+    pumpAlerts.forEach((a) => {
       const isAuto = a.message.toLowerCase().includes("auto");
       const isOff = a.title.toLowerCase().includes("off") || a.title.toLowerCase().includes("stopped");
       const timeStr = new Date(a.timestamp).toLocaleTimeString([], {
@@ -54,11 +53,10 @@ export default function PumpRunLog({ className }: { className?: string }) {
 
     // Provide default rich history if alerts list is short
     if (list.length < 5) {
-      const now = Date.now();
       const defaults: PumpLogItem[] = [
         {
           id: "def-1",
-          time: new Date(now - 12 * 60 * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          time: "14:15",
           mode: "Auto",
           duration: "45s",
           trigger: "Soil 24% < 30% Min Threshold",
@@ -67,7 +65,7 @@ export default function PumpRunLog({ className }: { className?: string }) {
         },
         {
           id: "def-2",
-          time: new Date(now - 45 * 60 * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          time: "13:30",
           mode: "Auto",
           duration: "30s",
           trigger: "Autonomous Root Zone Cycle",
@@ -76,7 +74,7 @@ export default function PumpRunLog({ className }: { className?: string }) {
         },
         {
           id: "def-3",
-          time: new Date(now - 2 * 3600 * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          time: "11:00",
           mode: "Manual",
           duration: "60s",
           trigger: "Operator Manual Boost",
@@ -85,7 +83,7 @@ export default function PumpRunLog({ className }: { className?: string }) {
         },
         {
           id: "def-4",
-          time: new Date(now - 4 * 3600 * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          time: "09:30",
           mode: "Auto",
           duration: "0s (Skipped)",
           trigger: "Rain Sensor Active (2.1 mm)",

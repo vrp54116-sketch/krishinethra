@@ -24,6 +24,7 @@ export default function PhoneCamera({
   const [active, setActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [facing, setFacing] = useState<"environment" | "user">("environment");
+  const [retryKey, setRetryKey] = useState(0);
 
   const stop = () => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -31,43 +32,50 @@ export default function PhoneCamera({
     setActive(false);
   };
 
-  const start = async (mode: "environment" | "user") => {
-    stop();
-    setError(null);
-    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
-      setError("Camera not supported in this browser — use Upload instead.");
-      return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: mode, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false,
-      });
-      streamRef.current = stream;
-      const v = videoRef.current;
-      if (v) {
-        v.srcObject = stream;
-        await v.play().catch(() => undefined);
-      }
-      setActive(true);
-    } catch {
-      setError("Camera blocked — allow camera permission, or use Upload instead.");
-    }
-  };
-
   useEffect(() => {
-    void start(facing);
+    let cancelled = false;
+
+    async function initCamera() {
+      if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+        queueMicrotask(() => {
+          if (!cancelled) setError("Camera not supported in this browser — use Upload instead.");
+        });
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        const v = videoRef.current;
+        if (v) {
+          v.srcObject = stream;
+          await v.play().catch(() => undefined);
+        }
+        setActive(true);
+      } catch {
+        if (!cancelled) {
+          setError("Camera blocked — allow camera permission, or use Upload instead.");
+        }
+      }
+    }
+
+    void initCamera();
+
     return () => {
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
+      cancelled = true;
+      stop();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [facing, retryKey]);
 
   const flip = () => {
-    const next = facing === "environment" ? "user" : "environment";
-    setFacing(next);
-    void start(next);
+    setError(null);
+    setFacing((prev) => (prev === "environment" ? "user" : "environment"));
   };
 
   const capture = () => {
@@ -95,7 +103,6 @@ export default function PhoneCamera({
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-black">
       <div className="relative aspect-[4/3] w-full bg-black">
-        {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
         <video
           ref={videoRef}
           playsInline
@@ -113,7 +120,10 @@ export default function PhoneCamera({
             </p>
             <button
               type="button"
-              onClick={() => void start(facing)}
+              onClick={() => {
+                setError(null);
+                setRetryKey((k) => k + 1);
+              }}
               className="mt-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-bold text-zinc-200 hover:border-emerald-500/40 hover:text-emerald-200"
             >
               Retry camera

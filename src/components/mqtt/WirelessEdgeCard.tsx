@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import {
   Check,
@@ -35,6 +35,17 @@ function rssiPct(rssi: number | null): number {
   return Math.min(100, Math.max(0, Math.round(((rssi + 90) / 60) * 100)));
 }
 
+function subscribeNow(callback: () => void) {
+  const id = setInterval(callback, 1000);
+  return () => clearInterval(id);
+}
+function getNowSec(): number {
+  return Math.floor(Date.now() / 1000);
+}
+function getServerSnapshot(): number {
+  return 0;
+}
+
 /**
  * WirelessEdgeCard — Settings → "Wireless Edge Bridge".
  * Token (default patelfarm01) with Copy + Regenerate, broker dropdown
@@ -63,19 +74,16 @@ export default function WirelessEdgeCard() {
   const isCustom = !DEFAULT_BROKERS.includes(brokerUrl as (typeof DEFAULT_BROKERS)[number]);
   const [customUrl, setCustomUrl] = useState(isCustom ? brokerUrl : "");
   const [copied, setCopied] = useState(false);
-  const [, forceTick] = useState(0);
 
-  // Re-render every second so "last seen Xs ago" stays live.
-  useEffect(() => {
-    const id = setInterval(() => forceTick((n) => n + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
+  const nowSec = useSyncExternalStore(subscribeNow, getNowSec, getServerSnapshot);
 
   const topics = topicsFor(token);
   const connected = mqttStatus === "online";
   const connecting = mqttStatus === "connecting";
   const ageSec =
-    mqttLastSeen != null ? Math.max(0, Math.round((Date.now() - mqttLastSeen) / 1000)) : null;
+    mqttLastSeen != null && nowSec > 0
+      ? Math.max(0, nowSec - Math.round(mqttLastSeen / 1000))
+      : null;
   const edgeLive =
     settings.mode === "live" && liveSource === "mqtt" && connected && (ageSec ?? 99) < 5;
 

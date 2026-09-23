@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Activity, ArrowUpRight, Cpu, Droplets, Thermometer, Wind, CloudRain, Clock } from "lucide-react";
+import { Activity, ArrowUpRight, Cpu, Droplets, Thermometer, Wind, CloudRain } from "lucide-react";
 import { useFarmStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 

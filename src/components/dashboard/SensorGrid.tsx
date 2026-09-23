@@ -41,6 +41,9 @@ export default function SensorGrid() {
   const snapshot = useFarmStore((s) => s.snapshot);
   const sensorHistory = useFarmStore((s) => s.sensorHistory);
   const thresholds = useFarmStore((s) => s.settings.thresholds);
+  const showRaw = useFarmStore((s) => s.settings.showRawCalibrationValues);
+  const soilRaw = snapshot.soilRaw ?? Math.round(1023 - (snapshot.soil * 6.5));
+  const mqRaw = snapshot.mqRaw ?? 230;
 
   const moistureTone = (m: number): PillTone =>
     m < 20 ? "bad" : m < thresholds.moistureLow ? "warn" : m > thresholds.moistureHigh ? "warn" : "good";
@@ -129,14 +132,22 @@ export default function SensorGrid() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         {sensors.map((s) => (
-          <SensorCard key={s.key} def={s} />
+          <SensorCard
+            key={s.key}
+            def={s}
+            rawText={
+              showRaw && (s.key === "soil" || s.key === "aqi")
+                ? `(raw: ${s.key === "soil" ? soilRaw : mqRaw})`
+                : undefined
+            }
+          />
         ))}
       </div>
     </div>
   );
 }
 
-function SensorCard({ def }: { def: SensorDef }) {
+function SensorCard({ def, rawText }: { def: SensorDef; rawText?: string }) {
   const Icon = def.icon;
   const body = (
     <>
@@ -149,9 +160,16 @@ function SensorCard({ def }: { def: SensorDef }) {
         >
           <Icon className="h-5 w-5" />
         </span>
-        <StatusPill tone={def.pill.tone} pulse={def.alertPulse}>
-          {def.pill.label}
-        </StatusPill>
+        <div className="flex items-center gap-1.5">
+          {rawText && (
+            <span className="font-mono text-[10px] text-amber-400 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-400/20">
+              {rawText}
+            </span>
+          )}
+          <StatusPill tone={def.pill.tone} pulse={def.alertPulse}>
+            {def.pill.label}
+          </StatusPill>
+        </div>
       </div>
 
       <p className="mt-3 truncate text-xs font-medium text-[#9CA3AF]">{def.label}</p>

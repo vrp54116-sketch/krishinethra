@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Monitor, Send, Sparkles, Trash2, CheckCircle2 } from "lucide-react";
+import { Monitor, Send, Trash2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useFarmStore } from "@/lib/store";
 import { cmdLcd } from "@/lib/mqtt-bridge";

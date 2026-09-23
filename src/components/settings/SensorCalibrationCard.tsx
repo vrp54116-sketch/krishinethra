@@ -1,6 +1,6 @@
 "use client";
 
-import { Sliders, Wrench, Droplets, Wind, CheckCircle2, BookOpen, Code2 } from "lucide-react";
+import { Wrench, Droplets, Wind, BookOpen } from "lucide-react";
 import { useFarmStore } from "@/lib/store";
 import { LiquidToggle } from "@/components/ui/glass";
 import { cn } from "@/lib/utils";

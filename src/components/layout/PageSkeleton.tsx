@@ -1,7 +1,5 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-
 /**
  * PageSkeleton — Apple-style liquid glass loading skeleton with left->right shimmer gradient.
  * Used by loading.tsx so route transitions feel fast, silky, and organic.

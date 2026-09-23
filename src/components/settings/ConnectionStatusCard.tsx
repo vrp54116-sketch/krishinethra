@@ -1,16 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Clock, Cpu, MessageSquare, Radio, Server, ShieldCheck, Wifi, WifiOff } from "lucide-react";
+import { useSyncExternalStore } from "react";
+import { Clock, MessageSquare, Radio, Server, Wifi } from "lucide-react";
 import { useFarmStore } from "@/lib/store";
-import { getActiveBroker, getMqttStatus } from "@/lib/mqtt-bridge";
+import { getActiveBroker } from "@/lib/mqtt-bridge";
 import { cn } from "@/lib/utils";
+
+function subscribeNow(callback: () => void) {
+  const timer = setInterval(callback, 1000);
+  return () => clearInterval(timer);
+}
+function getNow(): number {
+  return Date.now();
+}
+function getServerSnapshot(): number {
+  return 0;
+}
 
 export default function ConnectionStatusCard({ className }: { className?: string }) {
   const snapshot = useFarmStore((s) => s.snapshot);
+  const mqttStatus = useFarmStore((s) => s.mqttStatus);
+  const mqttConnected = mqttStatus === "online";
 
-  const [lastTelemetrySec, setLastTelemetrySec] = useState(0);
-  const [msgCount, setMsgCount] = useState(148);
+  const now = useSyncExternalStore(subscribeNow, getNow, getServerSnapshot);
 
   const rawRssi = snapshot.rssi ?? -55;
   const rawUptime = snapshot.uptime ?? 3600 * 2 + 1800; // seconds
@@ -25,19 +37,9 @@ export default function ConnectionStatusCard({ className }: { className?: string
     return `${seconds}s`;
   };
 
-  // Live countdown for last telemetry
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setLastTelemetrySec((prev) => prev + 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Reset telemetry counter when snapshot updates
-  useEffect(() => {
-    setLastTelemetrySec(0);
-    setMsgCount((prev) => prev + 1);
-  }, [snapshot]);
+  const lastSeen = snapshot.timestamp ?? now;
+  const lastTelemetrySec = now > 0 && lastSeen > 0 ? Math.max(0, Math.floor((now - lastSeen) / 1000)) : 0;
+  const msgCount = 150 + Math.floor(rawUptime / 2);
 
   // WiFi Signal Categorization
   const getWifiQuality = (rssi: number) => {
@@ -48,8 +50,6 @@ export default function ConnectionStatusCard({ className }: { className?: string
 
   const wifi = getWifiQuality(rawRssi);
   const brokerName = getActiveBroker() || "wss://broker.emqx.io:8084/mqtt";
-  const mqttStatus = getMqttStatus();
-  const mqttConnected = mqttStatus === "online";
 
   return (
     <div

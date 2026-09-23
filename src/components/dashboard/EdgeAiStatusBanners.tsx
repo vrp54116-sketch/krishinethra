@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  AlertTriangle,
   CloudOff,
   CloudRain,
   Radio,
   ShieldAlert,
-  WifiOff,
   X,
+  type LucideIcon,
 } from "lucide-react";
 import { useFarmStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -19,7 +18,7 @@ interface BannerItem {
   type: "danger" | "warning" | "info";
   title: string;
   description: string;
-  icon: any;
+  icon: LucideIcon;
   tone: {
     bg: string;
     border: string;
@@ -35,107 +34,105 @@ export default function EdgeAiStatusBanners({ className }: { className?: string 
   const mqttStatus = useFarmStore((s) => s.mqttStatus);
   const mqttConnected = mqttStatus === "online";
 
-  const [dismissed, setDismissed] = useState<Record<string, number>>({});
-  const [activeBanner, setActiveBanner] = useState<BannerItem | null>(null);
+  const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
 
-  // Evaluate banner conditions
-  useEffect(() => {
-    const now = Date.now();
-    const stale = snapshot.stale;
-    const rain = snapshot.rain && !pump.running;
-    const cloudOffline = !mqttConnected;
-    const weakWifi = snapshot.rssi != null && snapshot.rssi < -80;
+  // Evaluate candidate banner
+  const stale = snapshot.stale;
+  const rain = snapshot.rain && !pump.running;
+  const cloudOffline = !mqttConnected;
+  const weakWifi = snapshot.rssi != null && snapshot.rssi < -80;
 
-    let candidate: BannerItem | null = null;
+  let candidate: BannerItem | null = null;
 
-    if (stale) {
-      candidate = {
-        id: "stale-node",
-        type: "danger",
-        title: "Sensor node offline (UNO link dead 5s+)",
-        description: "Edge AI has locked auto-irrigation for crop safety. Manual override still available.",
-        icon: ShieldAlert,
-        tone: {
-          bg: "bg-rose-500/15",
-          border: "border-rose-500/35",
-          text: "text-rose-200",
-          iconColor: "text-rose-400",
-          glow: "shadow-[0_0_24px_rgba(244,63,94,0.2)]",
-        },
-      };
-    } else if (rain) {
-      candidate = {
-        id: "rain-lock",
-        type: "warning",
-        title: "Rain detected — pump locked OFF",
-        description: `Precipitation active (${snapshot.rainMm.toFixed(1)} mm). Water savings algorithm engaged.`,
-        icon: CloudRain,
-        tone: {
-          bg: "bg-amber-500/15",
-          border: "border-amber-500/35",
-          text: "text-amber-200",
-          iconColor: "text-amber-400",
-          glow: "shadow-[0_0_24px_rgba(245,158,11,0.2)]",
-        },
-      };
-    } else if (cloudOffline) {
-      candidate = {
-        id: "cloud-offline",
-        type: "info",
-        title: "Cloud link offline — Edge AI active locally",
-        description: "ESP32 autonomous control and local MQTT broker running uninterrupted on local network.",
-        icon: CloudOff,
-        tone: {
-          bg: "bg-sky-500/15",
-          border: "border-sky-500/35",
-          text: "text-sky-200",
-          iconColor: "text-sky-400",
-          glow: "shadow-[0_0_24px_rgba(14,165,233,0.2)]",
-        },
-      };
-    } else if (weakWifi) {
-      candidate = {
-        id: "wifi-weak",
-        type: "warning",
-        title: `Weak WiFi signal (${snapshot.rssi} dBm)`,
-        description: "ESP32 telemetry may experience dropped packets. Consider adjusting antenna position.",
-        icon: Radio,
-        tone: {
-          bg: "bg-amber-500/15",
-          border: "border-amber-500/35",
-          text: "text-amber-200",
-          iconColor: "text-amber-400",
-          glow: "shadow-[0_0_24px_rgba(245,158,11,0.2)]",
-        },
-      };
-    }
+  if (stale) {
+    candidate = {
+      id: "stale-node",
+      type: "danger",
+      title: "Sensor node offline (UNO link dead 5s+)",
+      description: "Edge AI has locked auto-irrigation for crop safety. Manual override still available.",
+      icon: ShieldAlert,
+      tone: {
+        bg: "bg-rose-500/15",
+        border: "border-rose-500/35",
+        text: "text-rose-200",
+        iconColor: "text-rose-400",
+        glow: "shadow-[0_0_24px_rgba(244,63,94,0.2)]",
+      },
+    };
+  } else if (rain) {
+    candidate = {
+      id: "rain-lock",
+      type: "warning",
+      title: "Rain detected — pump locked OFF",
+      description: `Precipitation active (${snapshot.rainMm.toFixed(1)} mm). Water savings algorithm engaged.`,
+      icon: CloudRain,
+      tone: {
+        bg: "bg-amber-500/15",
+        border: "border-amber-500/35",
+        text: "text-amber-200",
+        iconColor: "text-amber-400",
+        glow: "shadow-[0_0_24px_rgba(245,158,11,0.2)]",
+      },
+    };
+  } else if (cloudOffline) {
+    candidate = {
+      id: "cloud-offline",
+      type: "info",
+      title: "Cloud link offline — Edge AI active locally",
+      description: "ESP32 autonomous control and local MQTT broker running uninterrupted on local network.",
+      icon: CloudOff,
+      tone: {
+        bg: "bg-sky-500/15",
+        border: "border-sky-500/35",
+        text: "text-sky-200",
+        iconColor: "text-sky-400",
+        glow: "shadow-[0_0_24px_rgba(14,165,233,0.2)]",
+      },
+    };
+  } else if (weakWifi) {
+    candidate = {
+      id: "wifi-weak",
+      type: "warning",
+      title: `Weak WiFi signal (${snapshot.rssi} dBm)`,
+      description: "ESP32 telemetry may experience dropped packets. Consider adjusting antenna position.",
+      icon: Radio,
+      tone: {
+        bg: "bg-amber-500/15",
+        border: "border-amber-500/35",
+        text: "text-amber-200",
+        iconColor: "text-amber-400",
+        glow: "shadow-[0_0_24px_rgba(245,158,11,0.2)]",
+      },
+    };
+  }
 
-    if (candidate) {
-      // Check if user dismissed this within the last 60s
-      const dismissedAt = dismissed[candidate.id];
-      if (!dismissedAt || now - dismissedAt > 60000) {
-        setActiveBanner(candidate);
-        return;
-      }
-    }
-    setActiveBanner(null);
-  }, [snapshot.stale, snapshot.rain, snapshot.rainMm, snapshot.rssi, pump.running, mqttConnected, dismissed]);
+  const activeBanner = candidate && !dismissed[candidate.id] ? candidate : null;
+
+  const dismissBanner = useCallback((id: string) => {
+    setDismissed((prev) => ({ ...prev, [id]: true }));
+    // Auto-un-dismiss after 60s
+    setTimeout(() => {
+      setDismissed((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }, 60000);
+  }, []);
 
   // 10s auto-dismiss timer
+  const activeId = activeBanner?.id;
   useEffect(() => {
-    if (!activeBanner) return;
-    const bannerId = activeBanner.id;
+    if (!activeId) return;
     const timer = setTimeout(() => {
-      setDismissed((prev) => ({ ...prev, [bannerId]: Date.now() }));
-      setActiveBanner(null);
+      dismissBanner(activeId);
     }, 10000);
     return () => clearTimeout(timer);
-  }, [activeBanner]);
+  }, [activeId, dismissBanner]);
 
   const handleDismiss = () => {
     if (activeBanner) {
-      setDismissed((prev) => ({ ...prev, [activeBanner.id]: Date.now() }));
-      setActiveBanner(null);
+      dismissBanner(activeBanner.id);
     }
   };
 

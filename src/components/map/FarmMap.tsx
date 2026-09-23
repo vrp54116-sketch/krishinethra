@@ -17,7 +17,6 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFarmStore } from "@/lib/store";
-import { useT } from "@/lib/i18n";
 
 export const ZONE_PAN: Record<string, number> = {
   A: 45,
@@ -33,7 +32,6 @@ export function zoneStatusTone(status: string): "good" | "warning" | "critical" 
 }
 
 export default function FarmMap() {
-  const t = useT();
   const snapshot = useFarmStore((s) => s.snapshot);
   const pump = useFarmStore((s) => s.pump);
   const thresholds = useFarmStore((s) => s.settings.thresholds);

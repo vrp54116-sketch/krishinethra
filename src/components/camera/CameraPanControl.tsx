@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Camera, Compass, MoveHorizontal, Pause, Play, RotateCcw, Sliders, Video } from "lucide-react";
+import { Camera, Compass, MoveHorizontal, Pause, RotateCcw } from "lucide-react";
 import { useFarmStore } from "@/lib/store";
 import { cmdServo, cmdSweep } from "@/lib/mqtt-bridge";
 import { LiquidButton, LiquidToggle } from "@/components/ui/glass";
@@ -24,12 +24,7 @@ export default function CameraPanControl({ className }: { className?: string }) 
   const [isSweeping, setIsSweeping] = useState<boolean>(false);
   const [activePreset, setActivePreset] = useState<string>("Center (90°)");
 
-  // Sync with telemetry if not user dragging
-  useEffect(() => {
-    if (!isSweeping && snapshot.servo != null) {
-      setAngle(snapshot.servo);
-    }
-  }, [snapshot.servo, isSweeping]);
+  const displayAngle = isSweeping ? angle : (snapshot.servo ?? angle);
 
   // Sweep simulation if simulator mode or edge responds
   useEffect(() => {
@@ -124,7 +119,7 @@ export default function CameraPanControl({ className }: { className?: string }) 
         <div className="flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-white/10 text-purple-300 border border-purple-400/30 shadow-[0_0_12px_rgba(168,85,247,0.15)]">
             <Compass className="h-3.5 w-3.5 text-purple-400" />
-            Angle: {angle}°
+            Angle: {displayAngle}°
           </span>
           {isSweeping && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 animate-pulse">
@@ -151,7 +146,7 @@ export default function CameraPanControl({ className }: { className?: string }) 
           <motion.div
             className="absolute bottom-0 left-1/2 h-20 w-1 bg-gradient-to-t from-purple-500 to-sky-400 origin-bottom rounded-full shadow-[0_0_10px_#a855f7]"
             style={{ transformOrigin: "bottom center" }}
-            animate={{ rotate: angle - 90 }}
+            animate={{ rotate: displayAngle - 90 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
           />
 
@@ -173,7 +168,7 @@ export default function CameraPanControl({ className }: { className?: string }) 
             <MoveHorizontal className="h-3.5 w-3.5 text-zinc-400" />
             Pan Angle (0° to 180°)
           </span>
-          <span className="font-mono text-purple-300 font-bold">{angle}°</span>
+          <span className="font-mono text-purple-300 font-bold">{displayAngle}°</span>
         </div>
 
         <input

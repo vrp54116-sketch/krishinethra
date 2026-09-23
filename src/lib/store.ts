@@ -38,7 +38,6 @@ import {
   makeAlert,
   tick,
   uid,
-  zoneStatusForMoisture,
   ZONE_A_BASELINE,
   ZONE_B_BASELINE,
 } from "./simulation-engine";
