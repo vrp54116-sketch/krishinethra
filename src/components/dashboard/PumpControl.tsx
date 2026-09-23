@@ -38,7 +38,7 @@ export default function PumpControl() {
     logPump(
       on ? "Pump turned ON (Manual)" : "Pump turned OFF (Manual)",
       on
-        ? `Manual run for ${thresholds.pumpDurationSec}s — Zone B at ${snapshot.soilMoistureB.toFixed(1)}%.`
+        ? `Manual run for ${thresholds.pumpDurationSec}s — Soil at ${snapshot.soil.toFixed(1)}%.`
         : "Manual run stopped by user.",
     );
   };
@@ -52,7 +52,7 @@ export default function PumpControl() {
     setPumpManual(true, sec);
     logPump(
       `Pump ON for ${sec}s`,
-      `Quick manual run — Zone B at ${snapshot.soilMoistureB.toFixed(1)}%, tank ${snapshot.tankLevelPercent.toFixed(0)}%.`,
+      `Quick manual run — Soil at ${snapshot.soil.toFixed(1)}%.`,
     );
   };
 
@@ -71,60 +71,43 @@ export default function PumpControl() {
     }
   };
 
-  // Live Auto-AI reasoning lines.
+  // Live Jal Agent Auto-AI reasoning lines.
   const autoLines = (): Array<{ text: string; hot: boolean }> => {
-    const m = snapshot.soilMoistureB;
+    const soil = snapshot.soil;
+    const rain = snapshot.rain;
     const low = thresholds.moistureLow;
     const high = thresholds.moistureHigh;
-    const tank = snapshot.tankLevelPercent;
+
     if (pump.running) {
+      if (rain) {
+        return [
+          { text: `Rain detected! Auto-stop triggered to prevent over-watering`, hot: true },
+          { text: `Soil moisture: ${soil.toFixed(1)}%`, hot: false },
+        ];
+      }
       return [
-        {
-          text: `Zone B moisture ${m.toFixed(1)}% — pump RUNNING, lifting toward ${high}%`,
-          hot: true,
-        },
-        {
-          text:
-            tank < 10
-              ? `Tank ${tank.toFixed(0)}% < 10% — auto-stop imminent, refill soon`
-              : `Tank ${tank.toFixed(0)}% healthy — irrigation continues`,
-          hot: tank < 10,
-        },
+        { text: `Soil moisture ${soil.toFixed(1)}% — pump RUNNING, lifting toward ${high}%`, hot: true },
+        { text: `Rain sensor: Dry (No rain detected)`, hot: false },
       ];
     }
-    if (tank <= 15) {
+
+    if (rain) {
       return [
-        {
-          text: `Tank ${tank.toFixed(0)}% ≤ 15% — auto-start blocked until refill`,
-          hot: true,
-        },
-        {
-          text: `Zone B moisture ${m.toFixed(1)}% vs threshold ${low}% — waiting on water supply`,
-          hot: false,
-        },
+        { text: `Rain detected — pump held OFF (rain irrigation active)`, hot: true },
+        { text: `Soil moisture: ${soil.toFixed(1)}% (Threshold: <${low}%)`, hot: false },
       ];
     }
-    if (m < low) {
+
+    if (soil < low) {
       return [
-        {
-          text: `Zone B moisture ${m.toFixed(1)}% < threshold ${low}% → pump will start`,
-          hot: true,
-        },
-        {
-          text: `Tank ${tank.toFixed(0)}% OK — auto-start conditions met`,
-          hot: false,
-        },
+        { text: `Soil moisture ${soil.toFixed(1)}% < ${low}% & dry → pump will start`, hot: true },
+        { text: `Jal Agent: Irrigation triggered`, hot: false },
       ];
     }
+
     return [
-      {
-        text: `Zone B moisture ${m.toFixed(1)}% ≥ threshold ${low}% — holding OFF`,
-        hot: false,
-      },
-      {
-        text: `Will restart if moisture drops below ${low}% or tank refills above 15%`,
-        hot: false,
-      },
+      { text: `Soil moisture ${soil.toFixed(1)}% ≥ ${low}% — holding OFF`, hot: false },
+      { text: `Will restart if moisture drops below ${low}% and no rain is detected`, hot: false },
     ];
   };
 
@@ -170,7 +153,7 @@ export default function PumpControl() {
             )}
           </p>
           <p className="truncate text-xs text-[#9CA3AF]">
-            Flow {snapshot.flowRateLpm.toFixed(2)} L/min · {snapshot.pumpCurrentA.toFixed(2)} A
+            Soil Moisture: {snapshot.soil.toFixed(1)}% · Rain: {snapshot.rain ? "Yes" : "No"}
           </p>
         </div>
         {/* Animated droplets when ON */}

@@ -91,9 +91,18 @@ export const DEFAULT_SETTINGS: AppSettings = {
     tankLow: 20,
     pumpDurationSec: 10,
   },
+  animations: {
+    glassBlur: true,
+    liquidGlow: true,
+    fluidAnimations: true,
+    fluidMotion: true,
+    particles: true,
+  },
   voiceOutput: true,
   voiceLang: "hi-IN",
   soundEnabled: true,
+  muteBuzzer: false,
+  showRawCalibrationValues: false,
   irrigationSchedule: [
     { id: "sched-mon", day: 1, time: "06:00", durationMin: 8 },
     { id: "sched-thu", day: 4, time: "06:00", durationMin: 8 },
@@ -734,54 +743,50 @@ function numOr(fallback: number, v: unknown): number {
 function applyLiveSnapshot(raw: SensorSnapshot): void {
   const s = useFarmStore.getState();
   const now = Date.now();
+  const soilA = numOr(s.snapshot.soilMoistureA, raw.soilMoistureA ?? raw.soil);
+  const soilB = numOr(s.snapshot.soilMoistureB, raw.soilMoistureB ?? raw.soil);
+  const temp = numOr(s.snapshot.temp ?? s.snapshot.tempC, raw.temp ?? raw.tempC);
+  const hum = numOr(s.snapshot.hum ?? s.snapshot.humidity, raw.hum ?? raw.humidity);
   const snapshot: SensorSnapshot = {
     timestamp: raw.timestamp > 0 ? raw.timestamp : now,
-    tempC: numOr(s.snapshot.tempC, raw.tempC),
-    humidity: numOr(s.snapshot.humidity, raw.humidity),
+    tempC: temp,
+    humidity: hum,
     aqi: numOr(s.snapshot.aqi, raw.aqi),
-    lightLux: numOr(s.snapshot.lightLux, raw.lightLux),
-    rainMm: numOr(s.snapshot.rainMm, raw.rainMm),
-    tankLevelPercent: numOr(s.snapshot.tankLevelPercent, raw.tankLevelPercent),
-    flowRateLpm: numOr(s.snapshot.flowRateLpm, raw.flowRateLpm),
-    pumpCurrentA: numOr(s.snapshot.pumpCurrentA, raw.pumpCurrentA),
-    soilMoistureA: numOr(s.snapshot.soilMoistureA, raw.soilMoistureA),
-    soilMoistureB: numOr(s.snapshot.soilMoistureB, raw.soilMoistureB),
+    lightLux: numOr(s.snapshot.lightLux ?? 650, raw.lightLux),
+    rainMm: numOr(s.snapshot.rainMm ?? 0, raw.rainMm),
+    tankLevelPercent: numOr(s.snapshot.tankLevelPercent ?? 85, raw.tankLevelPercent),
+    flowRateLpm: numOr(s.snapshot.flowRateLpm ?? 0, raw.flowRateLpm),
+    pumpCurrentA: numOr(s.snapshot.pumpCurrentA ?? 0, raw.pumpCurrentA),
+    soilMoistureA: soilA,
+    soilMoistureB: soilB,
+    soil: soilB,
+    temp,
+    hum,
+    rain: typeof raw.rain === "boolean" ? raw.rain : Boolean(raw.rain),
+    pump: typeof raw.pump === "boolean" ? raw.pump : s.pump.running,
+    mode: (raw.mode as "AUTO" | "MANUAL") ?? (s.pump.mode === "auto" ? "AUTO" : "MANUAL"),
+    servo: numOr(s.snapshot.servo ?? 90, raw.servo),
+    rssi: numOr(s.snapshot.rssi ?? -55, raw.rssi),
+    stale: typeof raw.stale === "boolean" ? raw.stale : false,
+    uptime: numOr(s.snapshot.uptime ?? 0, raw.uptime),
+    soilRaw: numOr(s.snapshot.soilRaw ?? 540, raw.soilRaw),
+    mqRaw: numOr(s.snapshot.mqRaw ?? 230, raw.mqRaw),
   };
 
-  // Pump relay state is derived from live electrics (no separate flag
-  // in the contract): flowing water or current draw means RUNNING.
   const wasRunning = s.pump.running;
-  const running = snapshot.flowRateLpm > 0.005 || snapshot.pumpCurrentA > 0.005;
+  const running = snapshot.pump;
   let pump = s.pump;
   if (running !== wasRunning) {
     pump = { ...pump, running, lastRunAt: running ? now : pump.lastRunAt };
   }
 
-  // Water/energy estimates on the fixed poll cadence.
   const dtSec = LIVE_POLL_MS / 1000;
-  let totalWaterUsedL = s.totalWaterUsedL;
   if (running) {
-    totalWaterUsedL =
-      Math.round((totalWaterUsedL + (snapshot.flowRateLpm / 60) * dtSec) * 10000) /
-      10000;
     pump = { ...pump, totalRunSeconds: pump.totalRunSeconds + dtSec };
   }
 
   const pumpEvent: "started" | "blocked" | null =
     !wasRunning && running ? "started" : null;
-
-  const t = s.settings.thresholds;
-  const zoneCMoisture =
-    Math.round(((snapshot.soilMoistureA + snapshot.soilMoistureB) / 2) * 100) / 100;
-  const zones: Zone[] = s.zones.map((z) => {
-    const moisture =
-      z.id === "A" ? snapshot.soilMoistureA : z.id === "B" ? snapshot.soilMoistureB : zoneCMoisture;
-    return {
-      ...z,
-      soilMoisture: moisture,
-      status: computeZoneStatus(z.id, moisture, t, s.sprayPlans, s.alerts),
-    };
-  });
 
   const fresh = generateAlerts(snapshot, s.settings, s.alerts, pumpEvent);
   const alerts = [...fresh, ...s.alerts].slice(0, 100);
@@ -796,15 +801,21 @@ function applyLiveSnapshot(raw: SensorSnapshot): void {
       aqi: snapshot.aqi,
       soilMoistureA: snapshot.soilMoistureA,
       soilMoistureB: snapshot.soilMoistureB,
-      waterUsedL: totalWaterUsedL,
+      waterUsedL: 0,
+      tankLevelPercent: snapshot.tankLevelPercent,
+      soil: snapshot.soil,
+      temp: snapshot.temp,
+      hum: snapshot.hum,
+      rain: snapshot.rain,
+      pump: snapshot.pump,
     };
     sensorHistory = [...s.sensorHistory, point].slice(-500);
   }
 
   const unresolved = s.scans.filter((scan) => !scan.resolved).length;
-  const farmHealthScore = computeFarmHealthScore(snapshot, zones, unresolved);
+  const farmHealthScore = computeFarmHealthScore(snapshot, s.zones, unresolved);
 
-  // Completed live run → diary entry (mirrors the simulator behaviour).
+  // Completed live run → diary entry.
   let diary = s.diary;
   if (wasRunning && !running) {
     const startAt = s.pump.lastRunAt ?? now;
@@ -818,8 +829,7 @@ function applyLiveSnapshot(raw: SensorSnapshot): void {
         id: uid("diary"),
         date: new Date(now).toISOString().slice(0, 10),
         type: "irrigation",
-        details: `Irrigated Zone B for ${label} (live hardware) — soil moisture B ${snapshot.soilMoistureB.toFixed(1)}%, tank at ${snapshot.tankLevelPercent.toFixed(0)}% after the run.`,
-        zone: "B",
+        details: `Irrigated farm for ${label} (live hardware) — soil moisture ${snapshot.soil.toFixed(1)}%.`,
       } as DiaryEntry,
       ...s.diary,
     ].slice(0, 200);
@@ -828,8 +838,6 @@ function applyLiveSnapshot(raw: SensorSnapshot): void {
   useFarmStore.setState({
     pump,
     snapshot,
-    totalWaterUsedL,
-    zones,
     alerts,
     sensorHistory,
     farmHealthScore,
@@ -1006,7 +1014,13 @@ function doTick(): void {
       aqi: snapshot.aqi,
       soilMoistureA: snapshot.soilMoistureA,
       soilMoistureB: snapshot.soilMoistureB,
-      waterUsedL: totalWaterUsedL,
+      waterUsedL: 0,
+      tankLevelPercent: snapshot.tankLevelPercent,
+      soil: snapshot.soil,
+      temp: snapshot.temp,
+      hum: snapshot.hum,
+      rain: snapshot.rain,
+      pump: snapshot.pump,
     };
     sensorHistory = [...s.sensorHistory, point].slice(-500);
   }
@@ -1015,7 +1029,6 @@ function doTick(): void {
   const farmHealthScore = computeFarmHealthScore(snapshot, zones, unresolved);
 
   // Auto-diary: every completed irrigation run files an irrigation entry.
-  // (wasRunning → stopped, and not a tank-blocked abort.)
   const wasManualRemaining = s.manualPumpRemainingSec;
   const completedRun = wasRunning && !pump.running && !result.blocked;
   let diary = s.diary;
@@ -1030,8 +1043,7 @@ function doTick(): void {
       id: uid("diary"),
       date: todayISO(),
       type: "irrigation",
-      details: `Irrigated Zone B for ${label} — soil moisture B ${snapshot.soilMoistureB.toFixed(1)}%, tank at ${snapshot.tankLevelPercent.toFixed(0)}% after the run.`,
-      zone: "B",
+      details: `Irrigated farm for ${label} — soil moisture ${snapshot.soil.toFixed(1)}%.`,
     };
     diary = [entry, ...s.diary].slice(0, 200);
   }
@@ -1060,26 +1072,34 @@ function seedSensorHistory(
   points = 60,
 ): SensorHistoryPoint[] {
   // 60 points, 5s apart, ending at the snapshot — charts look alive instantly.
-  // Values wiggle gently around the live reading (deterministic, no jitter).
   const out: SensorHistoryPoint[] = [];
+  const sSoilA = snapshot.soilMoistureA ?? 45;
+  const sSoilB = snapshot.soilMoistureB ?? snapshot.soil ?? 22;
+  const sTemp = snapshot.temp ?? snapshot.tempC ?? 30;
+  const sHum = snapshot.hum ?? snapshot.humidity ?? 60;
   for (let i = points - 1; i >= 0; i--) {
     const ts = snapshot.timestamp - i * 5000;
     const k = i / Math.max(1, points - 1); // 0 newest → 1 oldest
     const wob = (seed: number, amp: number) =>
       Math.sin(ts / 37000 + seed) * amp * (0.3 + k * 0.7);
+    const soilValA = Math.round((sSoilA + wob(4, 1.1)) * 10) / 10;
+    const soilValB = Math.round((sSoilB + wob(2, 0.9)) * 10) / 10;
+    const tempVal = Math.round((sTemp + wob(1, 0.7)) * 10) / 10;
+    const humVal = Math.round((sHum + wob(2, 2.2)) * 10) / 10;
     out.push({
       timestamp: ts,
-      tempC: Math.round((snapshot.tempC + wob(1, 0.7)) * 10) / 10,
-      humidity: Math.round((snapshot.humidity + wob(2, 2.2)) * 10) / 10,
+      tempC: tempVal,
+      humidity: humVal,
       aqi: Math.round(snapshot.aqi + wob(3, 4)),
-      soilMoistureA:
-        Math.round((snapshot.soilMoistureA + wob(4, 1.1)) * 10) / 10,
-      soilMoistureB:
-        Math.round((snapshot.soilMoistureB + wob(5, 1.4)) * 10) / 10,
-      waterUsedL:
-        Math.round(
-          Math.max(0, totalWaterUsedL - (i * totalWaterUsedL) / points) * 10000,
-        ) / 10000,
+      soilMoistureA: soilValA,
+      soilMoistureB: soilValB,
+      waterUsedL: 0,
+      tankLevelPercent: snapshot.tankLevelPercent,
+      soil: soilValB,
+      temp: tempVal,
+      hum: humVal,
+      rain: false,
+      pump: false,
     });
   }
   return out;
@@ -2315,3 +2335,41 @@ if (typeof window !== "undefined") {
     }
   });
 }
+
+export interface SensorContextValue {
+  soil: number;
+  temp: number;
+  hum: number;
+  aqi: number;
+  rain: boolean;
+  pump: boolean;
+  mode: "AUTO" | "MANUAL";
+  servo: number;
+  rssi: number | null;
+  stale: boolean;
+  uptime: number;
+}
+
+export function useSensorContext(): SensorContextValue {
+  const snapshot = useFarmStore((s) => s.snapshot);
+  const pump = useFarmStore((s) => s.pump);
+  const mqttRssi = useFarmStore((s) => s.mqttRssi);
+  const edgeStale = useFarmStore((s) => s.edgeStale);
+  const edgeServo = useFarmStore((s) => s.edgeServo);
+  const hwUptimeSec = useFarmStore((s) => s.hwUptimeSec);
+
+  return {
+    soil: snapshot.soil ?? snapshot.soilMoistureA ?? 45,
+    temp: snapshot.temp ?? snapshot.tempC ?? 28,
+    hum: snapshot.hum ?? snapshot.humidity ?? 60,
+    aqi: snapshot.aqi ?? 85,
+    rain: Boolean(snapshot.rain),
+    pump: pump.running,
+    mode: (pump.mode === "auto" ? "AUTO" : "MANUAL") as "AUTO" | "MANUAL",
+    servo: edgeServo ?? snapshot.servo ?? 90,
+    rssi: mqttRssi ?? snapshot.rssi ?? null,
+    stale: edgeStale ?? snapshot.stale ?? false,
+    uptime: hwUptimeSec ?? snapshot.uptime ?? 0,
+  };
+}
+

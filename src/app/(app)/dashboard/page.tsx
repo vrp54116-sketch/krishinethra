@@ -9,9 +9,11 @@ import SensorGrid from "@/components/dashboard/SensorGrid";
 import PumpControl from "@/components/dashboard/PumpControl";
 import SuggestionsCard from "@/components/dashboard/SuggestionsCard";
 import AlertsFeed from "@/components/dashboard/AlertsFeed";
-import WaterCard from "@/components/dashboard/WaterCard";
 import QuickActions from "@/components/dashboard/QuickActions";
 import EdgeStaleBanner from "@/components/mqtt/EdgeStaleBanner";
+import EdgeAiStatusBanners from "@/components/dashboard/EdgeAiStatusBanners";
+import AiAgentReasoning from "@/components/dashboard/AiAgentReasoning";
+import SensorHealthCard from "@/components/dashboard/SensorHealthCard";
 
 function Rise({
   children,
@@ -67,9 +69,17 @@ export default function DashboardPage() {
         </Rise>
       )}
 
-      {/* 0b. HARDWARE SAFETY — sensor node silent (edge-stale) */}
+      {/* 0b. HARDWARE SAFETY & EDGE AI BANNERS */}
       <Rise>
         <EdgeStaleBanner />
+      </Rise>
+      <Rise delay={0.02}>
+        <EdgeAiStatusBanners />
+      </Rise>
+
+      {/* 1. SIGNATURE AI AGENT REASONING DISPLAY */}
+      <Rise delay={0.05}>
+        <AiAgentReasoning />
       </Rise>
 
       {/* V2.1 LIQUID GLASS LAYOUT
@@ -77,22 +87,20 @@ export default function DashboardPage() {
           right: health + pump + camera quick actions.
           Tablet/mobile: single column, cards stack (right column first). */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        {/* ---- LEFT: sensors + reasoning (+ alerts/water) ---- */}
+        {/* ---- LEFT: sensors + health monitor (+ alerts/water) ---- */}
         <div className="order-2 flex min-w-0 flex-col gap-4 xl:order-1">
+          <Rise delay={0.08}>
+            <SensorHealthCard />
+          </Rise>
           <Rise delay={0.1}>
             <SensorGrid />
           </Rise>
           <Rise delay={0.16}>
             <SuggestionsCard />
           </Rise>
-          <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2 xl:grid-cols-1">
-            <Rise delay={0.18}>
-              <AlertsFeed />
-            </Rise>
-            <Rise delay={0.2}>
-              <WaterCard />
-            </Rise>
-          </div>
+          <Rise delay={0.18}>
+            <AlertsFeed />
+          </Rise>
         </div>
 
         {/* ---- RIGHT: health + pump + camera ---- */}

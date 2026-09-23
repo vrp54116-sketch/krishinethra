@@ -36,6 +36,7 @@ import {
   type AlertSource,
 } from "@/lib/notifications";
 import type { Alert, Thresholds } from "@/lib/types";
+import BuzzerPatternTester from "@/components/alerts/BuzzerPatternTester";
 
 function Rise({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   return (
@@ -383,8 +384,13 @@ export default function AlertsPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-5">
-      {/* ============ 1. ALERT CENTER ============ */}
+      {/* ============ 0. BUZZER PATTERN TESTER ============ */}
       <Rise>
+        <BuzzerPatternTester />
+      </Rise>
+
+      {/* ============ 1. ALERT CENTER ============ */}
+      <Rise delay={0.06}>
         <Card>
           <CardHeader
             title={t("alertsPage.alertCenter")}

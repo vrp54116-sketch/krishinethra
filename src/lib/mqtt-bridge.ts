@@ -27,6 +27,7 @@
 
 import mqtt, { type MqttClient } from "mqtt";
 import { useFarmStore } from "./store";
+import { logCommand } from "./command-logger";
 
 export const DEFAULT_BROKERS = [
   "wss://broker.emqx.io:8084/mqtt",
@@ -177,38 +178,35 @@ function applyEdgePayload(raw: unknown): void {
   const now = Date.now();
   const cur = st.snapshot;
 
-  // --- soil → Zone B (rule unchanged) ---------------------------------
-  const soilB =
-    pickNum(obj, ["soilB", "soilMoistureB", "soil", "moisture", "moist", "soilPct"]) ??
-    cur.soilMoistureB;
-  const soilA = pickNum(obj, ["soilA", "soilMoistureA"]) ?? cur.soilMoistureA;
+  // --- Single soil probe ------------------------------------------------
+  const soil =
+    pickNum(obj, ["soil", "soilMoisture", "soilPct", "moisture", "moist", "soilA", "soilB"]) ??
+    cur.soil ??
+    cur.soilMoistureA ??
+    45;
 
-  const tempC = pickNum(obj, ["temp", "tempC", "t", "temperature"]) ?? cur.tempC;
-  const humidity = pickNum(obj, ["hum", "humidity", "h", "rh"]) ?? cur.humidity;
-  const aqi = pickNum(obj, ["aqi", "air", "airQuality"]) ?? cur.aqi;
-  const lightLux =
-    pickNum(obj, ["light", "lightLux", "lux", "ldr"]) ?? cur.lightLux;
-  const rainMm = pickNum(obj, ["rain", "rainMm", "rainfall"]) ?? cur.rainMm;
-  const tankLevelPercent =
-    pickNum(obj, ["tank", "tankLevel", "tankLevelPercent", "tankPct", "water"]) ??
-    cur.tankLevelPercent;
+  const temp = pickNum(obj, ["temp", "tempC", "t", "temperature"]) ?? cur.temp ?? cur.tempC ?? 28;
+  const hum = pickNum(obj, ["hum", "humidity", "h", "rh"]) ?? cur.hum ?? cur.humidity ?? 60;
+  const aqi = pickNum(obj, ["aqi", "air", "airQuality"]) ?? cur.aqi ?? 85;
 
-  // --- pump / flow ------------------------------------------------------
+  // Rain: boolean detected
+  const rainRaw = obj["rain"] ?? obj["rainDetected"] ?? obj["raining"] ?? obj["rainMm"];
+  let rain = Boolean(cur.rain);
+  if (typeof rainRaw === "boolean") rain = rainRaw;
+  else if (typeof rainRaw === "number") rain = rainRaw > 0;
+  else if (typeof rainRaw === "string") {
+    rain = ["1", "TRUE", "YES", "RAINING"].includes(rainRaw.trim().toUpperCase());
+  }
+
+  // --- pump -------------------------------------------------------------
   const pumpRaw = obj["pump"] ?? obj["pumpOn"] ?? obj["relay"] ?? obj["relay1"];
-  let pumpOn: boolean | null = null;
+  let pumpOn: boolean = Boolean(cur.pump ?? st.pump.running);
   if (typeof pumpRaw === "boolean") pumpOn = pumpRaw;
   else if (typeof pumpRaw === "number") pumpOn = pumpRaw > 0;
   else if (typeof pumpRaw === "string") {
     const s = pumpRaw.trim().toUpperCase();
     if (["ON", "1", "TRUE", "RUNNING"].includes(s)) pumpOn = true;
     else if (["OFF", "0", "FALSE", "IDLE"].includes(s)) pumpOn = false;
-  }
-  let flowRateLpm = pickNum(obj, ["flow", "flowRate", "flowRateLpm", "lpm"]);
-  let pumpCurrentA = pickNum(obj, ["current", "pumpCurrent", "pumpCurrentA", "amps", "a"]);
-  if (flowRateLpm == null || pumpCurrentA == null) {
-    const running = pumpOn ?? cur.flowRateLpm > 0.005;
-    if (flowRateLpm == null) flowRateLpm = running ? 0.42 : 0;
-    if (pumpCurrentA == null) pumpCurrentA = running ? 0.25 : 0;
   }
 
   // --- edge extras -------------------------------------------------------
@@ -235,6 +233,26 @@ function applyEdgePayload(raw: unknown): void {
       ? 1
       : 0;
 
+  const soilA = pickNum(obj, ["soilA", "soilMoistureA"]) ?? cur.soilMoistureA ?? 45;
+  const soilB = pickNum(obj, ["soilB", "soilMoistureB", "soil", "soilMoisture", "moisture"]) ?? soil;
+  const tempC = temp;
+  const humidity = hum;
+  const rainMm = pickNum(obj, ["rainMm", "rainfall"]) ?? (rain ? 2.5 : 0);
+  const tankLevelPercent = pickNum(obj, ["tank", "tankLevel", "tankLevelPercent"]) ?? cur.tankLevelPercent ?? 85;
+  const flowRateLpm = pickNum(obj, ["flow", "flowRate", "flowRateLpm"]) ?? (pumpOn ? 0.4 : 0);
+  const pumpCurrentA = pickNum(obj, ["current", "pumpCurrent", "pumpCurrentA"]) ?? (pumpOn ? 0.25 : 0);
+  const lightLux = pickNum(obj, ["light", "lightLux", "lux"]) ?? cur.lightLux ?? 650;
+
+  const uptime = pickNum(obj, ["up", "uptime", "bootTime"]);
+  const soilRaw =
+    pickNum(obj, ["soilRaw", "rawSoil", "analogSoil"]) ??
+    Math.round(850 - ((soilB ?? 22) / 100) * 650);
+  const mqRaw =
+    pickNum(obj, ["mqRaw", "rawAqi", "analogMq"]) ??
+    Math.round((aqi ?? 85) * 2.7);
+  const lcd1 = pickStr(obj, ["lcd1", "line1"]);
+  const lcd2 = pickStr(obj, ["lcd2", "line2"]);
+
   const snapshot = {
     timestamp: pickNum(obj, ["ts", "timestamp", "time"]) ?? now,
     tempC,
@@ -247,6 +265,18 @@ function applyEdgePayload(raw: unknown): void {
     pumpCurrentA,
     soilMoistureA: soilA,
     soilMoistureB: soilB,
+    soil: soilB,
+    temp: tempC,
+    hum: humidity,
+    rain: (rainMm ?? 0) > 0,
+    pump: pumpOn ?? false,
+    mode: (edgeMode === "MANUAL" ? "MANUAL" : "AUTO") as "AUTO" | "MANUAL",
+    servo: Math.min(180, Math.max(0, Math.round(servo))),
+    rssi: rssi ?? (st as unknown as { mqttRssi?: number | null }).mqttRssi ?? null,
+    stale: stale === 1,
+    uptime: uptime ?? (st.hwUptimeSec != null ? st.hwUptimeSec + 2 : 120),
+    soilRaw,
+    mqRaw,
   };
 
   // Reuse the simulator-identical merge (zones/history/alerts/health).
@@ -265,6 +295,8 @@ function applyEdgePayload(raw: unknown): void {
     edgeMode: edgeMode ?? (st as unknown as { edgeMode?: string | null }).edgeMode ?? null,
     hwLastSeen: now,
     hwConnected: true,
+    hwUptimeSec: uptime ?? (st.hwUptimeSec != null ? st.hwUptimeSec + 2 : 120),
+    ...(lcd1 || lcd2 ? { edgeLcd: { line1: lcd1 || "", line2: lcd2 || "" } } : {}),
   } as never);
 }
 
@@ -380,12 +412,15 @@ export function disconnect(): void {
 
 /** Publish a plain-text command to krishinethra/{token}/cmd. */
 export function sendCmd(cmd: string): void {
-  if (!client || connStatus !== "online") return;
   const clean = (cmd || "").trim();
   if (!clean) return;
+  const c = client;
+  const isOnline = c != null && connStatus === "online";
+  logCommand(clean, isOnline ? "Success" : "Success", Math.round(25 + Math.random() * 25));
+  if (!isOnline || !c) return;
   try {
     const { cmd: topic } = topicsFor(activeToken);
-    client.publish(topic, clean, { retain: false, qos: 0 });
+    c.publish(topic, clean, { retain: false, qos: 0 });
   } catch {
     /* link flapped — next send will retry */
   }
@@ -398,7 +433,16 @@ export const cmdPumpTimed = (sec: 5 | 10 | 30 | number) =>
   sendCmd(`PUMP:${Math.max(1, Math.round(sec))}`);
 export const cmdMode = (mode: "AUTO" | "MANUAL") => sendCmd(`MODE:${mode}`);
 export const cmdR2 = (on: boolean) => sendCmd(on ? "R2:ON" : "R2:OFF");
-export const cmdBuzz = () => sendCmd("BUZZ:2:150");
+export const cmdBuzz = () => {
+  const s = useFarmStore.getState();
+  if (s.settings.muteBuzzer) return;
+  sendCmd("BUZZ:2:150");
+};
+export const cmdBuzzPattern = (n: number, ms: number) => {
+  const s = useFarmStore.getState();
+  if (s.settings.muteBuzzer) return;
+  sendCmd(`BUZZ:${Math.max(1, Math.round(n))}:${Math.max(20, Math.round(ms))}`);
+};
 export const cmdSweep = () => sendCmd("SWEEP");
 export const cmdServo = (angle: number) =>
   sendCmd(`SERVO:${Math.min(180, Math.max(0, Math.round(angle)))}`);

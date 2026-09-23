@@ -65,7 +65,7 @@ export async function fetchHwStatus(
 
 export async function fetchHwSensors(
   gw: string,
-): Promise<HwEnvelope<Record<string, number>>> {
+): Promise<HwEnvelope<Record<string, unknown>>> {
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 8000);

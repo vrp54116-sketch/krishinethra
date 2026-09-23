@@ -154,22 +154,41 @@ function num(v: unknown, fallback: number): number {
  * number so the UI can merge live data into the same slices the
  * simulator writes to without extra guards.
  */
-export function sanitizeSnapshot(raw: unknown): Record<string, number> {
+export function sanitizeSnapshot(raw: unknown): Record<string, unknown> {
   const r =
     raw !== null && typeof raw === "object"
       ? (raw as Record<string, unknown>)
       : {};
+  const soil = num(r["soil"], num(r["soilMoistureB"], num(r["soilMoistureA"], 0)));
+  const temp = num(r["temp"], num(r["tempC"], 0));
+  const hum = num(r["hum"], num(r["humidity"], 0));
+  const aqi = num(r["aqi"], 0);
+  const rain = Boolean(r["rain"]);
+  const pump = Boolean(r["pump"]);
+  const mode = r["mode"] === "AUTO" ? "AUTO" : "MANUAL";
+  const servo = num(r["servo"], 90);
+
   return {
     timestamp: num(r["timestamp"], Date.now()),
-    tempC: num(r["tempC"], 0),
-    humidity: num(r["humidity"], 0),
-    aqi: num(r["aqi"], 0),
+    soil,
+    temp,
+    hum,
+    aqi,
+    rain,
+    pump,
+    mode,
+    servo,
+    rssi: num(r["rssi"], 0),
+    stale: Boolean(r["stale"]),
+    uptime: num(r["uptime"], 0),
+    tempC: temp,
+    humidity: hum,
     lightLux: num(r["lightLux"], 0),
-    rainMm: num(r["rainMm"], 0),
+    rainMm: num(r["rainMm"], rain ? 2.5 : 0),
     tankLevelPercent: num(r["tankLevelPercent"], 0),
     flowRateLpm: num(r["flowRateLpm"], 0),
     pumpCurrentA: num(r["pumpCurrentA"], 0),
-    soilMoistureA: num(r["soilMoistureA"], 0),
-    soilMoistureB: num(r["soilMoistureB"], 0),
+    soilMoistureA: soil,
+    soilMoistureB: soil,
   };
 }

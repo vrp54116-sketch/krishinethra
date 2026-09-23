@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import {
   Bell,
-  Camera,
   Cpu,
   DatabaseBackup,
   Eye,
@@ -16,6 +15,7 @@ import {
   Mic,
   Send,
   SlidersHorizontal,
+  Sparkles,
   Thermometer,
   Tractor,
   Trash2,
@@ -31,6 +31,11 @@ import { MANDI_PRICES, mandiById } from "@/lib/market-data";
 import { INDIAN_STATES, districtsForState } from "@/lib/india-locations";
 import { exportFarmBackup } from "@/lib/report-export";
 import WirelessEdgeCard from "@/components/mqtt/WirelessEdgeCard";
+import ConnectionStatusCard from "@/components/settings/ConnectionStatusCard";
+import BuzzerPatternTester from "@/components/alerts/BuzzerPatternTester";
+import LcdMessageSender from "@/components/settings/LcdMessageSender";
+import CommandLogCard from "@/components/settings/CommandLogCard";
+import SensorCalibrationCard from "@/components/settings/SensorCalibrationCard";
 
 function Rise({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   return (
@@ -463,8 +468,35 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-5">
-      {/* ============ 1. FARM PROFILE ============ */}
+      {/* ============ 0. EDGE HARDWARE, TELEMETRY & COMMANDS ============ */}
       <Rise>
+        <ConnectionStatusCard />
+      </Rise>
+
+      <Rise delay={0.04}>
+        <WirelessEdgeCard />
+      </Rise>
+
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-2">
+        <Rise delay={0.06}>
+          <BuzzerPatternTester />
+        </Rise>
+        <Rise delay={0.08}>
+          <LcdMessageSender />
+        </Rise>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-2">
+        <Rise delay={0.1}>
+          <SensorCalibrationCard />
+        </Rise>
+        <Rise delay={0.12}>
+          <CommandLogCard />
+        </Rise>
+      </div>
+
+      {/* ============ 1. FARM PROFILE ============ */}
+      <Rise delay={0.14}>
         <Card>
           <CardHeader
             title={t("settings.farmProfile")}
@@ -980,15 +1012,6 @@ export default function SettingsPage() {
               unit="s"
               onChange={(v) => updateSettings({ thresholds: { pumpDurationSec: v } })}
             />
-            <ThresholdRow
-              label={t("settings.tankLow")}
-              value={thresholds.tankLow}
-              min={5}
-              max={60}
-              step={1}
-              unit="%"
-              onChange={(v) => updateSettings({ thresholds: { tankLow: v } })}
-            />
           </div>
         </Card>
       </Rise>
@@ -1037,72 +1060,101 @@ export default function SettingsPage() {
         </Card>
       </Rise>
 
-      {/* ============ 5. CAMERA ============ */}
+      {/* ============ 5. LIQUID GLASS ANIMATION PREFERENCES ============ */}
       <Rise delay={0.1}>
         <Card>
           <CardHeader
-            title={t("settings.camera")}
-            subtitle={t("settings.cameraSub")}
+            title="Liquid Glass Animation Preferences"
+            subtitle="Customize visual fidelity, glassmorphism blur, and glow effects"
             action={
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/15 text-violet-300">
-                <Camera className="h-4 w-4" />
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300">
+                <Sparkles className="h-4 w-4" />
               </span>
             }
           />
-          <span className={labelCls}>{t("settings.source")}</span>
-          <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-black/40 p-1">
-            {[
-              { id: "simulation", label: t("settings.simFeed") },
-              { id: "stream", label: t("settings.liveStream") },
-            ].map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() =>
-                  updateSettings({ cameraSource: o.id as "simulation" | "stream" })
-                }
-                aria-pressed={settings.cameraSource === o.id}
-                className={cn(
-                  "rounded-lg px-3 py-2.5 text-xs font-bold transition-all",
-                  settings.cameraSource === o.id
-                    ? "bg-emerald-500 text-black shadow-[0_0_14px_rgba(34,197,94,0.4)]"
-                    : "text-zinc-400 hover:bg-white/5 hover:text-white",
-                )}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block">
-              <span className={labelCls}>{t("settings.streamUrl")}</span>
-              <input
-                value={settings.cameraStreamUrl}
-                onChange={(e) => updateSettings({ cameraStreamUrl: e.target.value.trim() })}
-                placeholder="http://raspberrypi.local:8080/stream"
-                autoComplete="off"
-                spellCheck={false}
-                className={cn(inputCls, "font-mono")}
-              />
-            </label>
-            <div>
-              <span className={labelCls}>
-                {t("settings.panSpeed")} — {settings.cameraPanSpeed ?? 5}°/tick
-              </span>
-              <input
-                type="range"
-                min={1}
-                max={10}
-                step={1}
-                value={settings.cameraPanSpeed ?? 5}
-                onChange={(e) => updateSettings({ cameraPanSpeed: Number(e.target.value) })}
-                aria-label={t("settings.panSpeed")}
-                className="mt-3 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-emerald-400"
-              />
-              <div className="mt-1 flex justify-between font-mono text-[10px] text-zinc-600">
-                <span>1° slow</span>
-                <span>10° fast</span>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="flex items-center justify-between rounded-xl border border-white/5 bg-black/30 p-3.5">
+              <div>
+                <p className="text-sm font-bold text-white">Glass Blur</p>
+                <p className="text-xs text-zinc-400">Frosted glass backdrop filters</p>
               </div>
+              <Toggle
+                label="Glass blur"
+                checked={settings.animations?.glassBlur ?? true}
+                onChange={(v) =>
+                  updateSettings({
+                    animations: {
+                      glassBlur: v,
+                      liquidGlow: settings.animations?.liquidGlow ?? true,
+                      fluidMotion: settings.animations?.fluidMotion ?? true,
+                      particles: settings.animations?.particles ?? true,
+                    },
+                  })
+                }
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl border border-white/5 bg-black/30 p-3.5">
+              <div>
+                <p className="text-sm font-bold text-white">Liquid Glow</p>
+                <p className="text-xs text-zinc-400">Ambient neon glow highlights</p>
+              </div>
+              <Toggle
+                label="Liquid glow"
+                checked={settings.animations?.liquidGlow ?? true}
+                onChange={(v) =>
+                  updateSettings({
+                    animations: {
+                      glassBlur: settings.animations?.glassBlur ?? true,
+                      liquidGlow: v,
+                      fluidMotion: settings.animations?.fluidMotion ?? true,
+                      particles: settings.animations?.particles ?? true,
+                    },
+                  })
+                }
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl border border-white/5 bg-black/30 p-3.5">
+              <div>
+                <p className="text-sm font-bold text-white">Fluid Motion</p>
+                <p className="text-xs text-zinc-400">Smooth micro-interactions & transitions</p>
+              </div>
+              <Toggle
+                label="Fluid motion"
+                checked={settings.animations?.fluidMotion ?? true}
+                onChange={(v) =>
+                  updateSettings({
+                    animations: {
+                      glassBlur: settings.animations?.glassBlur ?? true,
+                      liquidGlow: settings.animations?.liquidGlow ?? true,
+                      fluidMotion: v,
+                      particles: settings.animations?.particles ?? true,
+                    },
+                  })
+                }
+              />
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl border border-white/5 bg-black/30 p-3.5">
+              <div>
+                <p className="text-sm font-bold text-white">Floating Particles</p>
+                <p className="text-xs text-zinc-400">Ambient particle and wave effects</p>
+              </div>
+              <Toggle
+                label="Floating particles"
+                checked={settings.animations?.particles ?? true}
+                onChange={(v) =>
+                  updateSettings({
+                    animations: {
+                      glassBlur: settings.animations?.glassBlur ?? true,
+                      liquidGlow: settings.animations?.liquidGlow ?? true,
+                      fluidMotion: settings.animations?.fluidMotion ?? true,
+                      particles: v,
+                    },
+                  })
+                }
+              />
             </div>
           </div>
         </Card>

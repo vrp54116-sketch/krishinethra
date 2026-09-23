@@ -17,8 +17,6 @@ import type {
 
 /* ------------------------------------------------------------------ */
 /* Constants                                                           */
-/* ------------------------------------------------------------------ */
-
 export const TANK_CAPACITY_L = 10;
 export const FLOW_RATE_LPM = 0.4;
 export const PUMP_CURRENT_A = 0.25;
@@ -30,12 +28,13 @@ export const AUTO_PUMP_TANK_OFF = 10; // tank below this forces auto-stop
 export const ALERT_DEDUP_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
 export const ZONE_A_BASELINE = 45; // % soil moisture
 export const ZONE_B_BASELINE = 22; // % soil moisture (dry problem zone)
+export const SOIL_BASELINE = 22;
 
 export interface TickResult {
   snapshot: SensorSnapshot;
   /** Litres consumed during this tick. */
   waterUsedL: number;
-  /** True when the pump was requested ON but the tank is too low to run. */
+  /** True when the pump was blocked. */
   blocked: boolean;
 }
 
@@ -172,10 +171,12 @@ export function computeZoneStatus(
 export function createInitialSnapshot(now: number = Date.now()): SensorSnapshot {
   const hour = new Date(now).getHours() + new Date(now).getMinutes() / 60;
   const tempC = temperatureForHour(hour);
+  const temp = Math.round(tempC * 10) / 10;
+  const hum = Math.round(humidityForTemp(tempC) * 10) / 10;
   return {
     timestamp: now,
-    tempC: Math.round(tempC * 10) / 10,
-    humidity: Math.round(humidityForTemp(tempC) * 10) / 10,
+    tempC: temp,
+    humidity: hum,
     aqi: 85,
     lightLux: Math.round(lightForHour(hour)),
     rainMm: 0,
@@ -184,6 +185,18 @@ export function createInitialSnapshot(now: number = Date.now()): SensorSnapshot 
     pumpCurrentA: 0,
     soilMoistureA: ZONE_A_BASELINE,
     soilMoistureB: ZONE_B_BASELINE,
+    soil: ZONE_B_BASELINE,
+    temp,
+    hum,
+    rain: false,
+    pump: false,
+    mode: "AUTO",
+    servo: 90,
+    rssi: -55,
+    stale: false,
+    uptime: 120,
+    soilRaw: 540,
+    mqRaw: 230,
   };
 }
 
@@ -203,25 +216,31 @@ export function tick(
 ): TickResult {
   void settings;
   const dt = Math.max(0, dtSeconds);
-  const canRun = snapshot.tankLevelPercent >= TANK_MIN_RUN_PERCENT;
+  const tank = snapshot.tankLevelPercent ?? 85;
+  const canRun = tank >= TANK_MIN_RUN_PERCENT;
   const running = pump.running && canRun;
 
   // --- Soil moisture ---
-  const irrigate = (m: number) =>
+  const irrigateA = (m: number) =>
     running
       ? clamp(m + IRRIGATION_PER_SEC * dt + noise(0.02), 0, 100)
       : clamp(m - EVAPORATION_PER_SEC * dt + noise(0.02), 0, 100);
-  const soilMoistureA = Math.round(irrigate(snapshot.soilMoistureA) * 100) / 100;
-  const soilMoistureB = Math.round(irrigate(snapshot.soilMoistureB) * 100) / 100;
+  const irrigateB = (m: number) =>
+    running
+      ? clamp(m + IRRIGATION_PER_SEC * dt + noise(0.02), 0, 100)
+      : clamp(m - EVAPORATION_PER_SEC * dt + noise(0.02), 0, 100);
+
+  const prevA = snapshot.soilMoistureA ?? ZONE_A_BASELINE;
+  const prevB = snapshot.soilMoistureB ?? snapshot.soil ?? ZONE_B_BASELINE;
+  const soilMoistureA = Math.round(irrigateA(prevA) * 100) / 100;
+  const soilMoistureB = Math.round(irrigateB(prevB) * 100) / 100;
 
   // --- Temperature / humidity / light from the simulated clock ---
   const timestamp = snapshot.timestamp + dt * 1000;
   const date = new Date(timestamp);
   const hour = date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600;
-  const tempC =
-    Math.round((temperatureForHour(hour) + noise(0.25)) * 10) / 10;
-  const humidity =
-    Math.round(clamp(humidityForTemp(tempC) + noise(1.5), 30, 90) * 10) / 10;
+  const tempC = Math.round((temperatureForHour(hour) + noise(0.25)) * 10) / 10;
+  const humidity = Math.round(clamp(humidityForTemp(tempC) + noise(1.5), 30, 90) * 10) / 10;
   const lightLux = Math.max(0, Math.round(lightForHour(hour) + noise(12)));
 
   // --- AQI random walk between 60 and 120 ---
@@ -229,7 +248,7 @@ export function tick(
 
   // --- Rain: occasional light shower, also tops the tank up slightly ---
   let rainMm = 0;
-  let tankLevelPercent = snapshot.tankLevelPercent;
+  let tankLevelPercent = tank;
   if (Math.random() < 0.02 * dt) {
     rainMm = Math.round((0.5 + Math.random() * 2.5) * 10) / 10;
     tankLevelPercent = clamp(tankLevelPercent + rainMm * 0.2, 0, 100);
@@ -251,6 +270,13 @@ export function tick(
   }
   tankLevelPercent = Math.round(tankLevelPercent * 100) / 100;
 
+  // Raw analog values (Uno 10-bit ADC 0-1023)
+  // At 22% moisture, raw is ~540; MQ-135 at 85 AQI, raw is ~230
+  const soilRaw = Math.round(850 - (soilMoistureB / 100) * 650);
+  const mqRaw = Math.round(aqi * 2.7);
+
+  const uptime = (snapshot.uptime || 0) + Math.round(dt);
+
   return {
     snapshot: {
       timestamp,
@@ -264,6 +290,18 @@ export function tick(
       pumpCurrentA,
       soilMoistureA,
       soilMoistureB,
+      soil: soilMoistureB,
+      temp: tempC,
+      hum: humidity,
+      rain: rainMm > 0,
+      pump: running,
+      mode: (pump.mode === "auto" ? "AUTO" : "MANUAL") as "AUTO" | "MANUAL",
+      servo: snapshot.servo ?? 90,
+      rssi: snapshot.rssi ?? -55,
+      stale: snapshot.stale ?? false,
+      uptime,
+      soilRaw,
+      mqRaw,
     },
     waterUsedL: Math.round(waterUsedL * 10000) / 10000,
     blocked: pump.running && !canRun,
@@ -271,13 +309,13 @@ export function tick(
 }
 
 /* ------------------------------------------------------------------ */
-/* AUTO mode logic                                                     */
+/* Jal Agent logic                                                    */
 /* ------------------------------------------------------------------ */
 
 /**
- * Decide the pump relay for AUTO mode.
- * - ON when Zone B moisture < moistureLow AND tank > 15%.
- * - OFF when moisture > moistureHigh OR tank < 10%.
+ * Decide the pump relay for AUTO mode (Jal Agent).
+ * - if soil < 30% AND rain === false → pump ON
+ * - if soil > 75% OR rain === true → pump OFF
  * Returns "on" | "off" | null (null = hold current state).
  */
 export function evaluateAutoPump(
@@ -287,18 +325,13 @@ export function evaluateAutoPump(
 ): "on" | "off" | null {
   if (pump.mode !== "auto") return null;
   const { moistureLow, moistureHigh } = settings.thresholds;
-  if (
-    !pump.running &&
-    snapshot.soilMoistureB < moistureLow &&
-    snapshot.tankLevelPercent > AUTO_PUMP_TANK_ON
-  ) {
+  const soil = snapshot.soil ?? snapshot.soilMoistureA ?? 45;
+  const rain = Boolean(snapshot.rain);
+
+  if (!pump.running && soil < moistureLow && !rain) {
     return "on";
   }
-  if (
-    pump.running &&
-    (snapshot.soilMoistureB > moistureHigh ||
-      snapshot.tankLevelPercent < AUTO_PUMP_TANK_OFF)
-  ) {
+  if (pump.running && (soil > moistureHigh || rain)) {
     return "off";
   }
   return null;
@@ -356,50 +389,35 @@ export function generateAlerts(
     if (!isDuplicate(already, alert.title, now)) out.push(alert);
   };
 
-  if (snapshot.soilMoistureB < 20) {
+  const soil = snapshot.soil ?? snapshot.soilMoistureA ?? 45;
+  const temp = snapshot.temp ?? snapshot.tempC ?? 30;
+
+  if (soil < 20) {
     consider(
       makeAlert(
         "critical",
-        "Critical soil moisture — Zone B",
-        `Zone B moisture is ${snapshot.soilMoistureB.toFixed(1)}%. Immediate irrigation needed.`,
+        "Critical soil moisture",
+        `Soil moisture is ${soil.toFixed(1)}%. Immediate irrigation needed.`,
         now,
-        "B",
       ),
     );
-  } else if (snapshot.soilMoistureA < 20) {
-    consider(
-      makeAlert(
-        "critical",
-        "Critical soil moisture — Zone A",
-        `Zone A moisture is ${snapshot.soilMoistureA.toFixed(1)}%. Immediate irrigation needed.`,
-        now,
-        "A",
-      ),
-    );
-  } else if (
-    snapshot.soilMoistureB < t.moistureLow ||
-    snapshot.soilMoistureA < t.moistureLow
-  ) {
-    const lowZone = snapshot.soilMoistureB < t.moistureLow ? "B" : "A";
-    const value =
-      lowZone === "B" ? snapshot.soilMoistureB : snapshot.soilMoistureA;
+  } else if (soil < t.moistureLow) {
     consider(
       makeAlert(
         "warning",
         "Low soil moisture",
-        `Zone ${lowZone} moisture is ${value.toFixed(1)}% (below ${t.moistureLow}%). Consider irrigating.`,
+        `Soil moisture is ${soil.toFixed(1)}% (below ${t.moistureLow}% threshold). Consider irrigating.`,
         now,
-        lowZone,
       ),
     );
   }
 
-  if (snapshot.tempC > t.tempHigh) {
+  if (temp > t.tempHigh) {
     consider(
       makeAlert(
         "warning",
         "High temperature",
-        `Field temperature ${snapshot.tempC.toFixed(1)}°C exceeds ${t.tempHigh}°C. Mulch or shade sensitive crops.`,
+        `Field temperature ${temp.toFixed(1)}°C exceeds ${t.tempHigh}°C threshold. Mulch or shade sensitive crops.`,
         now,
       ),
     );
@@ -416,14 +434,14 @@ export function generateAlerts(
     );
   }
 
-  if (snapshot.tankLevelPercent < t.tankLow) {
+  const tank = snapshot.tankLevelPercent ?? 85;
+  const tankLow = t.tankLow ?? 20;
+  if (tank < tankLow) {
     consider(
       makeAlert(
-        snapshot.tankLevelPercent < TANK_MIN_RUN_PERCENT
-          ? "critical"
-          : "warning",
+        "critical",
         "Low water tank",
-        `Tank is at ${snapshot.tankLevelPercent.toFixed(0)}% (below ${t.tankLow}%). Refill soon to keep irrigating.`,
+        `Water tank is at ${tank.toFixed(0)}% (below ${tankLow}% threshold). Refill soon.`,
         now,
       ),
     );
@@ -434,7 +452,7 @@ export function generateAlerts(
       makeAlert(
         "info",
         "Pump started",
-        `Irrigation pump turned ON. Flow ${FLOW_RATE_LPM} L/min from a ${snapshot.tankLevelPercent.toFixed(0)}% tank.`,
+        `Irrigation pump turned ON.`,
         now,
       ),
     );
@@ -444,8 +462,8 @@ export function generateAlerts(
     consider(
       makeAlert(
         "critical",
-        "Pump blocked — tank empty",
-        `Pump cannot run: tank below ${TANK_MIN_RUN_PERCENT}%. Refill the tank.`,
+        "Pump blocked",
+        `Pump blocked: tank level is too low to run safely.`,
         now,
       ),
     );
@@ -492,27 +510,26 @@ export interface HealthBreakdownResult {
 
 export function computeHealthBreakdown(
   snapshot: SensorSnapshot,
-  zones: Zone[],
-  unresolvedDiseaseCount: number,
+  zones: Zone[] = [],
+  unresolvedDiseaseCount: number = 0,
   activeSprayPlansCount: number = 0,
 ): HealthBreakdownResult {
-  const moistureAvg =
-    zones.length > 0
-      ? zones.reduce((sum, z) => sum + z.soilMoisture, 0) / zones.length
-      : (snapshot.soilMoistureA + snapshot.soilMoistureB) / 2;
-  const moistureScore = clamp(100 - Math.abs(moistureAvg - 45) * 2.5, 0, 100);
+  const soil = snapshot.soil ?? snapshot.soilMoistureA ?? 45;
+  const temp = snapshot.temp ?? snapshot.tempC ?? 28;
+  const hum = snapshot.hum ?? snapshot.humidity ?? 60;
+  const moistureScore = clamp(100 - Math.abs(soil - 45) * 2.5, 0, 100);
 
   const tempScore =
-    snapshot.tempC <= 32
+    temp <= 32
       ? 100
-      : clamp(100 - (snapshot.tempC - 32) * 15, 0, 100);
+      : clamp(100 - (temp - 32) * 15, 0, 100);
 
   const humidityScore =
-    snapshot.humidity >= 50 && snapshot.humidity <= 70
+    hum >= 50 && hum <= 70
       ? 100
-      : snapshot.humidity < 50
-        ? clamp(100 - (50 - snapshot.humidity) * 3, 0, 100)
-        : clamp(100 - (snapshot.humidity - 70) * 3, 0, 100);
+      : hum < 50
+        ? clamp(100 - (50 - hum) * 3, 0, 100)
+        : clamp(100 - (hum - 70) * 3, 0, 100);
 
   const aqiScore = clamp(100 - ((snapshot.aqi - 60) * 100) / 140, 0, 100);
 

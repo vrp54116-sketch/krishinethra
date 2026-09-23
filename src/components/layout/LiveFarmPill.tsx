@@ -44,13 +44,12 @@ export default function LiveFarmPill({ className }: { className?: string } = {})
     (a) => !a.read && a.level === "critical",
   );
 
-  const zoneBMoisture = mounted
-    ? Math.round(snapshot.soilMoistureB ?? 57)
-    : 57;
-  const tempC = mounted ? Math.round(snapshot.tempC ?? 35) : 35;
-  const tankPct = mounted ? Math.round(snapshot.tankLevelPercent) : 78;
+  const soilMoisture = mounted
+    ? Math.round(snapshot.soil ?? 45)
+    : 45;
+  const tempC = mounted ? Math.round(snapshot.temp ?? 30) : 30;
 
-  const liveText = `Zone B ${zoneBMoisture}% • Pump ${running ? "ON" : "OFF"} • ${tempC}°C`;
+  const liveText = `Soil ${soilMoisture}% • Pump ${running ? "ON" : "OFF"} • ${tempC}°C`;
 
   const togglePump = () => {
     if (running) setPumpManual(false);
@@ -253,31 +252,6 @@ export default function LiveFarmPill({ className }: { className?: string } = {})
             onChange={(next) => setPumpMode(next ? "auto" : "manual")}
             label={autoMode ? t("common.on") : t("common.off")}
           />
-        </div>
-
-        {/* Tank level mini bar */}
-        <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.03] px-3.5 py-3">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-zinc-300">
-              {t("dashboard.tankLevel")}
-            </span>
-            <span className="font-bold text-white">
-              {tankPct == null ? "–" : `${tankPct}%`}
-            </span>
-          </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-            <div
-              className={cn(
-                "h-full rounded-full transition-all",
-                (tankPct ?? 100) < 20
-                  ? "bg-red-400"
-                  : (tankPct ?? 100) < 40
-                    ? "bg-amber-400"
-                    : "bg-emerald-400",
-              )}
-              style={{ width: `${Math.max(0, Math.min(100, tankPct ?? 0))}%` }}
-            />
-          </div>
         </div>
       </GlassSheet>
     </>

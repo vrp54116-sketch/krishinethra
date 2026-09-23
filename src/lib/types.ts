@@ -33,6 +33,20 @@ export interface SensorSnapshot {
   pumpCurrentA: number;
   soilMoistureA: number;
   soilMoistureB: number;
+  // Edge V2 aliases & extra telemetry
+  soil: number; // 0-100% (mirrors soilMoistureB)
+  temp: number; // °C (mirrors tempC)
+  hum: number; // % (mirrors humidity)
+  rain: boolean; // boolean (rainMm > 0)
+  pump: boolean; // boolean (running)
+  mode: "AUTO" | "MANUAL";
+  servo: number; // 0-180°
+  rssi: number | null; // WiFi signal strength
+  stale: boolean; // boolean (UNO link dead)
+  uptime: number; // seconds since ESP32 boot
+  soilRaw?: number; // raw analog ADC (e.g. 540)
+  mqRaw?: number; // raw analog MQ-135 (e.g. 230)
+  rainRaw?: number;
 }
 
 export interface PumpState {
@@ -116,6 +130,30 @@ export interface SensorHistoryPoint {
   soilMoistureA: number;
   soilMoistureB: number;
   waterUsedL: number;
+  tankLevelPercent?: number;
+  rainMm?: number;
+  soil?: number;
+  temp?: number;
+  hum?: number;
+  rain?: boolean;
+  pump?: boolean;
+}
+
+export interface CommandLogEntry {
+  id: string;
+  timestamp: number;
+  command: string;
+  status: "Success" | "Pending" | "Failed";
+  responseTimeMs: number;
+}
+
+export interface RainSkipRecord {
+  id: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM
+  rainDetected: boolean;
+  action: string;
+  waterSavedL: number;
 }
 
 /**
@@ -214,6 +252,14 @@ export interface FarmProfile {
   crops: string[];
 }
 
+export interface AnimationPreferences {
+  glassBlur: boolean;
+  liquidGlow: boolean;
+  fluidAnimations?: boolean;
+  fluidMotion?: boolean;
+  particles?: boolean;
+}
+
 export interface AppSettings {
   language: "en" | "hi" | "gu" | "mr";
   mode: "simulation" | "live";
@@ -227,11 +273,16 @@ export interface AppSettings {
   /** Pan-tilt glide speed (deg per tick, 1–10). Used by Settings → Camera. */
   cameraPanSpeed: number;
   thresholds: Thresholds;
+  animations?: AnimationPreferences;
   voiceOutput: boolean;
   /** BCP-47 recognition lang for voice input, e.g. "hi-IN". */
   voiceLang: string;
   /** Critical-alert beep (WebAudio). When false, alerts stay silent. */
   soundEnabled: boolean;
+  /** When true, buzzer hardware test and commands are muted */
+  muteBuzzer?: boolean;
+  /** Calibration mode: show raw analog values prominently */
+  showRawCalibrationValues?: boolean;
   /** Weekly auto-run slots used by pump "schedule" mode. */
   irrigationSchedule: IrrigationScheduleSlot[];
   /** Farm coordinates used by the /climate Open-Meteo forecast. */

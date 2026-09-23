@@ -17,13 +17,15 @@ import {
   Landmark,
   LayoutDashboard,
   Leaf,
-  Map,
   MessageCircle,
   Mic,
   MoreHorizontal,
   Settings,
   SprayCan,
   TrendingUp,
+  Wifi,
+  WifiOff,
+  Activity,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -38,6 +40,7 @@ import EdgeLiveChip, { edgeChipState } from "@/components/mqtt/EdgeLiveChip";
 import InstallAppButton from "@/components/pwa/InstallAppButton";
 import PageSkeleton from "@/components/layout/PageSkeleton";
 import AppToaster from "@/components/layout/AppToaster";
+import QuickActionsFAB from "@/components/layout/QuickActionsFAB";
 import { AmbientBackground, LiquidButton } from "@/components/ui/glass";
 import { useMounted } from "@/components/dashboard/ui";
 import { getSectionAccent } from "@/lib/theme";
@@ -61,6 +64,7 @@ function RouteFade({ children }: { children: React.ReactNode }) {
 
 interface NavItem {
   href: string;
+  label?: string;
   labelKey: string;
   titleKey: string;
   icon: LucideIcon;
@@ -68,10 +72,10 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard", labelKey: "nav.dashboard", titleKey: "titles.dashboard", icon: LayoutDashboard },
-  { href: "/map", labelKey: "nav.map", titleKey: "titles.map", icon: Map },
-  { href: "/camera", labelKey: "nav.camera", titleKey: "titles.camera", icon: Camera },
+  { href: "/camera", label: "📷 Leaf Scanner", labelKey: "nav.camera", titleKey: "titles.camera", icon: Camera },
   { href: "/irrigation", labelKey: "nav.irrigation", titleKey: "titles.irrigation", icon: Droplets },
   { href: "/climate", labelKey: "nav.climate", titleKey: "titles.climate", icon: CloudSun },
+  { href: "/sensors", label: "🔌 Sensor Health", labelKey: "nav.sensors", titleKey: "titles.sensors", icon: Activity },
   { href: "/spray", labelKey: "nav.spray", titleKey: "titles.spray", icon: SprayCan },
   { href: "/fertilizer", labelKey: "nav.fertilizer", titleKey: "titles.fertilizer", icon: FlaskConical },
   { href: "/market", labelKey: "nav.market", titleKey: "titles.market", icon: TrendingUp },
@@ -89,7 +93,7 @@ const MOBILE_TABS: Array<NavItem | { key: "more" }> = [
   NAV_ITEMS[0],
   NAV_ITEMS[1],
   NAV_ITEMS[2],
-  NAV_ITEMS[10],
+  NAV_ITEMS[9],
   { key: "more" },
 ];
 
@@ -272,6 +276,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const appPinHash = useFarmStore((s) => s.appPinHash);
   const isAuthenticated = useFarmStore((s) => s.isAuthenticated);
   const farmProfile = useFarmStore((s) => s.settings.farmProfile);
+  const snapshot = useFarmStore((s) => s.snapshot);
 
   // Routing guard: wizard first, PIN-locked second.
   useEffect(() => {
@@ -330,7 +335,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <LogoBlock className="shrink-0 px-4 pt-4 pb-2" />
 
         <nav className="flex-1 overflow-y-auto scrollbar-hide px-3 space-y-1">
-          {NAV_ITEMS.map(({ href, labelKey, icon: Icon }) => {
+          {NAV_ITEMS.map(({ href, label, labelKey, icon: Icon }) => {
             const active = pathname === href || pathname?.startsWith(href + "/");
             const showBadge = href === "/alerts" && unread > 0;
             const itemAccent = getSectionAccent(href);
@@ -368,7 +373,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   className="h-[18px] w-[18px] shrink-0 transition-colors"
                   style={{ color: active ? itemAccent.color : "#9CA3AF" }}
                 />
-                <span className="truncate">{t(labelKey)}</span>
+                <span className="truncate">{label ?? t(labelKey)}</span>
                 {mounted && showBadge && (
                   <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(251,113,133,0.7)]">
                     {unread > 99 ? "99+" : unread}
@@ -417,6 +422,28 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
           {/* LIVE gateway reachability (only in live mode) */}
           <LivePill />
+
+          {/* WiFi RSSI Signal Indicator */}
+          {mounted && (
+            <div
+              className="liquid-glass-pill hidden xs:inline-flex sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border border-white/10"
+              title={`WiFi RSSI: ${snapshot.rssi ?? -55} dBm (${(snapshot.rssi ?? -55) >= -60 ? "Strong" : (snapshot.rssi ?? -55) >= -80 ? "Medium" : "Weak"})`}
+            >
+              <Wifi
+                className={cn(
+                  "h-3.5 w-3.5",
+                  (snapshot.rssi ?? -55) >= -60
+                    ? "text-emerald-400"
+                    : (snapshot.rssi ?? -55) >= -80
+                      ? "text-amber-400"
+                      : "text-rose-400",
+                )}
+              />
+              <span className="font-mono text-[11px] text-zinc-300">
+                {snapshot.rssi ?? -55} dBm
+              </span>
+            </div>
+          )}
 
           {/* PWA install (mobile only, appears when installable) */}
           <InstallAppButton />
@@ -612,7 +639,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         : { color: "#9CA3AF" }
                     }
                   >
-                    {t(tab.labelKey)}
+                    {"label" in tab && tab.label ? tab.label : t(tab.labelKey)}
                   </span>
                 </Link>
               );
@@ -673,7 +700,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-2.5">
-                {NAV_ITEMS.filter((n) => !MOBILE_TABS.some((m) => "href" in m && m.href === n.href)).map(({ href, labelKey, icon: Icon }) => {
+                {NAV_ITEMS.filter((n) => !MOBILE_TABS.some((m) => "href" in m && m.href === n.href)).map(({ href, label, labelKey, icon: Icon }) => {
                   const showBadge = href === "/alerts" && unread > 0;
                   const itemAccent = getSectionAccent(href);
                   const active = pathname === href || pathname?.startsWith(href + "/");
@@ -701,7 +728,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                         className="h-5 w-5"
                         style={{ color: active ? itemAccent.color : "#9CA3AF" }}
                       />
-                      <span className="truncate w-full">{t(labelKey)}</span>
+                      <span className="truncate w-full">{label ?? t(labelKey)}</span>
                       {mounted && showBadge && (
                         <span className="absolute right-2 top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(251,113,133,0.8)]">
                           {unread > 99 ? "99+" : unread}
@@ -716,6 +743,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         )}
       </AnimatePresence>
 
+      <QuickActionsFAB />
       <AppToaster />
     </div>
   );

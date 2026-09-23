@@ -1,12 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   CloudRain,
-  Container,
   Droplets,
-  Sun,
   Thermometer,
   Waves,
   Wind,
@@ -17,36 +14,12 @@ import { useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { AnimatedNumber, CardHeader, Sparkline, StatusPill, type PillTone } from "./ui";
 
-/* ------------------------------------------------------------------ */
-/* Helpers                                                             */
-/* ------------------------------------------------------------------ */
-
 /** Pad / trim a series to exactly 24 points for the sparkline. */
 function to24(all: number[], current: number): number[] {
   const tail = all.slice(-24);
   if (tail.length >= 24) return tail;
   const fill = tail.length > 0 ? tail[0] : current;
   return [...Array<number>(24 - tail.length).fill(fill), ...tail];
-}
-
-/**
- * Local rolling buffer for metrics the store history doesn't track
- * (light, rain, tank). Samples the live value every 2s, keeps last 24.
- */
-function useLocalSeries(value: number, n = 24): number[] {
-  const [series, setSeries] = useState<number[]>(() => Array(n).fill(value));
-  const ref = useRef(value);
-  useEffect(() => {
-    ref.current = value;
-  }, [value]);
-  useEffect(() => {
-    const id = setInterval(() => {
-      const v = ref.current;
-      setSeries((s) => [...s.slice(-(n - 1)), v]);
-    }, 2000);
-    return () => clearInterval(id);
-  }, [n]);
-  return series;
 }
 
 interface SensorDef {
@@ -61,12 +34,7 @@ interface SensorDef {
   series: number[];
   sparkColor: string;
   alertPulse?: boolean;
-  custom?: "tank";
 }
-
-/* ------------------------------------------------------------------ */
-/* Grid                                                                */
-/* ------------------------------------------------------------------ */
 
 export default function SensorGrid() {
   const t = useT();
@@ -74,60 +42,41 @@ export default function SensorGrid() {
   const sensorHistory = useFarmStore((s) => s.sensorHistory);
   const thresholds = useFarmStore((s) => s.settings.thresholds);
 
-  const lightSeries = useLocalSeries(snapshot.lightLux);
-  const rainSeries = useLocalSeries(snapshot.rainMm);
-  const tankSeries = useLocalSeries(snapshot.tankLevelPercent);
-
   const moistureTone = (m: number): PillTone =>
     m < 20 ? "bad" : m < thresholds.moistureLow ? "warn" : m > thresholds.moistureHigh ? "warn" : "good";
   const moistureLabel = (m: number): string =>
     m < 20 ? "Critical" : m < thresholds.moistureLow ? "Dry" : m > thresholds.moistureHigh ? "Wet" : "Optimal";
 
-  const tempTone: PillTone = snapshot.tempC > thresholds.tempHigh ? "warn" : "good";
+  const tempTone: PillTone = snapshot.temp > thresholds.tempHigh ? "warn" : "good";
   const humidityTone: PillTone =
-    snapshot.humidity < thresholds.humidityLow || snapshot.humidity > 70 ? "warn" : "good";
+    snapshot.hum < thresholds.humidityLow || snapshot.hum > 70 ? "warn" : "good";
   const aqiTone: PillTone =
     snapshot.aqi > thresholds.aqiHigh ? "bad" : snapshot.aqi > 100 ? "warn" : "good";
-  const tankTone: PillTone =
-    snapshot.tankLevelPercent < 5 ? "bad" : snapshot.tankLevelPercent < thresholds.tankLow ? "warn" : "good";
-  const rainTone: PillTone = snapshot.rainMm >= 2 ? "info" : snapshot.rainMm > 0 ? "info" : "good";
 
   const sensors: SensorDef[] = [
     {
-      key: "a",
-      label: `${t("dashboard.soilMoisture")} A`,
+      key: "soil",
+      label: t("dashboard.soilMoisture"),
       icon: Droplets,
       iconTint: "bg-sky-500/15 text-sky-300",
-      value: snapshot.soilMoistureA,
+      value: snapshot.soil,
       decimals: 1,
       unit: "%",
-      pill: { tone: moistureTone(snapshot.soilMoistureA), label: moistureLabel(snapshot.soilMoistureA) },
-      series: to24(sensorHistory.map((p) => p.soilMoistureA), snapshot.soilMoistureA),
+      pill: { tone: moistureTone(snapshot.soil), label: moistureLabel(snapshot.soil) },
+      series: to24(sensorHistory.map((p) => p.soil ?? p.soilMoistureA), snapshot.soil),
       sparkColor: "#38bdf8",
-    },
-    {
-      key: "b",
-      label: `${t("dashboard.soilMoisture")} B`,
-      icon: Droplets,
-      iconTint: "bg-amber-500/15 text-amber-300",
-      value: snapshot.soilMoistureB,
-      decimals: 1,
-      unit: "%",
-      pill: { tone: moistureTone(snapshot.soilMoistureB), label: moistureLabel(snapshot.soilMoistureB) },
-      series: to24(sensorHistory.map((p) => p.soilMoistureB), snapshot.soilMoistureB),
-      sparkColor: "#f59e0b",
-      alertPulse: snapshot.soilMoistureB < thresholds.moistureLow,
+      alertPulse: snapshot.soil < thresholds.moistureLow,
     },
     {
       key: "temp",
       label: t("dashboard.temperature"),
       icon: Thermometer,
       iconTint: "bg-red-500/15 text-red-300",
-      value: snapshot.tempC,
+      value: snapshot.temp,
       decimals: 1,
       unit: "°C",
-      pill: { tone: tempTone, label: snapshot.tempC > thresholds.tempHigh ? "High" : "Normal" },
-      series: to24(sensorHistory.map((p) => p.tempC), snapshot.tempC),
+      pill: { tone: tempTone, label: snapshot.temp > thresholds.tempHigh ? "High" : "Normal" },
+      series: to24(sensorHistory.map((p) => p.temp ?? p.tempC), snapshot.temp),
       sparkColor: "#ef4444",
     },
     {
@@ -135,19 +84,19 @@ export default function SensorGrid() {
       label: t("dashboard.humidity"),
       icon: Waves,
       iconTint: "bg-cyan-500/15 text-cyan-300",
-      value: snapshot.humidity,
+      value: snapshot.hum,
       decimals: 1,
       unit: "%",
       pill: {
         tone: humidityTone,
-        label: snapshot.humidity < thresholds.humidityLow ? "Low" : snapshot.humidity > 70 ? "High" : "Optimal",
+        label: snapshot.hum < thresholds.humidityLow ? "Low" : snapshot.hum > 70 ? "High" : "Optimal",
       },
-      series: to24(sensorHistory.map((p) => p.humidity), snapshot.humidity),
+      series: to24(sensorHistory.map((p) => p.hum ?? p.humidity), snapshot.hum),
       sparkColor: "#22d3ee",
     },
     {
       key: "aqi",
-      label: "AQI",
+      label: "Air Quality (AQI)",
       icon: Wind,
       iconTint: "bg-violet-500/15 text-violet-300",
       value: snapshot.aqi,
@@ -160,52 +109,25 @@ export default function SensorGrid() {
       series: to24(sensorHistory.map((p) => p.aqi), snapshot.aqi),
       sparkColor: "#a78bfa",
     },
-    {
-      key: "light",
-      label: "Light",
-      icon: Sun,
-      iconTint: "bg-yellow-500/15 text-yellow-300",
-      value: snapshot.lightLux,
-      decimals: 0,
-      unit: " lux",
-      pill: { tone: snapshot.lightLux > 10 ? "good" : "info", label: snapshot.lightLux > 10 ? "Day" : "Night" },
-      series: lightSeries,
-      sparkColor: "#facc15",
-    },
-    {
-      key: "tank",
-      label: t("dashboard.tankLevel"),
-      icon: Container,
-      iconTint: "bg-emerald-500/15 text-emerald-300",
-      value: snapshot.tankLevelPercent,
-      decimals: 0,
-      unit: "%",
-      pill: {
-        tone: tankTone,
-        label: snapshot.tankLevelPercent < 5 ? "Empty" : snapshot.tankLevelPercent < thresholds.tankLow ? "Low" : "Full",
-      },
-      series: tankSeries,
-      sparkColor: "#22c55e",
-      custom: "tank",
-    },
-    {
-      key: "rain",
-      label: "Rain",
-      icon: CloudRain,
-      iconTint: "bg-blue-500/15 text-blue-300",
-      value: snapshot.rainMm,
-      decimals: 1,
-      unit: " mm",
-      pill: { tone: rainTone, label: snapshot.rainMm > 0 ? "Raining" : "Dry" },
-      series: rainSeries,
-      sparkColor: "#60a5fa",
-    },
   ];
 
   return (
     <div>
-      <CardHeader title={t("dashboard.liveSensors")} subtitle={t("dashboard.liveSensorsSub")} />
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 sm:gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+      <div className="flex items-center justify-between pb-3">
+        <CardHeader title={t("dashboard.liveSensors")} subtitle={t("dashboard.liveSensorsSub")} />
+        <div
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border backdrop-blur-md transition-all shadow-sm",
+            snapshot.rain
+              ? "bg-blue-500/20 border-blue-400/40 text-blue-300 shadow-[0_0_12px_rgba(59,130,246,0.4)] animate-pulse"
+              : "bg-white/[0.04] border-white/10 text-white/60"
+          )}
+        >
+          <CloudRain className={cn("w-3.5 h-3.5", snapshot.rain ? "text-blue-300" : "text-white/40")} />
+          <span>Rain: {snapshot.rain ? "Yes" : "No"}</span>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         {sensors.map((s) => (
           <SensorCard key={s.key} def={s} />
         ))}
@@ -240,31 +162,12 @@ function SensorCard({ def }: { def: SensorDef }) {
         <span className="ml-0.5 text-sm font-semibold text-[#9CA3AF]">{def.unit}</span>
       </p>
 
-      {def.custom === "tank" ? (
-        <div className="mt-3 flex items-end gap-3">
-          {/* Vertical fill gauge */}
-          <div className="relative h-20 w-8 shrink-0 overflow-hidden rounded-[10px] border border-white/10 bg-white/[0.04]">
-            <motion.div
-              className="absolute inset-x-0 bottom-0 rounded-b-[8px] bg-gradient-to-t from-emerald-600 to-[#34D399]"
-              initial={false}
-              animate={{ height: `${Math.max(0, Math.min(100, def.value))}%` }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              style={{ boxShadow: "0 0 12px rgba(52,211,153,0.5)" }}
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <Sparkline data={def.series} color={def.sparkColor} />
-          </div>
-        </div>
-      ) : (
-        <div className="mt-2">
-          <Sparkline data={def.series} color={def.sparkColor} />
-        </div>
-      )}
+      <div className="mt-2">
+        <Sparkline data={def.series} color={def.sparkColor} />
+      </div>
     </>
   );
 
-  // Zone B low-moisture: pulsing amber border (glow only, text stays steady).
   if (def.alertPulse) {
     return (
       <motion.section

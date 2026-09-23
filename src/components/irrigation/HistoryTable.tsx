@@ -118,7 +118,7 @@ export default function HistoryTable() {
           startTs: Date.now(),
           startWater: s.totalWaterUsedL,
           mode: s.pump.mode as RunMode,
-          trigger: `moisture ${s.snapshot.soilMoistureB.toFixed(0)}% · tank ${s.snapshot.tankLevelPercent.toFixed(0)}%`,
+          trigger: `soil ${s.snapshot.soil.toFixed(0)}% · rain ${s.snapshot.rain ? "Yes" : "No"}`,
         };
       } else if (was && !is && activeRun.current) {
         const run = activeRun.current;

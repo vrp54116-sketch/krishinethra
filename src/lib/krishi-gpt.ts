@@ -257,29 +257,27 @@ function link(id: string, label: string, href: string): KrishiGptAction {
 function answerWater(state: FarmState): KrishiGptAnswer {
   const s = state.snapshot;
   const t = state.settings.thresholds;
-  const m = moisture(state);
-  const tank = s.tankLevelPercent;
-  const tankL = tankLitres(state);
+  const soil = s.soil ?? s.soilMoistureB;
+  const rain = s.rain;
 
   let verdict: string;
-  if (tank < 5) {
-    verdict = `Tank sirf ${f0(tank)}% hai — pehle tank bharo, tabhi sinchai hogi, warna pump start nahi hoga.`;
-  } else if (m.b < 20) {
-    verdict = `HAAN, TURANT paani do — Zone B ${f1(m.b)}% par hai (critical, 20% se bhi kam)!`;
-  } else if (m.b < t.moistureLow) {
-    verdict = `Haan, aaj paani dena chahiye — Zone B ${f1(m.b)}% hai jo ${t.moistureLow}% threshold se kam hai.`;
-  } else if (m.b > t.moistureHigh) {
-    verdict = `Abhi paani mat do — Zone B ${f1(m.b)}% hai (${t.moistureHigh}% se zyada, khet geela hai).`;
+  if (rain) {
+    verdict = `Baarish detect hui hai — sinchai ki zaroorat nahi hai (natural rain active).`;
+  } else if (soil < 20) {
+    verdict = `HAAN, TURANT paani do — Mitti ki nami ${f1(soil)}% par hai (critical low)!`;
+  } else if (soil < t.moistureLow) {
+    verdict = `Haan, aaj paani dena chahiye — Mitti ki nami ${f1(soil)}% hai jo ${t.moistureLow}% threshold se kam hai.`;
+  } else if (soil > t.moistureHigh) {
+    verdict = `Abhi paani mat do — Mitti ki nami ${f1(soil)}% hai (${t.moistureHigh}% se zyada, khet geela hai).`;
   } else {
-    verdict = `Abhi field theek hai — Zone B ${f1(m.b)}% healthy range me hai, kal phir check karenge.`;
+    verdict = `Abhi field theek hai — Mitti ki nami ${f1(soil)}% healthy range me hai.`;
   }
 
   const text =
-    `Paani report (LIVE): Zone A (${cropOf(state, "A", "Tomato")}) ${f1(m.a)}%, ` +
-    `Zone B (${cropOf(state, "B", "Chili")}) ${f1(m.b)}%, Zone C (${cropOf(state, "C", "Spinach")}) ${f1(m.c)}%. ` +
+    `Paani report (LIVE): Soil Moisture ${f1(soil)}%, Rain sensor: ${rain ? "Baarish detect hui" : "Sookha (Dry)"}. ` +
     `Limit: ${t.moistureLow}% se kam = paani do, ${t.moistureHigh}% se zyada = roko. ${verdict} ` +
-    `Pump abhi ${state.pump.running ? "RUNNING hai" : `band hai (${state.pump.mode} mode)`}, ` +
-    `tank ${f0(tank)}% (${f1(tankL)}/${TANK_CAPACITY_L} L). Kya main pump 10 second ke liye chala doon?`;
+    `Pump abhi ${state.pump.running ? "RUNNING hai" : `band hai (${state.pump.mode} mode)`}. ` +
+    `Kya main pump chalane mein madad karoon?`;
 
   return { text, actions: [pumpAction, link("goto-irrigation", "Go to Irrigation", "/irrigation")] };
 }
@@ -354,23 +352,22 @@ function answerFertilizer(state: FarmState): KrishiGptAnswer {
 
 function answerWeather(state: FarmState): KrishiGptAnswer {
   const s = state.snapshot;
-  const m = moisture(state);
-  const tank = s.tankLevelPercent;
-  const rainProb = s.humidity > 72 ? 55 : s.humidity > 55 ? 25 : 10;
-  const tMax = s.tempC + 2.5;
+  const soil = s.soil ?? s.soilMoistureB;
+  const rainProb = s.hum > 72 ? 55 : s.hum > 55 ? 25 : 10;
+  const tMax = s.temp + 2.5;
   const tMin = tMax - 8;
 
   const rainAdvice =
-    s.rainMm > 0.2
-      ? `${f1(s.rainMm)} mm barish ho rahi hai — aaj sinchai SKIP karo, muft ka paani!`
+    s.rain
+      ? `Baarish sensor par detect hui hai — aaj sinchai SKIP karo, muft ka paani!`
       : rainProb >= 50
         ? `Barish chance ~${rainProb}% hai — pump rok kar rakho, kal phir dekho.`
-        : `Barish chance sirf ~${rainProb}% hai — moisture ke hisab se sinchai karo (Zone B ${f1(m.b)}%).`;
+        : `Barish chance sirf ~${rainProb}% hai — moisture ke hisab se sinchai karo (Soil ${f1(soil)}%).`;
 
   const text =
-    `Mausam (LIVE sensor): ${f1(s.tempC)}°C, ${f1(s.humidity)}% nami, ${f1(s.rainMm)} mm barish, AQI ${f0(s.aqi)}. ` +
+    `Mausam (LIVE sensor): ${f1(s.temp)}°C, ${f1(s.hum)}% nami, Rain sensor: ${s.rain ? "Yes" : "No"}, AQI ${f0(s.aqi)}. ` +
     `Aaj ka offline anumaan: max ~${f1(tMax)}°C / min ~${f1(tMin)}°C, barish chance ~${rainProb}%. ` +
-    `${rainAdvice} Tank ${f0(tank)}% bhari hai. Kya sinchai ki final salah moisture se jod kar bataoon?`;
+    `${rainAdvice} Kya sinchai ki final salah moisture se jod kar bataoon?`;
 
   return { text, actions: [link("goto-climate", "Open Climate", "/climate")] };
 }
@@ -378,41 +375,29 @@ function answerWeather(state: FarmState): KrishiGptAnswer {
 function answerPump(state: FarmState): KrishiGptAnswer {
   const p = state.pump;
   const s = state.snapshot;
-  const m = moisture(state);
+  const soil = s.soil ?? s.soilMoistureB;
   const run = `${fmtRun(p.totalRunSeconds)} (${f0(p.totalRunSeconds)} sec total)`;
-  const water = state.totalWaterUsedL.toFixed(2);
 
   const suggestion =
-    s.tankLevelPercent < 5
-      ? `Tank ${f0(s.tankLevelPercent)}% hai — pehle refill karo, warna pump start nahi hoga.`
+    s.rain
+      ? `Baarish chal rahi hai — pump chalane ki zaroorat nahi hai.`
       : p.running
         ? `Pump chal raha hai — nami badh rahi hai, band hone do.`
-        : `Zone B ${f1(m.b)}% hai — 10-sec test run karna hai?`;
+        : `Soil moisture ${f1(soil)}% hai — manual run karna hai?`;
 
   const text =
     `Pump (LIVE): abhi ${p.running ? "RUNNING hai" : "band hai"}, mode ${p.mode === "auto" ? "Auto AI" : p.mode}. ` +
-    `Aaj kul ${run} chala, ${water} L paani istemal hua, flow ${f1(s.flowRateLpm)} L/min. ` +
-    `Last run: ${fmtClock(p.lastRunAt)}. Zone B nami ${f1(m.b)}%, tank ${f0(s.tankLevelPercent)}%. ${suggestion}`;
+    `Aaj kul ${run} chala. Last run: ${fmtClock(p.lastRunAt)}. Soil moisture ${f1(soil)}%, Rain: ${s.rain ? "Yes" : "No"}. ${suggestion}`;
 
   return { text, actions: [pumpAction, link("goto-irrigation", "Go to Irrigation", "/irrigation")] };
 }
 
 function answerTank(state: FarmState): KrishiGptAnswer {
   const s = state.snapshot;
-  const low = state.settings.thresholds.tankLow;
-  const tank = s.tankLevelPercent;
-  const litres = tankLitres(state);
-
-  const advice =
-    tank < 5
-      ? `CRITICAL — ${f0(tank)}% par pump NAHI chal sakta. Turant refill karo!`
-      : tank < low
-        ? `${low}% limit se kam hai — jald refill karo taaki sinchai na ruke.`
-        : `${low}% limit se upar hai — refill ki chinta nahi, aaram se sinchai karo.`;
-
+  const soil = s.soil ?? s.soilMoistureB;
   const text =
-    `Tank (LIVE): ${f0(tank)}% bhari = ${f1(litres)}/${TANK_CAPACITY_L} L paani bacha hai. ${advice} ` +
-    `Aaj ab tak ${state.totalWaterUsedL.toFixed(2)} L kharch hua hai. Tank full karke pump chalana hai?`;
+    `Tank update: Actual hardware configuration me ultrasonic tank sensor installed nahi hai. ` +
+    `KrishiNethra directly aapke soil moisture sensor (${f1(soil)}%) aur rain sensor (${s.rain ? "Rain detected" : "Dry"}) ke zariye irrigation manage karta hai.`;
 
   return { text, actions: [link("goto-irrigation", "Go to Irrigation", "/irrigation")] };
 }
@@ -489,12 +474,12 @@ function answerHelp(): KrishiGptAnswer {
 }
 
 function answerFallback(state: FarmState): KrishiGptAnswer {
-  const m = moisture(state);
+  const soil = state.snapshot.soil ?? state.snapshot.soilMoistureB;
   const text =
     `Ye sawal samajh nahi aaya. I can help with: water (paani), disease (rog), fertilizer (khaad), ` +
-    `weather (mausam), pump, tank, market (bhav), schemes (yojana), daily report. / ` +
-    `Main inme madad kar sakta hoon: paani, rog, khaad, mausam, pump, tanki, bazaar bhav, yojana, daily report. ` +
-    `Abhi LIVE: health ${f0(state.farmHealthScore)}/100, Zone B ${f1(m.b)}% nami, tank ${f0(state.snapshot.tankLevelPercent)}%. ` +
+    `weather (mausam), pump, market (bhav), schemes (yojana), daily report. / ` +
+    `Main inme madad kar sakta hoon: paani, rog, khaad, mausam, pump, bazaar bhav, yojana, daily report. ` +
+    `Abhi LIVE: health ${f0(state.farmHealthScore)}/100, Soil ${f1(soil)}% nami, Rain: ${state.snapshot.rain ? "Yes" : "No"}. ` +
     `Try: "Aaj paani dena chahiye?" — kya paani par salah doon?`;
 
   return {

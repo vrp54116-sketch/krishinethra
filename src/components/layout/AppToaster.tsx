@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Toaster } from "sonner";
+import { CheckCircle2, AlertCircle, Info, AlertTriangle } from "lucide-react";
 
 /**
- * Global toaster — dark theme with green accent.
- * bottom-right on desktop (md+), top-center on mobile.
+ * Global toaster — Apple-style liquid glass pill with vibrant colored circular icons.
+ * Bottom-right on desktop (md+), top-center on mobile.
  */
 export default function AppToaster() {
   const [isDesktop, setIsDesktop] = useState(false);
@@ -23,13 +24,30 @@ export default function AppToaster() {
       theme="dark"
       position={isDesktop ? "bottom-right" : "top-center"}
       className="z-[70]"
-      style={{ zIndex: 70 }}
+      icons={{
+        success: (
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-400/30">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+          </div>
+        ),
+        error: (
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-500/20 text-rose-400 border border-rose-400/30">
+            <AlertCircle className="h-3.5 w-3.5" />
+          </div>
+        ),
+        info: (
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/20 text-sky-400 border border-sky-400/30">
+            <Info className="h-3.5 w-3.5" />
+          </div>
+        ),
+        warning: (
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500/20 text-amber-400 border border-amber-400/30">
+            <AlertTriangle className="h-3.5 w-3.5" />
+          </div>
+        ),
+      }}
       toastOptions={{
-        style: {
-          background: "#0a120c",
-          border: "1px solid rgba(34,197,94,0.25)",
-          color: "#e7f5ec",
-        },
+        className: "liquid-glass-pill text-xs font-medium",
       }}
     />
   );

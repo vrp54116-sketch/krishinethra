@@ -15,6 +15,7 @@ import { setPendingCapture } from "@/components/camera/field-capture";
 import LeafScanner, { diseaseDot } from "@/components/camera/LeafScanner";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import { StatusPill } from "@/components/dashboard/ui";
+import CameraPanControl from "@/components/camera/CameraPanControl";
 
 type CameraTab = "live" | "scanner" | "history";
 
@@ -117,6 +118,7 @@ function CameraInner() {
                 </p>
               </div>
               <SimulatedCamera />
+              <CameraPanControl />
               <PanTiltPad />
             </>
           )}

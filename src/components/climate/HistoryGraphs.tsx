@@ -15,7 +15,7 @@ import { useFarmStore } from "@/lib/store";
 import { Card, CardHeader } from "@/components/dashboard/ui";
 import { buildTwelveHourSeries } from "./shared";
 
-type TabId = "temp" | "humidity" | "aqi" | "light";
+type TabId = "temp" | "humidity" | "aqi";
 
 const TABS: Array<{
   id: TabId;
@@ -23,7 +23,7 @@ const TABS: Array<{
   unit: string;
   color: string;
   fill: string;
-  dataKey: "tempC" | "humidity" | "aqi" | "lightLux";
+  dataKey: "tempC" | "humidity" | "aqi";
   decimals: number;
 }> = [
   {
@@ -51,15 +51,6 @@ const TABS: Array<{
     color: "#a78bfa",
     fill: "rgba(167,139,250,0.2)",
     dataKey: "aqi",
-    decimals: 0,
-  },
-  {
-    id: "light",
-    label: "Light",
-    unit: " lux",
-    color: "#facc15",
-    fill: "rgba(250,204,21,0.16)",
-    dataKey: "lightLux",
     decimals: 0,
   },
 ];

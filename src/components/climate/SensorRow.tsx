@@ -3,10 +3,6 @@
 import { useMemo } from "react";
 import {
   CloudRain,
-  Droplets,
-  Gauge,
-  Moon,
-  Sun,
   Thermometer,
   Waves,
   Wind,
@@ -24,11 +20,10 @@ import {
   AQI_BANDS,
   aqiBand,
   buildTwelveHourSeries,
-  currentPressure,
 } from "./shared";
 
 /* ------------------------------------------------------------------ */
-/* Small visual helpers                                                */
+/* Visual helpers                                                     */
 /* ------------------------------------------------------------------ */
 
 function ComfortBar({
@@ -118,7 +113,7 @@ function Shell({
 }
 
 /* ------------------------------------------------------------------ */
-/* 6 live climate sensor cards                                         */
+/* 3 live climate sensor cards + Rain status chip                      */
 /* ------------------------------------------------------------------ */
 
 export default function SensorRow() {
@@ -135,162 +130,106 @@ export default function SensorRow() {
   const tempSeries = useMemo(() => series.map((p) => p.tempC), [series]);
   const humSeries = useMemo(() => series.map((p) => p.humidity), [series]);
   const aqiSeries = useMemo(() => series.map((p) => p.aqi), [series]);
-  const lightSeries = useMemo(() => series.map((p) => p.lightLux), [series]);
-  const rainSeries = useMemo(() => series.map((p) => p.rainMm), [series]);
-  const pressSeries = useMemo(
-    () => series.map((p) => p.pressureHpa),
-    [series],
-  );
 
-  const pressure = currentPressure(snapshot);
   const band = aqiBand(snapshot.aqi);
-  const isDay = snapshot.lightLux > 10;
-  const raining = snapshot.rainMm >= 0.3;
-  const drizzle = !raining && snapshot.rainMm > 0;
 
   const tempTone: PillTone =
-    snapshot.tempC > tempHigh ? "warn" : snapshot.tempC < 10 ? "warn" : "good";
+    snapshot.temp > tempHigh ? "warn" : snapshot.temp < 10 ? "warn" : "good";
   const humTone: PillTone =
-    snapshot.humidity > 80 || snapshot.humidity < 30 ? "warn" : "good";
+    snapshot.hum > 80 || snapshot.hum < 30 ? "warn" : "good";
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
-      {/* Temperature with comfort range bar */}
-      <Shell
-        icon={Thermometer}
-        tint="bg-red-500/15 text-red-300"
-        label="Temperature · 12h history"
-        pill={{
-          tone: tempTone,
-          label:
-            snapshot.tempC > tempHigh
-              ? "Hot"
-              : snapshot.tempC < 10
-                ? "Cold"
-                : "Comfort",
-        }}
-      >
-        <p className="text-2xl font-extrabold tracking-tight text-white">
-          <AnimatedNumber value={snapshot.tempC} decimals={1} />
-          <span className="ml-0.5 text-sm font-semibold text-zinc-400">°C</span>
-        </p>
-        <Sparkline data={tempSeries} color="#ef4444" />
-        <ComfortBar min={0} max={45} idealMin={18} idealMax={32} value={snapshot.tempC} />
-      </Shell>
-
-      {/* Humidity */}
-      <Shell
-        icon={Waves}
-        tint="bg-cyan-500/15 text-cyan-300"
-        label="Humidity · 12h history"
-        pill={{
-          tone: humTone,
-          label:
-            snapshot.humidity > 80
-              ? "Humid"
-              : snapshot.humidity < 30
-                ? "Dry"
-                : "Optimal",
-        }}
-      >
-        <p className="text-2xl font-extrabold tracking-tight text-white">
-          <AnimatedNumber value={snapshot.humidity} decimals={1} />
-          <span className="ml-0.5 text-sm font-semibold text-zinc-400">%</span>
-        </p>
-        <Sparkline data={humSeries} color="#22d3ee" />
-        <p className="mt-2 text-[11px] text-zinc-500">
-          Ideal 50–70% · fungus risk above 80%
-        </p>
-      </Shell>
-
-      {/* AQI with 0–500 color scale */}
-      <Shell
-        icon={Wind}
-        tint="bg-violet-500/15 text-violet-300"
-        label="Air Quality Index · 12h history"
-        pill={{
-          tone:
-            snapshot.aqi > aqiHigh ? "bad" : snapshot.aqi > 100 ? "warn" : "good",
-          label: band.label,
-        }}
-      >
-        <p className="text-2xl font-extrabold tracking-tight text-white">
-          <AnimatedNumber value={snapshot.aqi} decimals={0} />
-          <span className="ml-1 text-xs font-semibold" style={{ color: band.color }}>
-            {band.label}
-          </span>
-        </p>
-        <Sparkline data={aqiSeries} color="#a78bfa" />
-        <AqiScale value={snapshot.aqi} />
-      </Shell>
-
-      {/* Light with day/night icon */}
-      <Shell
-        icon={isDay ? Sun : Moon}
-        tint={isDay ? "bg-yellow-500/15 text-yellow-300" : "bg-indigo-500/15 text-indigo-300"}
-        label="Light intensity · 12h history"
-        pill={{ tone: isDay ? "good" : "info", label: isDay ? "Day" : "Night" }}
-      >
-        <p className="text-2xl font-extrabold tracking-tight text-white">
-          <AnimatedNumber value={snapshot.lightLux} decimals={0} />
-          <span className="ml-0.5 text-sm font-semibold text-zinc-400">lux</span>
-        </p>
-        <Sparkline data={lightSeries} color="#facc15" />
-        <p className="mt-2 flex items-center gap-1.5 text-[11px] text-zinc-500">
-          {isDay ? (
-            <Sun className="h-3.5 w-3.5 text-yellow-300" />
-          ) : (
-            <Moon className="h-3.5 w-3.5 text-indigo-300" />
+    <div className="space-y-3">
+      {/* Header with Rain status boolean chip */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:px-4 backdrop-blur-md">
+        <div>
+          <h2 className="text-sm font-extrabold text-white">Live Microclimate Telemetry</h2>
+          <p className="text-xs text-zinc-400">Atmospheric readings from DHT22, MQ-135 & digital rain probe</p>
+        </div>
+        <div
+          className={cn(
+            "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold backdrop-blur-md transition-all self-start sm:self-auto",
+            snapshot.rain
+              ? "border-blue-400/50 bg-blue-500/20 text-blue-300 shadow-[0_0_14px_rgba(59,130,246,0.4)] animate-pulse"
+              : "border-white/10 bg-white/[0.04] text-zinc-400"
           )}
-          {isDay ? "Photosynthesis active" : "Night — lights out, stomata closed"}
-        </p>
-      </Shell>
+        >
+          <CloudRain className={cn("h-4 w-4", snapshot.rain ? "text-blue-300" : "text-zinc-500")} />
+          <span>Rain Detected: <strong className="text-white">{snapshot.rain ? "Yes" : "No"}</strong></span>
+        </div>
+      </div>
 
-      {/* Rain sensor status */}
-      <Shell
-        icon={CloudRain}
-        tint="bg-blue-500/15 text-blue-300"
-        label="Rain sensor · 12h history"
-        pill={{
-          tone: raining ? "info" : drizzle ? "info" : "good",
-          label: raining ? "Raining" : drizzle ? "Drizzle" : "Dry",
-        }}
-      >
-        <p className="text-2xl font-extrabold tracking-tight text-white">
-          <AnimatedNumber value={snapshot.rainMm} decimals={1} />
-          <span className="ml-0.5 text-sm font-semibold text-zinc-400">mm</span>
-        </p>
-        <Sparkline data={rainSeries} color="#60a5fa" />
-        <p className="mt-2 flex items-center gap-1.5 text-[11px] text-zinc-500">
-          <Droplets className="h-3.5 w-3.5 text-blue-300" />
-          {raining
-            ? "Rain watering the field — skip irrigation"
-            : drizzle
-              ? "Trace moisture on the sensor"
-              : "Sensor dry — no rainfall"}
-        </p>
-      </Shell>
+      {/* 3 Core Sensor Cards: Temperature, Humidity, AQI */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+        {/* Temperature with comfort range bar */}
+        <Shell
+          icon={Thermometer}
+          tint="bg-red-500/15 text-red-300"
+          label="Temperature · 12h history"
+          pill={{
+            tone: tempTone,
+            label:
+              snapshot.temp > tempHigh
+                ? "Hot"
+                : snapshot.temp < 10
+                  ? "Cold"
+                  : "Comfort",
+          }}
+        >
+          <p className="text-2xl font-extrabold tracking-tight text-white">
+            <AnimatedNumber value={snapshot.temp} decimals={1} />
+            <span className="ml-0.5 text-sm font-semibold text-zinc-400">°C</span>
+          </p>
+          <Sparkline data={tempSeries} color="#ef4444" />
+          <ComfortBar min={0} max={45} idealMin={18} idealMax={32} value={snapshot.temp} />
+        </Shell>
 
-      {/* Pressure */}
-      <Shell
-        icon={Gauge}
-        tint="bg-emerald-500/15 text-emerald-300"
-        label="Atmospheric pressure · 12h history"
-        pill={{
-          tone: pressure < 1005 || pressure > 1020 ? "warn" : "good",
-          label:
-            pressure < 1005 ? "Low" : pressure > 1020 ? "High" : "Normal",
-        }}
-      >
-        <p className="text-2xl font-extrabold tracking-tight text-white">
-          <AnimatedNumber value={pressure} decimals={1} />
-          <span className="ml-0.5 text-sm font-semibold text-zinc-400">hPa</span>
-        </p>
-        <Sparkline data={pressSeries} color="#34d399" />
-        <p className="mt-2 text-[11px] text-zinc-500">
-          Falling pressure often precedes rain — watch the trend
-        </p>
-      </Shell>
+        {/* Humidity */}
+        <Shell
+          icon={Waves}
+          tint="bg-cyan-500/15 text-cyan-300"
+          label="Humidity · 12h history"
+          pill={{
+            tone: humTone,
+            label:
+              snapshot.hum > 80
+                ? "Humid"
+                : snapshot.hum < 30
+                  ? "Dry"
+                  : "Optimal",
+          }}
+        >
+          <p className="text-2xl font-extrabold tracking-tight text-white">
+            <AnimatedNumber value={snapshot.hum} decimals={1} />
+            <span className="ml-0.5 text-sm font-semibold text-zinc-400">%</span>
+          </p>
+          <Sparkline data={humSeries} color="#22d3ee" />
+          <p className="mt-2 text-[11px] text-zinc-500">
+            Ideal 50–70% · fungus risk above 80%
+          </p>
+        </Shell>
+
+        {/* AQI with 0–500 color scale */}
+        <Shell
+          icon={Wind}
+          tint="bg-violet-500/15 text-violet-300"
+          label="Air Quality Index · 12h history"
+          pill={{
+            tone:
+              snapshot.aqi > aqiHigh ? "bad" : snapshot.aqi > 100 ? "warn" : "good",
+            label: band.label,
+          }}
+        >
+          <p className="text-2xl font-extrabold tracking-tight text-white">
+            <AnimatedNumber value={snapshot.aqi} decimals={0} />
+            <span className="ml-1 text-xs font-semibold" style={{ color: band.color }}>
+              {band.label}
+            </span>
+          </p>
+          <Sparkline data={aqiSeries} color="#a78bfa" />
+          <AqiScale value={snapshot.aqi} />
+        </Shell>
+      </div>
     </div>
   );
 }

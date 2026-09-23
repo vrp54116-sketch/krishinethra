@@ -3,12 +3,11 @@
 import { motion } from "framer-motion";
 import PumpHeroCard from "@/components/irrigation/PumpHeroCard";
 import AiExplainerCard from "@/components/irrigation/AiExplainerCard";
-import TankCard from "@/components/irrigation/TankCard";
-import UsageTracker from "@/components/irrigation/UsageTracker";
-import EnergyMonitor from "@/components/irrigation/EnergyMonitor";
 import HistoryTable from "@/components/irrigation/HistoryTable";
 import SchedulePanel from "@/components/irrigation/SchedulePanel";
 import EdgeStaleBanner from "@/components/mqtt/EdgeStaleBanner";
+import PumpRunLog from "@/components/irrigation/PumpRunLog";
+import RainSkipLog from "@/components/irrigation/RainSkipLog";
 
 function Rise({
   children,
@@ -29,9 +28,9 @@ function Rise({
 }
 
 /**
- * /irrigation — complete water management center.
- * Pump control, explainable Auto AI, tank, usage, energy,
- * history and weekly scheduling — all live from the farm store.
+ * /irrigation — single pump & soil water management center.
+ * Pump control, Jal Agent rule engine, weekly scheduling,
+ * and history log — all live from the hardware contract.
  */
 export default function IrrigationPage() {
   return (
@@ -51,25 +50,20 @@ export default function IrrigationPage() {
         </Rise>
       </div>
 
-      {/* 2. TANK + SCHEDULE */}
+      {/* 2. PUMP RUN LOG & WATER SAVINGS */}
       <div className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-2">
         <Rise delay={0.1}>
-          <TankCard />
+          <PumpRunLog />
         </Rise>
         <Rise delay={0.14}>
-          <SchedulePanel />
+          <RainSkipLog />
         </Rise>
       </div>
 
-      {/* 3. USAGE + ENERGY */}
-      <div className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-2">
-        <Rise delay={0.16}>
-          <UsageTracker />
-        </Rise>
-        <Rise delay={0.2}>
-          <EnergyMonitor />
-        </Rise>
-      </div>
+      {/* 3. SCHEDULE */}
+      <Rise delay={0.18}>
+        <SchedulePanel />
+      </Rise>
 
       {/* 4. HISTORY */}
       <Rise delay={0.22}>

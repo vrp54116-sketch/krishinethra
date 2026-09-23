@@ -89,10 +89,7 @@ export function getHealthBreakdown(
   unresolvedDiseaseCount: number,
   activeSprayPlansCount: number = 0,
 ): HealthFactor[] {
-  const moistureAvg =
-    zones.length > 0
-      ? zones.reduce((sum, z) => sum + z.soilMoisture, 0) / zones.length
-      : (snapshot.soilMoistureA + snapshot.soilMoistureB) / 2;
+  const moistureAvg = snapshot.soil ?? ((snapshot.soilMoistureA + snapshot.soilMoistureB) / 2);
   const moistureScore = clamp(100 - Math.abs(moistureAvg - 45) * 2.5, 0, 100);
 
   const tempScore =
@@ -720,38 +717,27 @@ export function suggestActions(state: DashboardAiState): Suggestion[] {
   const t = settings.thresholds;
   const out: Suggestion[] = [];
 
-  // 1. Water needed — dry zones.
-  if (s.soilMoistureB < 20) {
+  // 1. Water needed — soil moisture.
+  const soilVal = s.soil ?? s.soilMoistureB;
+  if (soilVal < 20) {
     out.push({
-      id: "water-b-critical",
-      title: "Zone B critically dry",
-      message: `Moisture ${f1(s.soilMoistureB)}% — irrigate immediately.`,
+      id: "water-critical",
+      title: "Soil critically dry",
+      message: `Soil moisture ${f1(soilVal)}% — irrigate immediately.`,
       severity: "critical",
       icon: "water",
       score: 100,
       actionLabel: "Irrigate",
       actionHref: "/irrigation",
     });
-  } else if (s.soilMoistureB < t.moistureLow) {
+  } else if (soilVal < t.moistureLow) {
     out.push({
-      id: "water-b",
-      title: "Zone B needs water",
-      message: `Moisture ${f1(s.soilMoistureB)}% is below the ${t.moistureLow}% threshold.`,
+      id: "water-low",
+      title: "Soil needs water",
+      message: `Soil moisture ${f1(soilVal)}% is below the ${t.moistureLow}% threshold.`,
       severity: "warning",
       icon: "water",
       score: 95,
-      actionLabel: "Irrigate",
-      actionHref: "/irrigation",
-    });
-  }
-  if (s.soilMoistureA < t.moistureLow && s.soilMoistureA <= s.soilMoistureB) {
-    out.push({
-      id: "water-a",
-      title: "Zone A needs water",
-      message: `Moisture ${f1(s.soilMoistureA)}% is below the ${t.moistureLow}% threshold.`,
-      severity: "warning",
-      icon: "water",
-      score: 85,
       actionLabel: "Irrigate",
       actionHref: "/irrigation",
     });
