@@ -38,7 +38,7 @@ import EdgeLiveChip, { edgeChipState } from "@/components/mqtt/EdgeLiveChip";
 import InstallAppButton from "@/components/pwa/InstallAppButton";
 import PageSkeleton from "@/components/layout/PageSkeleton";
 import AppToaster from "@/components/layout/AppToaster";
-import { AmbientBackground } from "@/components/ui/glass";
+import { AmbientBackground, LiquidButton } from "@/components/ui/glass";
 import { useMounted } from "@/components/dashboard/ui";
 import { getSectionAccent } from "@/lib/theme";
 
@@ -150,7 +150,7 @@ function LogoBlock({ className }: { className?: string }) {
   const t = useT();
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <div className="glass-pill flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 shadow-[0_0_20px_rgba(52,211,153,0.45)]">
+      <div className="liquid-glass-strong flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-emerald-500/30 text-emerald-300 shadow-[0_0_20px_rgba(52,211,153,0.45)]">
         <Leaf className="h-5 w-5 text-emerald-400" />
       </div>
       <div className="min-w-0">
@@ -326,7 +326,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <AmbientBackground />
 
       {/* ============ DESKTOP SIDEBAR ============ */}
-      <aside className="relative z-30 hidden md:flex w-64 shrink-0 h-[calc(100dvh-1.5rem)] max-h-[calc(100dvh-1.5rem)] flex-col glass-strong m-3 mr-0 rounded-3xl">
+      <aside className="relative z-30 hidden md:flex w-64 shrink-0 h-[calc(100dvh-1.5rem)] max-h-[calc(100dvh-1.5rem)] flex-col liquid-glass-strong m-3 mr-0 rounded-3xl">
         <LogoBlock className="shrink-0 px-4 pt-4 pb-2" />
 
         <nav className="flex-1 overflow-y-auto scrollbar-hide px-3 space-y-1">
@@ -391,9 +391,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* ============ MAIN COLUMN ============ */}
       <div className="relative z-10 flex h-full min-w-0 flex-1 flex-col">
         {/* Header: shrink-0 z-40 mx-3 mt-3 rounded-2xl glass */}
-        <header className="shrink-0 z-40 mx-3 mt-3 rounded-2xl glass bg-[#070B09]/80 backdrop-blur-xl border border-white/10 shadow-lg px-3.5 py-2.5 flex items-center gap-2 sm:gap-3">
+        <header className="shrink-0 z-40 mx-3 mt-3 rounded-2xl liquid-glass px-3.5 py-2.5 flex items-center gap-2 sm:gap-3">
           {/* Mobile logo */}
-          <div className="glass-pill flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-emerald-300 md:hidden border border-emerald-500/30 bg-emerald-500/10 shadow-[0_0_12px_rgba(52,211,153,0.4)]">
+          <div className="liquid-glass-pill flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-emerald-300 border border-emerald-500/30 shadow-[0_0_12px_rgba(52,211,153,0.4)] md:hidden">
             <Leaf className="h-4 w-4" />
           </div>
 
@@ -411,7 +411,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Live clock */}
-          <span className="glass-pill hidden items-center px-3 py-1.5 font-mono text-xs text-zinc-300 sm:inline-flex border border-white/10">
+          <span               className="liquid-glass-pill hidden items-center px-3 py-1.5 font-mono text-xs text-zinc-300 sm:inline-flex border border-white/10">
             {clock}
           </span>
 
@@ -429,7 +429,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 setAlertsOpen(false);
                 setLangOpen((v) => !v);
               }}
-              className="glass-pill flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-all hover:border-emerald-500/40 hover:text-white cursor-pointer"
+              className="liquid-glass-pill flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-all hover:border-emerald-500/40 hover:text-white cursor-pointer"
               aria-label={t("common.language")}
             >
               <span>{activeLang?.nativeLabel ?? "English"}</span>
@@ -438,7 +438,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {langOpen && (
               <>
                 <button aria-label="close" className="fixed inset-0 z-40 cursor-default" onClick={closeOverlays} />
-                <div className="glass-strong absolute right-0 top-full z-50 mt-2 w-40 overflow-hidden rounded-2xl border border-emerald-500/25 p-1 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.8)]">
+                <div className="liquid-glass-strong absolute right-0 top-full z-50 mt-2 w-40 overflow-hidden rounded-2xl border border-emerald-500/25 p-1">
                   {LANGUAGES.map((l) => (
                     <button
                       key={l.code}
@@ -472,7 +472,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 if (!alertsOpen) markAlertsRead();
                 setAlertsOpen((v) => !v);
               }}
-              className="glass-pill relative flex h-9 w-9 items-center justify-center rounded-full text-zinc-200 transition-all hover:border-emerald-500/40 hover:text-white cursor-pointer"
+              className="liquid-glass-pill relative flex h-9 w-9 items-center justify-center rounded-full text-zinc-200 transition-all hover:border-emerald-500/40 hover:text-white cursor-pointer"
               aria-label={t("nav.alerts")}
             >
               <Bell className="h-4 w-4" />
@@ -483,7 +483,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {alertsOpen && (
               <>
                 <button aria-label="close" className="fixed inset-0 z-40 cursor-default" onClick={closeOverlays} />
-                <div className="glass-strong absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-emerald-500/25 p-1 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.8)]">
+                <div className="liquid-glass-strong absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-emerald-500/25 p-1">
                   <div className="flex items-center justify-between border-b border-white/5 px-3 py-2.5">
                     <span className="text-xs font-bold text-white">{t("common.recentAlerts")}</span>
                     <Link href="/alerts" onClick={closeOverlays} className="text-[11px] font-medium text-emerald-300 hover:text-emerald-200">
@@ -508,7 +508,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {/* Health score chip */}
           <Link
             href="/dashboard"
-            className="glass-pill hidden items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-200 border border-emerald-500/30 bg-emerald-500/10 shadow-[0_0_12px_rgba(34,197,94,0.2)] transition-all hover:border-emerald-400/50 xs:flex sm:flex"
+            className="liquid-glass-pill hidden items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-200 border border-emerald-500/30 shadow-[0_0_12px_rgba(34,197,94,0.2)] transition-all hover:border-emerald-400/50 xs:flex sm:flex"
             title={t("common.farmHealthScore")}
           >
             <span
@@ -544,7 +544,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* ============ MOBILE BOTTOM NAV ============ */}
       <nav className="md:hidden fixed bottom-3 inset-x-3 z-50 pointer-events-none">
-        <div className="glass-strong pointer-events-auto mx-auto max-w-lg rounded-full backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.65)] border border-white/12">
+        <div className="liquid-glass-strong pointer-events-auto mx-auto max-w-lg rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.65)] border border-white/12">
           <div className="grid grid-cols-5 px-2 py-1.5">
             {MOBILE_TABS.map((tab) => {
               if ("key" in tab) {
@@ -630,6 +630,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* Floating mic trigger */}
       <FloatingMicButton />
 
+      {/* V2.1 mobile liquid FAB — Ask AI, left side clear of mic/pill/tabs */}
+      <div className="fixed bottom-24 left-4 z-50 md:hidden">
+        <LiquidButton
+          icon={MessageCircle}
+          iconOnly
+          href="/assistant"
+          variant="primary"
+          aria-label="Ask KrishiGPT"
+          title="Ask KrishiGPT"
+        />
+      </div>
+
       {/* Mobile More Sheet */}
       <AnimatePresence>
         {moreOpen && (
@@ -647,14 +659,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="glass-strong fixed inset-x-0 bottom-0 z-[60] max-h-[80vh] overflow-y-auto rounded-t-3xl border-t border-emerald-500/25 p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:hidden backdrop-blur-2xl"
+              className="liquid-glass-strong fixed inset-x-0 bottom-0 z-[60] max-h-[80vh] overflow-y-auto rounded-t-3xl border-t border-emerald-500/25 p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:hidden"
             >
               <div className="mb-4 flex items-center justify-between">
                 <span className="text-sm font-bold text-white">{t("nav.more")}</span>
                 <button
                   type="button"
                   onClick={() => setMoreOpen(false)}
-                  className="glass-pill flex h-8 w-8 items-center justify-center rounded-full text-zinc-300 hover:text-white"
+                  className="liquid-glass-pill flex h-8 w-8 items-center justify-center rounded-full text-zinc-300 hover:text-white"
                   aria-label={t("common.close")}
                 >
                   <X className="h-4 w-4" />

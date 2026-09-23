@@ -22,8 +22,8 @@
   --glass-bg-strong: rgba(18, 26, 22, 0.85);
   --glass-border: rgba(255, 255, 255, 0.10);
   --glass-highlight: rgba(255, 255, 255, 0.10);
-  --glass-blur: blur(20px) saturate(170%);
-  --glass-blur-strong: blur(28px) saturate(170%);
+  --glass-backdrop: blur(20px) saturate(170%);
+  --glass-backdrop-strong: blur(28px) saturate(170%);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
@@ -49,8 +49,8 @@ body {
 /* ---- Aurora Harvest glass utilities ---- */
 .glass {
   background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
   border: 1px solid var(--glass-border);
   border-radius: 20px;
   box-shadow: var(--glass-shadow);
@@ -72,8 +72,8 @@ body {
 
 .glass-strong {
   background: var(--glass-bg-strong);
-  backdrop-filter: var(--glass-blur-strong);
-  -webkit-backdrop-filter: var(--glass-blur-strong);
+  backdrop-filter: var(--glass-backdrop-strong);
+  -webkit-backdrop-filter: var(--glass-backdrop-strong);
   border: 1px solid var(--glass-border);
   border-radius: 20px;
   box-shadow: var(--glass-shadow);
@@ -95,8 +95,8 @@ body {
 
 .glass-inset {
   background: rgba(10, 16, 12, 0.55);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
   box-shadow:
@@ -107,8 +107,8 @@ body {
 
 .glass-pill {
   background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
   border: 1px solid var(--glass-border);
   border-radius: 999px;
   box-shadow: var(--glass-shadow);
@@ -129,8 +129,8 @@ body {
 /* OLED-optimized card surfaces */
 .card-surface {
   background: rgba(18, 26, 22, 0.66);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-backdrop);
+  -webkit-backdrop-filter: var(--glass-backdrop);
   border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 20px;
   box-shadow:
@@ -358,7 +358,7 @@ body {
 .ambient-blob {
   position: absolute;
   border-radius: 9999px;
-  filter: blur(90px);
+  filter: blur(100px);
   will-change: transform;
   pointer-events: none;
 }
@@ -370,10 +370,10 @@ body {
   animation: ambient-drift-b 64s ease-in-out infinite;
 }
 .ambient-blob-c {
-  animation: ambient-drift-c 44s ease-in-out infinite;
+  animation: ambient-drift-c 50s ease-in-out infinite;
 }
 .ambient-blob-d {
-  animation: ambient-drift-d 70s ease-in-out infinite;
+  animation: ambient-drift-d 78s ease-in-out infinite;
 }
 .ambient-blob-e {
   animation: ambient-drift-e 58s ease-in-out infinite;
@@ -384,7 +384,8 @@ body {
   .ambient-blob-b,
   .ambient-blob-c,
   .ambient-blob-d,
-  .ambient-blob-e {
+  .ambient-blob-e,
+  .ambient-blob-f {
     animation: none;
   }
 }

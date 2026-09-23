@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { useMounted } from "@/components/dashboard/ui";
-import { GlassSheet, GlassToggle } from "@/components/ui/glass";
+import { GlassSheet, LiquidToggle } from "@/components/ui/glass";
 
 const QUICK_DURATIONS = [
   { label: "10s", sec: 10 },
@@ -248,7 +248,7 @@ export default function LiveFarmPill({ className }: { className?: string } = {})
               {t("irrigation.aiReasoning")}
             </p>
           </div>
-          <GlassToggle
+          <LiquidToggle
             checked={autoMode}
             onChange={(next) => setPumpMode(next ? "auto" : "manual")}
             label={autoMode ? t("common.on") : t("common.off")}

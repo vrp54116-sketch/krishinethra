@@ -205,7 +205,7 @@ export default function SensorGrid() {
   return (
     <div>
       <CardHeader title={t("dashboard.liveSensors")} subtitle={t("dashboard.liveSensorsSub")} />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 sm:gap-4 xl:grid-cols-2 2xl:grid-cols-3">
         {sensors.map((s) => (
           <SensorCard key={s.key} def={s} />
         ))}
@@ -218,23 +218,30 @@ function SensorCard({ def }: { def: SensorDef }) {
   const Icon = def.icon;
   const body = (
     <>
-      <div className="flex items-center justify-between gap-2">
-        <span className={cn("flex h-9 w-9 items-center justify-center rounded-xl", def.iconTint)}>
-          <Icon className="h-[18px] w-[18px]" />
+      <div className="flex items-start justify-between gap-2">
+        <span
+          className={cn(
+            "liquid-icon-circle flex h-11 w-11 shrink-0 items-center justify-center",
+            def.iconTint,
+          )}
+        >
+          <Icon className="h-5 w-5" />
         </span>
         <StatusPill tone={def.pill.tone} pulse={def.alertPulse}>
           {def.pill.label}
         </StatusPill>
       </div>
 
-      <p className="mt-2 truncate text-xs font-medium text-[#9CA3AF]">{def.label}</p>
-      <p className="text-2xl font-semibold tabular-nums tracking-tight text-white">
-        <AnimatedNumber value={def.value} decimals={def.decimals} />
+      <p className="mt-3 truncate text-xs font-medium text-[#9CA3AF]">{def.label}</p>
+      <p className="mt-0.5 flex items-baseline">
+        <span className="liquid-metric">
+          <AnimatedNumber value={def.value} decimals={def.decimals} />
+        </span>
         <span className="ml-0.5 text-sm font-semibold text-[#9CA3AF]">{def.unit}</span>
       </p>
 
       {def.custom === "tank" ? (
-        <div className="mt-2 flex items-end gap-3">
+        <div className="mt-3 flex items-end gap-3">
           {/* Vertical fill gauge */}
           <div className="relative h-20 w-8 shrink-0 overflow-hidden rounded-[10px] border border-white/10 bg-white/[0.04]">
             <motion.div
@@ -250,7 +257,7 @@ function SensorCard({ def }: { def: SensorDef }) {
           </div>
         </div>
       ) : (
-        <div className="mt-1">
+        <div className="mt-2">
           <Sparkline data={def.series} color={def.sparkColor} />
         </div>
       )}
@@ -261,7 +268,7 @@ function SensorCard({ def }: { def: SensorDef }) {
   if (def.alertPulse) {
     return (
       <motion.section
-        className="card-surface rounded-[20px] border-amber-400/60 p-4 transition-transform duration-300 hover:-translate-y-1 sm:p-5"
+        className="liquid-glass liquid-glass-card liquid-card-hover liquid-card-amber"
         animate={{
           boxShadow: [
             "0 0 12px rgba(245,158,11,0.25)",
@@ -277,7 +284,7 @@ function SensorCard({ def }: { def: SensorDef }) {
   }
 
   return (
-    <section className="card-surface rounded-[20px] p-4 transition-all duration-300 hover:-translate-y-1 sm:p-5">
+    <section className="liquid-glass liquid-glass-card liquid-card-hover">
       {body}
     </section>
   );

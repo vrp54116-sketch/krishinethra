@@ -4,7 +4,6 @@ import { memo, useEffect, useId, useState, type ReactNode } from "react";
 import { animate, useMotionValue } from "framer-motion";
 import { Area, ComposedChart, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
-import { GlassCard } from "@/components/ui/glass/GlassCard";
 
 /* ------------------------------------------------------------------ */
 /* Aurora Harvest chart theme — shared by every Recharts surface      */
@@ -73,13 +72,19 @@ export function Card({
   children: ReactNode;
   variant?: "default" | "strong";
 }) {
+  // V2.1 — every dashboard card is a liquid glass card.
   return (
-    <GlassCard
-      variant={variant}
-      className={cn("g3-card-hover p-4 sm:p-5", className)}
+    <div
+      className={cn(
+        "relative liquid-card-hover",
+        variant === "strong"
+          ? "liquid-glass-strong rounded-[28px]"
+          : "liquid-glass-card",
+        className,
+      )}
     >
-      {children}
-    </GlassCard>
+      <div className="relative z-[1]">{children}</div>
+    </div>
   );
 }
 
@@ -244,7 +249,7 @@ export function StatusPill({
   return (
     <span
       className={cn(
-        "glass-inset inline-flex items-center gap-1.5 rounded-full! border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+        "liquid-glass-pill inline-flex items-center gap-1.5 rounded-full! border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
         cfg.pillStyle,
       )}
     >

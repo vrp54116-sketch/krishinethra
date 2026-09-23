@@ -1,0 +1,609 @@
+/* ==========================================================================
+   KrishiNethra AI — V2.1 LIQUID GLASS FOUNDATION
+   Apple-style refractive glass system inspired by freefrontend.com samples.
+
+   SVG filters live in src/components/ui/glass/LiquidFilterDefs.tsx:
+     #liquid-refraction  — chromatic refraction (R:-20 G:-24 B:-28) + blur 3
+     #liquid-gooey       — feGaussianBlur 13 + feColorMatrix alpha 13
+     #liquid-distortion  — feTurbulence 0.008 + feDisplacementMap scale 77
+   ========================================================================== */
+
+:root {
+  --glass-frost: 0.08;
+  --glass-saturation: 1.4;
+  --glass-blur: 20px;
+  --glass-radius: 28px;
+  --liquid-speed: 8s;
+
+  --glass-frost-strong: 0.12;
+  --glass-blur-strong: 28px;
+  --liquid-tint: 18, 26, 22;
+}
+
+/* All liquid utilities live in Tailwind's `components` layer so per-element
+   utilities (border tints, padding, flex…) can still override them. */
+@layer components {
+
+/* --------------------------------------------------------------------------
+   1. LIQUID GLASS CORE
+   -------------------------------------------------------------------------- */
+
+.liquid-glass,
+.liquid-glass-pill,
+.liquid-glass-card {
+  position: relative;
+  border-radius: var(--glass-radius);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, calc(var(--glass-frost) + 0.05)),
+      rgba(255, 255, 255, calc(var(--glass-frost) * 0.45)) 55%,
+      rgba(255, 255, 255, calc(var(--glass-frost) + 0.02))
+    ),
+    rgba(var(--liquid-tint), 0.45);
+  -webkit-backdrop-filter: blur(var(--glass-blur))
+    saturate(calc(var(--glass-saturation) * 100%));
+  backdrop-filter: blur(var(--glass-blur))
+    saturate(calc(var(--glass-saturation) * 100%));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  /* 6-layer shadow: inset white highlights + dark core + outer drop */
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.38),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.10),
+    inset 1px 0 1.5px rgba(255, 255, 255, 0.10),
+    inset -1px 0 1.5px rgba(255, 255, 255, 0.08),
+    0 10px 40px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.06);
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    box-shadow 200ms ease,
+    background 200ms ease;
+}
+
+/* Refraction applied to the backdrop where the browser supports SVG filters
+   inside backdrop-filter (content stays razor sharp). */
+@supports ((backdrop-filter: url("#liquid-refraction")) or
+    (-webkit-backdrop-filter: url("#liquid-refraction"))) {
+  .liquid-glass,
+  .liquid-glass-pill,
+  .liquid-glass-card {
+    -webkit-backdrop-filter: url(#liquid-refraction) blur(var(--glass-blur))
+      saturate(calc(var(--glass-saturation) * 100%));
+    backdrop-filter: url(#liquid-refraction) blur(var(--glass-blur))
+      saturate(calc(var(--glass-saturation) * 100%));
+  }
+}
+
+.liquid-glass-strong {
+  position: relative;
+  border-radius: var(--glass-radius);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, calc(var(--glass-frost-strong) + 0.04)),
+      rgba(255, 255, 255, calc(var(--glass-frost-strong) * 0.5)) 60%
+    ),
+    rgba(var(--liquid-tint), 0.72);
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong))
+    saturate(calc(var(--glass-saturation) * 100%));
+  backdrop-filter: blur(var(--glass-blur-strong))
+    saturate(calc(var(--glass-saturation) * 100%));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.45),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.12),
+    inset 1px 0 2px rgba(255, 255, 255, 0.12),
+    inset -1px 0 2px rgba(255, 255, 255, 0.10),
+    0 16px 56px rgba(0, 0, 0, 0.6),
+    0 1px 0 rgba(255, 255, 255, 0.10);
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    box-shadow 200ms ease,
+    background 200ms ease;
+}
+
+@supports ((backdrop-filter: url("#liquid-refraction")) or
+    (-webkit-backdrop-filter: url("#liquid-refraction"))) {
+  .liquid-glass-strong {
+    -webkit-backdrop-filter: url(#liquid-refraction)
+      blur(var(--glass-blur-strong))
+      saturate(calc(var(--glass-saturation) * 100%));
+    backdrop-filter: url(#liquid-refraction) blur(var(--glass-blur-strong))
+      saturate(calc(var(--glass-saturation) * 100%));
+  }
+}
+
+.liquid-glass-pill {
+  border-radius: 9999px;
+}
+
+.liquid-glass-card {
+  border-radius: var(--glass-radius);
+  padding: 24px;
+}
+
+@media (max-width: 640px) {
+  .liquid-glass-card {
+    padding: 18px;
+  }
+}
+
+/* Status pills inset inside liquid cards stay perfectly round. */
+.liquid-glass-card .glass-inset,
+.liquid-glass .glass-inset {
+  border-radius: 9999px;
+  -webkit-backdrop-filter: blur(12px)
+    saturate(calc(var(--glass-saturation) * 100%));
+  backdrop-filter: blur(12px) saturate(calc(var(--glass-saturation) * 100%));
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.25),
+    inset 1px -1px 3px rgba(0, 0, 0, 0.35);
+}
+
+/* Alert-state liquid card tints (defined after .liquid-glass so they win
+   the border-color cascade within this layer). */
+.liquid-card-amber {
+  border-color: rgba(245, 158, 11, 0.6);
+}
+.liquid-card-rose {
+  border-color: rgba(251, 113, 133, 0.6);
+}
+
+/* Standalone liquid pill (buttons, chips, badges). */
+.liquid-glass-pill:not(.liquid-glass):not(.liquid-glass-card) {
+  border-radius: 9999px;
+}
+
+/* Gooey + distortion filter utilities (element-level SVG filters). */
+.liquid-gooey {
+  filter: url(#liquid-gooey);
+}
+
+.liquid-distort {
+  filter: url(#liquid-distortion);
+}
+
+/* Slow specular breathing sheen driven by --liquid-speed.
+   z-index:-1 keeps it above the glass background (backdrop-filter creates
+   the stacking context) but below all content. */
+.liquid-glass::after,
+.liquid-glass-strong::after,
+.liquid-glass-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.10) 45%,
+    rgba(255, 255, 255, 0.02) 52%,
+    transparent 70%
+  );
+  background-size: 260% 100%;
+  animation: liquid-sheen var(--liquid-speed) ease-in-out infinite;
+  opacity: 0.7;
+}
+
+@keyframes liquid-sheen {
+  0%,
+  100% {
+    background-position: 120% 0;
+  }
+  50% {
+    background-position: -40% 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   2. LIQUID BUTTONS
+   -------------------------------------------------------------------------- */
+
+.liquid-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 22px 8px 8px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, calc(var(--glass-frost) + 0.06)),
+      rgba(255, 255, 255, calc(var(--glass-frost) * 0.5))
+    ),
+    rgba(var(--liquid-tint), 0.5);
+  -webkit-backdrop-filter: blur(var(--glass-blur))
+    saturate(calc(var(--glass-saturation) * 100%));
+  backdrop-filter: blur(var(--glass-blur))
+    saturate(calc(var(--glass-saturation) * 100%));
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.40),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.10),
+    inset 1px 0 1.5px rgba(255, 255, 255, 0.10),
+    inset -1px 0 1.5px rgba(255, 255, 255, 0.08),
+    0 10px 32px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 150ms ease,
+    filter 150ms ease,
+    box-shadow 200ms ease,
+    border-color 150ms ease;
+}
+
+.liquid-button:hover {
+  transform: translateY(-3px);
+  filter: brightness(1.1);
+}
+
+.liquid-button:active {
+  transform: scale(0.94);
+}
+
+.liquid-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+  filter: none;
+}
+
+.liquid-button:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.40),
+    0 0 0 2px rgba(7, 11, 9, 1),
+    0 0 0 4px rgba(52, 211, 153, 0.75),
+    0 0 28px rgba(52, 211, 153, 0.35);
+}
+
+/* Primary: emerald gradient glow shadow. */
+.liquid-button-primary {
+  border-color: rgba(52, 211, 153, 0.40);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.40),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.10),
+    inset 1px 0 1.5px rgba(255, 255, 255, 0.10),
+    inset -1px 0 1.5px rgba(255, 255, 255, 0.08),
+    0 0 28px rgba(52, 211, 153, 0.35),
+    0 10px 32px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.liquid-button-primary:hover {
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.45),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.12),
+    inset 1px 0 1.5px rgba(255, 255, 255, 0.12),
+    inset -1px 0 1.5px rgba(255, 255, 255, 0.10),
+    0 0 36px rgba(52, 211, 153, 0.5),
+    0 14px 40px rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(255, 255, 255, 0.10);
+}
+
+/* Icon circle badge — dark 40px disc, white icon. */
+.liquid-button-badge {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  background: rgba(7, 11, 9, 0.88);
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.18),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.6),
+    0 3px 10px rgba(0, 0, 0, 0.45);
+  transition: transform 150ms ease;
+}
+
+.liquid-button:hover .liquid-button-badge {
+  transform: scale(1.1);
+}
+
+.liquid-button:active .liquid-button-badge {
+  transform: scale(0.94);
+}
+
+.liquid-button:disabled:hover .liquid-button-badge,
+.liquid-button:disabled:active .liquid-button-badge {
+  transform: none;
+}
+
+.liquid-button-label {
+  position: relative;
+  z-index: 1;
+}
+
+/* Icon-only (floating action button) — perfect 56px liquid circle. */
+.liquid-button-icon-only {
+  padding: 8px;
+  width: 56px;
+  height: 56px;
+}
+
+/* Click ripple — expanding circle from the click point, 600ms. */
+.liquid-ripple {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.65) 0%,
+    rgba(52, 211, 153, 0.35) 45%,
+    transparent 70%
+  );
+  transform: translate(-50%, -50%) scale(0.2);
+  animation: liquid-ripple 600ms ease-out forwards;
+}
+
+@keyframes liquid-ripple {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.2);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   3. LIQUID SENSOR CARDS
+   -------------------------------------------------------------------------- */
+
+.liquid-card-hover {
+  transition:
+    transform 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.liquid-card-hover:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.40),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.10),
+    0 0 30px rgba(var(--section-accent-rgb, 52, 211, 153), 0.15),
+    0 14px 44px rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* 44px tinted icon circle with a rotating liquid blob pseudo-element. */
+.liquid-icon-circle {
+  position: relative;
+  overflow: hidden;
+  border-radius: 9999px;
+  isolation: isolate;
+}
+
+.liquid-icon-circle::before {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  border-radius: 45%;
+  background: radial-gradient(
+    circle at 35% 35%,
+    currentColor 0%,
+    transparent 70%
+  );
+  opacity: 0.38;
+  animation: liquid-blob-rotate 5s linear infinite;
+  pointer-events: none;
+}
+
+.liquid-icon-circle > svg {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes liquid-blob-rotate {
+  0% {
+    transform: rotate(0deg) translate(2%, -2%) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) translate(-3%, 3%) scale(1.18);
+  }
+  100% {
+    transform: rotate(360deg) translate(2%, -2%) scale(1);
+  }
+}
+
+/* Gradient metric value: white → white/60. */
+.liquid-metric {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    rgba(255, 255, 255, 0.60) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* --------------------------------------------------------------------------
+   4. AMBIENT BACKGROUND DRIFT (6 blobs, 50–80s loops)
+   -------------------------------------------------------------------------- */
+
+@keyframes ambient-drift-f {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  35% {
+    transform: translate(-6vw, -4vh) scale(1.1);
+  }
+  70% {
+    transform: translate(4vw, 5vh) scale(0.96);
+  }
+}
+
+.ambient-blob-f {
+  animation: ambient-drift-f 72s ease-in-out infinite;
+}
+
+/* --------------------------------------------------------------------------
+   5. @supports FALLBACK + REDUCED MOTION
+   -------------------------------------------------------------------------- */
+
+@supports not ((backdrop-filter: blur(1px)) or
+    (-webkit-backdrop-filter: blur(1px))) {
+  .liquid-glass,
+  .liquid-glass-pill,
+  .liquid-glass-card,
+  .liquid-button {
+    background: rgba(18, 26, 22, 0.92);
+  }
+  .liquid-glass-strong {
+    background: rgba(18, 26, 22, 0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liquid-glass,
+  .liquid-glass-strong,
+  .liquid-glass-pill,
+  .liquid-glass-card,
+  .liquid-button,
+  .liquid-button-badge,
+  .liquid-card-hover,
+  .liquid-icon-circle::before,
+  .ambient-blob-f,
+  .ambient-blob-a,
+  .ambient-blob-b,
+  .ambient-blob-c,
+  .ambient-blob-d,
+  .ambient-blob-e {
+    animation: none !important;
+    transition: opacity 150ms ease !important;
+  }
+
+  .liquid-glass::after,
+  .liquid-glass-strong::after,
+  .liquid-glass-card::after,
+  .liquid-ripple {
+    display: none !important;
+  }
+
+  .liquid-button:hover,
+  .liquid-button:active,
+  .liquid-card-hover:hover {
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
+} /* @layer components */
+
+/* --------------------------------------------------------------------------
+   6. LEGACY SURFACE ADOPTION
+   .card-surface (skeletons, map/camera panels, modals) and the .glass* trio
+   (forms, sheets, segmented controls, climate/irrigation panels) pick up the
+   liquid backdrop + 28px radius without any markup churn. These overrides are
+   intentionally UNLAYERED (this file imports after globals.css) so they beat
+   the original same-specificity rules while preserving each surface's role:
+   pills stay round, inset wells stay recessed.
+   -------------------------------------------------------------------------- */
+
+.card-surface,
+.glass,
+.glass-strong,
+.glass-pill {
+  border-radius: var(--glass-radius);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, calc(var(--glass-frost) + 0.04)),
+      rgba(255, 255, 255, calc(var(--glass-frost) * 0.5)) 50%
+    ),
+    rgba(var(--liquid-tint), 0.5);
+  -webkit-backdrop-filter: blur(var(--glass-blur))
+    saturate(calc(var(--glass-saturation) * 100%));
+  backdrop-filter: blur(var(--glass-blur))
+    saturate(calc(var(--glass-saturation) * 100%));
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.35),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.10),
+    inset 1px 0 1.5px rgba(255, 255, 255, 0.10),
+    inset -1px 0 1.5px rgba(255, 255, 255, 0.08),
+    0 10px 40px rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.glass-strong {
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, calc(var(--glass-frost-strong) + 0.04)),
+      rgba(255, 255, 255, calc(var(--glass-frost-strong) * 0.5)) 60%
+    ),
+    rgba(var(--liquid-tint), 0.72);
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong))
+    saturate(calc(var(--glass-saturation) * 100%));
+  backdrop-filter: blur(var(--glass-blur-strong))
+    saturate(calc(var(--glass-saturation) * 100%));
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.45),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.12),
+    inset 1px 0 2px rgba(255, 255, 255, 0.12),
+    inset -1px 0 2px rgba(255, 255, 255, 0.10),
+    0 16px 56px rgba(0, 0, 0, 0.6),
+    0 1px 0 rgba(255, 255, 255, 0.10);
+}
+
+.glass-pill {
+  border-radius: 9999px;
+}
+
+@supports ((backdrop-filter: url("#liquid-refraction")) or
+    (-webkit-backdrop-filter: url("#liquid-refraction"))) {
+  .card-surface,
+  .glass,
+  .glass-strong,
+  .glass-pill {
+    -webkit-backdrop-filter: url(#liquid-refraction) blur(var(--glass-blur))
+      saturate(calc(var(--glass-saturation) * 100%));
+    backdrop-filter: url(#liquid-refraction) blur(var(--glass-blur))
+      saturate(calc(var(--glass-saturation) * 100%));
+  }
+  .glass-strong {
+    -webkit-backdrop-filter: url(#liquid-refraction)
+      blur(var(--glass-blur-strong))
+      saturate(calc(var(--glass-saturation) * 100%));
+    backdrop-filter: url(#liquid-refraction) blur(var(--glass-blur-strong))
+      saturate(calc(var(--glass-saturation) * 100%));
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or
+    (-webkit-backdrop-filter: blur(1px))) {
+  .card-surface,
+  .glass,
+  .glass-strong,
+  .glass-pill {
+    background: rgba(18, 26, 22, 0.92);
+  }
+}

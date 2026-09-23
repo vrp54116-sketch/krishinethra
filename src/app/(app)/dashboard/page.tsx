@@ -72,45 +72,47 @@ export default function DashboardPage() {
         <EdgeStaleBanner />
       </Rise>
 
-      {/* 1. HERO ROW — Health card + Daily Report card side-by-side (max height 220px) */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Rise className="h-full">
-          <HealthScoreCard />
-        </Rise>
-        <Rise delay={0.06} className="h-full lg:col-span-2">
-          <DailyReportCard />
-        </Rise>
-      </div>
-
-      {/* 2. SENSOR CARDS GRID */}
-      <Rise delay={0.1}>
-        <SensorGrid />
-      </Rise>
-
-      {/* 3 + 4. PUMP CONTROL + AI SUGGESTIONS */}
+      {/* V2.1 LIQUID GLASS LAYOUT
+          Desktop (xl+): 2-column — left: sensors + AI reasoning,
+          right: health + pump + camera quick actions.
+          Tablet/mobile: single column, cards stack (right column first). */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <Rise delay={0.12}>
-          <PumpControl />
-        </Rise>
-        <Rise delay={0.16}>
-          <SuggestionsCard />
-        </Rise>
-      </div>
+        {/* ---- LEFT: sensors + reasoning (+ alerts/water) ---- */}
+        <div className="order-2 flex min-w-0 flex-col gap-4 xl:order-1">
+          <Rise delay={0.1}>
+            <SensorGrid />
+          </Rise>
+          <Rise delay={0.16}>
+            <SuggestionsCard />
+          </Rise>
+          <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2 xl:grid-cols-1">
+            <Rise delay={0.18}>
+              <AlertsFeed />
+            </Rise>
+            <Rise delay={0.2}>
+              <WaterCard />
+            </Rise>
+          </div>
+        </div>
 
-      {/* 5 + 6. LIVE ALERTS + WATER TODAY */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <Rise delay={0.18}>
-          <AlertsFeed />
-        </Rise>
-        <Rise delay={0.2}>
-          <WaterCard />
-        </Rise>
+        {/* ---- RIGHT: health + pump + camera ---- */}
+        <div className="order-1 flex min-w-0 flex-col gap-4 xl:order-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <Rise className="h-full sm:col-span-1">
+              <HealthScoreCard />
+            </Rise>
+            <Rise delay={0.06} className="h-full sm:col-span-2">
+              <DailyReportCard />
+            </Rise>
+          </div>
+          <Rise delay={0.12}>
+            <PumpControl />
+          </Rise>
+          <Rise delay={0.22}>
+            <QuickActions />
+          </Rise>
+        </div>
       </div>
-
-      {/* 7. QUICK ACTIONS */}
-      <Rise delay={0.22}>
-        <QuickActions />
-      </Rise>
     </div>
   );
 }

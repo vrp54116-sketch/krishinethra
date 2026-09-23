@@ -50,7 +50,7 @@ export default function QuickActions() {
           </>
         );
         const cls =
-          "card-surface rounded-[20px] p-4 text-left transition-all duration-300 hover:-translate-y-1 active:scale-[0.98]";
+          "liquid-glass liquid-glass-card liquid-card-hover p-4 text-left active:scale-[0.98]";
         return a.href ? (
           <Link key={a.key} href={a.href} className={cls}>
             {inner}

@@ -4,7 +4,11 @@ import ServiceWorkerRegister from "@/components/pwa/ServiceWorkerRegister";
 import DemoSeedBoot from "@/components/pwa/DemoSeedBoot";
 import { AlertPipelineListener } from "@/lib/notifications";
 import { AmbientBackground } from "@/components/ui/glass";
+import { LiquidFilterDefs } from "@/components/ui/glass/LiquidFilterDefs";
 import "./globals.css";
+// V2.1 liquid glass system — imported after globals so its tokens/utilities
+// (e.g. --glass-blur: 20px) win the cascade over the legacy glass helpers.
+import "../lib/liquid-glass.css";
 
 // NOTE: next/font/google was removed — its Turbopack build-time fetch of
 // fonts.gstatic.com fails in offline/blocked CI ("Can't resolve
@@ -76,6 +80,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="h-full bg-[#070B09] font-sans text-[#F3F4F6] antialiased overflow-hidden">
+        <LiquidFilterDefs />
         <AmbientBackground />
         {children}
         <AppToaster />
