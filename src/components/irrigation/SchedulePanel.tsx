@@ -65,12 +65,12 @@ export default function SchedulePanel() {
         const key = `${slot.id}@${dateStr}`;
         if (diff >= 0 && diff < 60_000 && firedRef.current !== key) {
           firedRef.current = key;
-          const moisture = st.snapshot.soilMoistureB.toFixed(1);
+          const moisture = (st.snapshot?.soil ?? st.snapshot?.soilMoistureB ?? 0).toFixed(1);
           st.startScheduledRun(slot.durationMin * 60);
           st.addAlert({
             level: "info",
             title: "Scheduled irrigation started",
-            message: `${WEEKDAYS[slot.day]} ${slot.time} slot — running ${slot.durationMin} min. Zone B at ${moisture}%.`,
+            message: `${WEEKDAYS[slot.day]} ${slot.time} slot — running ${slot.durationMin} min. Soil at ${moisture}%.`,
           });
           toast.success("Scheduled irrigation started", {
             description: `${WEEKDAYS[slot.day]} ${slot.time} · ${slot.durationMin} min run.`,

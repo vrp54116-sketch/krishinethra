@@ -465,7 +465,7 @@ export default function TasksPage() {
     const added = useFarmStore.getState().tasks.length - before;
     if (added > 0) {
       toast.success(`Generated ${added} AI task${added === 1 ? "" : "s"}`, {
-        description: "Built from live moisture, tank, spray and fertilizer state.",
+        description: "Built from live moisture, weather, spray and fertilizer state.",
       });
     } else {
       toast.info("Already up to date", { description: "No new AI tasks — nothing fresh to add." });

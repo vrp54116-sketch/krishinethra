@@ -14,11 +14,11 @@ const STROKE = 10;
 
 export default function HealthScoreCard() {
   const t = useT();
-  const farmHealthScore = useFarmStore((s) => s.farmHealthScore);
+  const farmHealthScore = useFarmStore((s) => s.farmHealthScore ?? 85);
   const snapshot = useFarmStore((s) => s.snapshot);
-  const zones = useFarmStore((s) => s.zones);
-  const scans = useFarmStore((s) => s.scans);
-  const sprayPlans = useFarmStore((s) => s.sprayPlans);
+  const zones = useFarmStore((s) => s.zones ?? []);
+  const scans = useFarmStore((s) => s.scans ?? []);
+  const sprayPlans = useFarmStore((s) => s.sprayPlans ?? []);
   const [showBreakdown, setShowBreakdown] = useState(false);
 
   const { hex, text, word } = healthColor(farmHealthScore);

@@ -39,10 +39,10 @@ export function pressureHpaFor(
   return Math.round(p * 10) / 10;
 }
 
-export function currentPressure(snapshot: SensorSnapshot): number {
-  const d = new Date(snapshot.timestamp);
+export function currentPressure(snapshot?: SensorSnapshot): number {
+  const d = new Date(snapshot?.timestamp ?? Date.now());
   const hour = d.getHours() + d.getMinutes() / 60;
-  return pressureHpaFor(snapshot.tempC, snapshot.humidity, hour);
+  return pressureHpaFor(snapshot?.tempC ?? snapshot?.temp ?? 28, snapshot?.humidity ?? snapshot?.hum ?? 55, hour);
 }
 
 /* ------------------------------------------------------------------ */
@@ -260,6 +260,8 @@ export interface CropProfile {
   humidity: [number, number];
   /** lux */
   light: [number, number];
+  /** soil moisture % */
+  soil: [number, number];
   /** max healthy AQI */
   aqiMax: number;
   note: string;
@@ -272,6 +274,7 @@ export const CROP_PROFILES: CropProfile[] = [
     temp: [18, 27],
     humidity: [60, 70],
     light: [400, 800],
+    soil: [50, 70],
     aqiMax: 100,
     note: "Tomato sets fruit best in mild warmth with steady humidity. Above 35°C flowers drop — shade net helps.",
   },
@@ -281,6 +284,7 @@ export const CROP_PROFILES: CropProfile[] = [
     temp: [20, 30],
     humidity: [50, 70],
     light: [400, 900],
+    soil: [40, 65],
     aqiMax: 100,
     note: "Chili loves heat but hates waterlogged air. Keep rows ventilated once humidity crosses 75%.",
   },
@@ -290,6 +294,7 @@ export const CROP_PROFILES: CropProfile[] = [
     temp: [15, 22],
     humidity: [60, 80],
     light: [200, 600],
+    soil: [55, 75],
     aqiMax: 80,
     note: "Leafy spinach bolts in heat. Partial shade and morning watering keep leaves tender.",
   },
@@ -299,6 +304,7 @@ export const CROP_PROFILES: CropProfile[] = [
     temp: [21, 30],
     humidity: [50, 60],
     light: [500, 900],
+    soil: [45, 65],
     aqiMax: 150,
     note: "Cotton tolerates heat and dust but excess humidity invites boll rot — prioritise drainage.",
   },
@@ -308,6 +314,7 @@ export const CROP_PROFILES: CropProfile[] = [
     temp: [15, 25],
     humidity: [50, 60],
     light: [400, 800],
+    soil: [40, 60],
     aqiMax: 120,
     note: "Wheat prefers cool dry grain-fill weather. Warm humid spells raise rust risk — scout often.",
   },

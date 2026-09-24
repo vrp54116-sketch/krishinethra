@@ -51,10 +51,11 @@ export default function PumpControl() {
 
   const handlePower = (on: boolean) => {
     setPumpManual(on);
+    const soilStr = (snapshot?.soil ?? 0).toFixed(1);
     logPump(
       on ? "Pump turned ON (Manual)" : "Pump turned OFF (Manual)",
       on
-        ? `Manual run for ${thresholds.pumpDurationSec}s — Soil at ${snapshot.soil.toFixed(1)}%.`
+        ? `Manual run for ${thresholds?.pumpDurationSec ?? 30}s — Soil at ${soilStr}%.`
         : "Manual run stopped by user.",
     );
   };
@@ -66,9 +67,10 @@ export default function PumpControl() {
       });
     }
     setPumpManual(true, sec);
+    const soilStr = (snapshot?.soil ?? 0).toFixed(1);
     logPump(
       `Pump ON for ${sec}s`,
-      `Quick manual run — Soil at ${snapshot.soil.toFixed(1)}%.`,
+      `Quick manual run — Soil at ${soilStr}%.`,
     );
   };
 
@@ -89,10 +91,10 @@ export default function PumpControl() {
 
   // Live Jal Agent Auto-AI reasoning lines.
   const autoLines = (): Array<{ text: string; hot: boolean }> => {
-    const soil = snapshot.soil;
-    const rain = snapshot.rain;
-    const low = thresholds.moistureLow;
-    const high = thresholds.moistureHigh;
+    const soil = snapshot?.soil ?? 45;
+    const rain = Boolean(snapshot?.rain);
+    const low = thresholds?.moistureLow ?? 30;
+    const high = thresholds?.moistureHigh ?? 75;
 
     if (pump.running) {
       if (rain) {

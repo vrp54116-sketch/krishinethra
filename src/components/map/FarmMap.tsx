@@ -18,19 +18,6 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFarmStore } from "@/lib/store";
 
-export const ZONE_PAN: Record<string, number> = {
-  A: 45,
-  B: 90,
-  C: 135,
-};
-
-export function zoneStatusTone(status: string): "good" | "warning" | "critical" | "info" {
-  if (status === "healthy") return "good";
-  if (status === "warning") return "warning";
-  if (status === "critical") return "critical";
-  return "info";
-}
-
 export default function FarmMap() {
   const snapshot = useFarmStore((s) => s.snapshot);
   const pump = useFarmStore((s) => s.pump);
@@ -69,12 +56,13 @@ export default function FarmMap() {
     toast.success("Servo 180° pan sweep initiated");
   };
 
+  const soilVal = snapshot?.soil ?? 0;
   const soilStatus =
-    snapshot.soil < 20
+    soilVal < 20
       ? { label: "Critical Low", color: "text-red-400 border-red-500/30 bg-red-500/10" }
-      : snapshot.soil < thresholds.moistureLow
+      : soilVal < thresholds.moistureLow
       ? { label: "Needs Water", color: "text-amber-400 border-amber-500/30 bg-amber-500/10" }
-      : snapshot.soil > thresholds.moistureHigh
+      : soilVal > thresholds.moistureHigh
       ? { label: "Saturated", color: "text-blue-400 border-blue-500/30 bg-blue-500/10" }
       : { label: "Optimal", color: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" };
 
@@ -182,7 +170,7 @@ export default function FarmMap() {
                 </div>
                 <div>
                   <p className="text-[10px] font-medium text-sky-200/70">Soil Moisture</p>
-                  <p className="text-xs sm:text-sm font-black text-white">{snapshot.soil.toFixed(1)}%</p>
+                  <p className="text-xs sm:text-sm font-black text-white">{(snapshot?.soil ?? 0).toFixed(1)}%</p>
                 </div>
               </motion.div>
             </div>
@@ -198,7 +186,7 @@ export default function FarmMap() {
                 </div>
                 <div>
                   <p className="text-[10px] font-medium text-red-200/70">Temperature</p>
-                  <p className="text-xs sm:text-sm font-black text-white">{snapshot.temp.toFixed(1)}°C</p>
+                  <p className="text-xs sm:text-sm font-black text-white">{(snapshot?.temp ?? 0).toFixed(1)}°C</p>
                 </div>
               </motion.div>
             </div>
@@ -214,7 +202,7 @@ export default function FarmMap() {
                 </div>
                 <div>
                   <p className="text-[10px] font-medium text-cyan-200/70">Humidity</p>
-                  <p className="text-xs sm:text-sm font-black text-white">{snapshot.hum.toFixed(1)}%</p>
+                  <p className="text-xs sm:text-sm font-black text-white">{(snapshot?.hum ?? 0).toFixed(1)}%</p>
                 </div>
               </motion.div>
             </div>
@@ -230,7 +218,7 @@ export default function FarmMap() {
                 </div>
                 <div>
                   <p className="text-[10px] font-medium text-violet-200/70">Air Quality</p>
-                  <p className="text-xs sm:text-sm font-black text-white">{snapshot.aqi} AQI</p>
+                  <p className="text-xs sm:text-sm font-black text-white">{snapshot?.aqi ?? 0} AQI</p>
                 </div>
               </motion.div>
             </div>
@@ -241,7 +229,7 @@ export default function FarmMap() {
                 whileHover={{ scale: 1.08 }}
                 className={cn(
                   "flex items-center gap-2 rounded-2xl border px-3 py-1.5 backdrop-blur-md shadow-md",
-                  snapshot.rain
+                  snapshot?.rain
                     ? "border-blue-400/60 bg-[rgba(16,28,48,0.9)] text-blue-200 shadow-[0_0_18px_rgba(59,130,246,0.35)]"
                     : "border-white/10 bg-[rgba(20,25,22,0.8)] text-zinc-300"
                 )}
@@ -249,14 +237,14 @@ export default function FarmMap() {
                 <div
                   className={cn(
                     "flex h-7 w-7 items-center justify-center rounded-xl",
-                    snapshot.rain ? "bg-blue-500/30 text-blue-300" : "bg-white/[0.06] text-zinc-400"
+                    snapshot?.rain ? "bg-blue-500/30 text-blue-300" : "bg-white/[0.06] text-zinc-400"
                   )}
                 >
                   <CloudRain className="h-4 w-4" />
                 </div>
                 <div>
                   <p className="text-[10px] font-medium opacity-80">Rain Sensor</p>
-                  <p className="text-xs sm:text-sm font-black text-white">{snapshot.rain ? "Rain Detected" : "Dry"}</p>
+                  <p className="text-xs sm:text-sm font-black text-white">{snapshot?.rain ? "Rain Detected" : "Dry"}</p>
                 </div>
               </motion.div>
             </div>
@@ -272,7 +260,7 @@ export default function FarmMap() {
                 </div>
                 <div>
                   <p className="text-[10px] font-medium text-amber-200/70">Pan Servo</p>
-                  <p className="text-xs sm:text-sm font-black text-white">{Math.round(snapshot.servo)}°</p>
+                  <p className="text-xs sm:text-sm font-black text-white">{Math.round(snapshot?.servo ?? 90)}°</p>
                 </div>
               </motion.div>
             </div>

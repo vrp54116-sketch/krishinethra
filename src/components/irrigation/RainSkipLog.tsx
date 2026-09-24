@@ -25,7 +25,7 @@ export default function RainSkipLog({ className }: { className?: string }) {
     { day: "Thu", rainMm: 0, savedL: 0, level: 0 },
     { day: "Fri", rainMm: 2.1, savedL: 6, level: 1 },
     { day: "Sat", rainMm: 0, savedL: 0, level: 0 },
-    { day: "Sun (Today)", rainMm: snapshot.rain ? Number(snapshot.rainMm.toFixed(1)) : 0, savedL: snapshot.rain ? 12 : 0, level: snapshot.rain ? 2 : 0 },
+    { day: "Sun (Today)", rainMm: snapshot?.rain ? Number((snapshot?.rainMm ?? 0).toFixed(1)) : 0, savedL: snapshot?.rain ? 12 : 0, level: snapshot?.rain ? 2 : 0 },
   ];
 
   const totalSavedWeek = weekDays.reduce((acc, d) => acc + d.savedL, 0) || 28;
@@ -36,10 +36,10 @@ export default function RainSkipLog({ className }: { className?: string }) {
       id: "rs-1",
       date: "Today",
       time: "14:15",
-      rainDetected: snapshot.rain ? `${snapshot.rainMm.toFixed(1)} mm` : "Yes (Precip active)",
+      rainDetected: snapshot?.rain ? `${(snapshot?.rainMm ?? 0).toFixed(1)} mm` : "Yes (Precip active)",
       action: "Suppressed Auto Run #18",
       waterSaved: "~12 Liters",
-      active: snapshot.rain,
+      active: Boolean(snapshot?.rain),
     },
     {
       id: "rs-2",

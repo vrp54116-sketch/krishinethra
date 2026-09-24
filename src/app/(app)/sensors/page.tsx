@@ -17,7 +17,6 @@ import {
   ArrowDownToLine,
   Droplets,
   Gauge,
-  Layers,
   Thermometer,
   Wind,
   CloudRain,
@@ -26,8 +25,9 @@ import {
 import { useFarmStore } from "@/lib/store";
 import type { SensorHistoryPoint } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 
-type SensorKey = "soil" | "temp" | "hum" | "aqi" | "rain" | "tank";
+type SensorKey = "soil" | "temp" | "hum" | "aqi" | "rain";
 
 interface SensorMetric {
   key: SensorKey;
@@ -48,7 +48,6 @@ interface ChartPoint {
   hum: number;
   aqi: number;
   rain: number;
-  tank: number;
 }
 
 const METRICS: SensorMetric[] = [
@@ -102,16 +101,6 @@ const METRICS: SensorMetric[] = [
     icon: CloudRain,
     getValue: (p) => p.rainMm ?? (p.rain ? 2.5 : 0),
   },
-  {
-    key: "tank",
-    name: "Tank Level",
-    unit: "%",
-    color: "#6366f1",
-    gradientFrom: "rgba(99, 102, 241, 0.4)",
-    gradientTo: "rgba(99, 102, 241, 0.0)",
-    icon: Layers,
-    getValue: (p) => p.tankLevelPercent ?? 78,
-  },
 ];
 
 export default function SensorsPage() {
@@ -137,24 +126,22 @@ export default function SensorsPage() {
           hum: Math.round(pt.hum ?? pt.humidity ?? 60),
           aqi: Math.round(pt.aqi ?? 85),
           rain: Number((pt.rainMm ?? (pt.rain ? 2.5 : 0)).toFixed(1)),
-          tank: Math.round(pt.tankLevelPercent ?? 78),
         };
       });
     }
 
     // Deterministic fallback for smooth charts if store history is fresh
-    const baseTime = snapshot.timestamp ?? 1700000000000;
+    const baseTime = snapshot?.timestamp ?? 1700000000000;
     return Array.from({ length: 30 }).map((_, i) => {
       const t = new Date(baseTime - (30 - i) * 60 * 1000);
       return {
         time: t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         timestamp: t.getTime(),
-        soil: Math.round(snapshot.soil ?? 45) + Math.sin(i * 0.4) * 4,
-        temp: Number(((snapshot.temp ?? 30) + Math.sin(i * 0.3) * 1.5).toFixed(1)),
-        hum: Math.round(snapshot.hum ?? 60) + Math.cos(i * 0.4) * 3,
-        aqi: Math.round(snapshot.aqi ?? 85) + Math.sin(i * 0.5) * 5,
-        rain: snapshot.rain ? 1.8 + (i % 3) * 0.2 : 0,
-        tank: Math.round(snapshot.tankLevelPercent ?? 78) - i * 0.1,
+        soil: Math.round(snapshot?.soil ?? 45) + Math.sin(i * 0.4) * 4,
+        temp: Number(((snapshot?.temp ?? 30) + Math.sin(i * 0.3) * 1.5).toFixed(1)),
+        hum: Math.round(snapshot?.hum ?? 60) + Math.cos(i * 0.4) * 3,
+        aqi: Math.round(snapshot?.aqi ?? 85) + Math.sin(i * 0.5) * 5,
+        rain: snapshot?.rain ? 1.8 + (i % 3) * 0.2 : 0,
       };
     });
   }, [sensorHistory, snapshot]);
@@ -167,7 +154,6 @@ export default function SensorsPage() {
       hum: { min: 0, max: 0, avg: 0, current: 0 },
       aqi: { min: 0, max: 0, avg: 0, current: 0 },
       rain: { min: 0, max: 0, avg: 0, current: 0 },
-      tank: { min: 0, max: 0, avg: 0, current: 0 },
     };
 
     METRICS.forEach((m) => {
@@ -192,7 +178,7 @@ export default function SensorsPage() {
   const activeMetric = METRICS.find((m) => m.key === selectedMetric) || METRICS[0];
 
   const handleExportCSV = () => {
-    const headers = ["Timestamp", "Time", "SoilMoisture_%", "Temp_C", "Humidity_%", "AQI", "Rain_mm", "TankLevel_%"];
+    const headers = ["Timestamp", "Time", "SoilMoisture_%", "Temp_C", "Humidity_%", "AQI", "Rain_mm"];
     const rows = chartData.map((d) => [
       d.timestamp,
       `"${d.time}"`,
@@ -201,7 +187,6 @@ export default function SensorsPage() {
       d.hum,
       d.aqi,
       d.rain,
-      d.tank,
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
@@ -246,7 +231,7 @@ export default function SensorsPage() {
       </div>
 
       {/* Metric Selector Pills & Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {METRICS.map((m) => {
           const isSelected = selectedMetric === m.key;
           const stat = stats[m.key];

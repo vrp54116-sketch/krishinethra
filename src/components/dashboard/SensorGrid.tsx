@@ -39,22 +39,35 @@ interface SensorDef {
 export default function SensorGrid() {
   const t = useT();
   const snapshot = useFarmStore((s) => s.snapshot);
-  const sensorHistory = useFarmStore((s) => s.sensorHistory);
-  const thresholds = useFarmStore((s) => s.settings.thresholds);
-  const showRaw = useFarmStore((s) => s.settings.showRawCalibrationValues);
-  const soilRaw = snapshot.soilRaw ?? Math.round(1023 - (snapshot.soil * 6.5));
-  const mqRaw = snapshot.mqRaw ?? 230;
+  const sensorHistory = useFarmStore((s) => s.sensorHistory ?? []);
+  const thresholds = useFarmStore((s) => s.settings?.thresholds ?? {
+    moistureLow: 30,
+    moistureHigh: 75,
+    tempHigh: 35,
+    humidityLow: 40,
+    aqiHigh: 150,
+  });
+  const showRaw = useFarmStore((s) => s.settings?.showRawCalibrationValues);
+
+  const soilVal = snapshot?.soil ?? 45;
+  const tempVal = snapshot?.temp ?? snapshot?.tempC ?? 28;
+  const humVal = snapshot?.hum ?? snapshot?.humidity ?? 60;
+  const aqiVal = snapshot?.aqi ?? 50;
+  const isRaining = Boolean(snapshot?.rain);
+
+  const soilRaw = snapshot?.soilRaw ?? Math.round(1023 - (soilVal * 6.5));
+  const mqRaw = snapshot?.mqRaw ?? 230;
 
   const moistureTone = (m: number): PillTone =>
     m < 20 ? "bad" : m < thresholds.moistureLow ? "warn" : m > thresholds.moistureHigh ? "warn" : "good";
   const moistureLabel = (m: number): string =>
     m < 20 ? "Critical" : m < thresholds.moistureLow ? "Dry" : m > thresholds.moistureHigh ? "Wet" : "Optimal";
 
-  const tempTone: PillTone = snapshot.temp > thresholds.tempHigh ? "warn" : "good";
+  const tempTone: PillTone = tempVal > thresholds.tempHigh ? "warn" : "good";
   const humidityTone: PillTone =
-    snapshot.hum < thresholds.humidityLow || snapshot.hum > 70 ? "warn" : "good";
+    humVal < thresholds.humidityLow || humVal > 70 ? "warn" : "good";
   const aqiTone: PillTone =
-    snapshot.aqi > thresholds.aqiHigh ? "bad" : snapshot.aqi > 100 ? "warn" : "good";
+    aqiVal > thresholds.aqiHigh ? "bad" : aqiVal > 100 ? "warn" : "good";
 
   const sensors: SensorDef[] = [
     {
@@ -62,24 +75,24 @@ export default function SensorGrid() {
       label: t("dashboard.soilMoisture"),
       icon: Droplets,
       iconTint: "bg-sky-500/15 text-sky-300",
-      value: snapshot.soil,
+      value: soilVal,
       decimals: 1,
       unit: "%",
-      pill: { tone: moistureTone(snapshot.soil), label: moistureLabel(snapshot.soil) },
-      series: to24(sensorHistory.map((p) => p.soil ?? p.soilMoistureA), snapshot.soil),
+      pill: { tone: moistureTone(soilVal), label: moistureLabel(soilVal) },
+      series: to24(sensorHistory.map((p) => p.soil ?? p.soilMoistureA ?? 45), soilVal),
       sparkColor: "#38bdf8",
-      alertPulse: snapshot.soil < thresholds.moistureLow,
+      alertPulse: soilVal < thresholds.moistureLow,
     },
     {
       key: "temp",
       label: t("dashboard.temperature"),
       icon: Thermometer,
       iconTint: "bg-red-500/15 text-red-300",
-      value: snapshot.temp,
+      value: tempVal,
       decimals: 1,
       unit: "°C",
-      pill: { tone: tempTone, label: snapshot.temp > thresholds.tempHigh ? "High" : "Normal" },
-      series: to24(sensorHistory.map((p) => p.temp ?? p.tempC), snapshot.temp),
+      pill: { tone: tempTone, label: tempVal > thresholds.tempHigh ? "High" : "Normal" },
+      series: to24(sensorHistory.map((p) => p.temp ?? p.tempC ?? 28), tempVal),
       sparkColor: "#ef4444",
     },
     {
@@ -87,14 +100,14 @@ export default function SensorGrid() {
       label: t("dashboard.humidity"),
       icon: Waves,
       iconTint: "bg-cyan-500/15 text-cyan-300",
-      value: snapshot.hum,
+      value: humVal,
       decimals: 1,
       unit: "%",
       pill: {
         tone: humidityTone,
-        label: snapshot.hum < thresholds.humidityLow ? "Low" : snapshot.hum > 70 ? "High" : "Optimal",
+        label: humVal < thresholds.humidityLow ? "Low" : humVal > 70 ? "High" : "Optimal",
       },
-      series: to24(sensorHistory.map((p) => p.hum ?? p.humidity), snapshot.hum),
+      series: to24(sensorHistory.map((p) => p.hum ?? p.humidity ?? 60), humVal),
       sparkColor: "#22d3ee",
     },
     {
@@ -102,14 +115,14 @@ export default function SensorGrid() {
       label: "Air Quality (AQI)",
       icon: Wind,
       iconTint: "bg-violet-500/15 text-violet-300",
-      value: snapshot.aqi,
+      value: aqiVal,
       decimals: 0,
       unit: "",
       pill: {
         tone: aqiTone,
-        label: snapshot.aqi > thresholds.aqiHigh ? "Poor" : snapshot.aqi > 100 ? "Moderate" : "Good",
+        label: aqiVal > thresholds.aqiHigh ? "Poor" : aqiVal > 100 ? "Moderate" : "Good",
       },
-      series: to24(sensorHistory.map((p) => p.aqi), snapshot.aqi),
+      series: to24(sensorHistory.map((p) => p.aqi ?? 50), aqiVal),
       sparkColor: "#a78bfa",
     },
   ];
@@ -121,13 +134,13 @@ export default function SensorGrid() {
         <div
           className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border backdrop-blur-md transition-all shadow-sm",
-            snapshot.rain
+            isRaining
               ? "bg-blue-500/20 border-blue-400/40 text-blue-300 shadow-[0_0_12px_rgba(59,130,246,0.4)] animate-pulse"
               : "bg-white/[0.04] border-white/10 text-white/60"
           )}
         >
-          <CloudRain className={cn("w-3.5 h-3.5", snapshot.rain ? "text-blue-300" : "text-white/40")} />
-          <span>Rain: {snapshot.rain ? "Yes" : "No"}</span>
+          <CloudRain className={cn("w-3.5 h-3.5", isRaining ? "text-blue-300" : "text-white/40")} />
+          <span>Rain: {isRaining ? "Yes" : "No"}</span>
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">

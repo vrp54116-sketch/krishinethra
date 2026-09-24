@@ -23,13 +23,13 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
 
   // Compute dynamic reasoning based on current telemetry & settings
   const currentReasoning = useMemo<ReasoningState>(() => {
-    const soil = Math.round(snapshot.soil ?? 45);
-    const rain = snapshot.rain;
-    const stale = snapshot.stale;
-    const isAuto = pump.mode === "auto";
-    const isRunning = pump.running;
-    const lowThresh = thresholds.moistureLow;
-    const highThresh = thresholds.moistureHigh;
+    const soil = Math.round(snapshot?.soil ?? 45);
+    const rain = Boolean(snapshot?.rain);
+    const stale = Boolean(snapshot?.stale);
+    const isAuto = pump?.mode === "auto";
+    const isRunning = Boolean(pump?.running);
+    const lowThresh = thresholds?.moistureLow ?? 30;
+    const highThresh = thresholds?.moistureHigh ?? 75;
 
     if (stale) {
       return {
@@ -41,11 +41,12 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
     }
 
     if (rain) {
+      const rainMmVal = (snapshot?.rainMm ?? 0).toFixed(1);
       return {
         id: `rain-${rain}-${isRunning}`,
         type: "rain_lock",
         headline: "Rain detected → Pump locked OFF (water savings: ~12L today)",
-        rule: `Rain sensor active • Precip: ${snapshot.rainMm.toFixed(1)} mm • Conserving reservoir`,
+        rule: `Rain sensor active • Precip: ${rainMmVal} mm • Conserving reservoir`,
       };
     }
 

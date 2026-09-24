@@ -22,16 +22,17 @@ export default function QuickActions() {
   const setPumpManual = useFarmStore((s) => s.setPumpManual);
   const addAlert = useFarmStore((s) => s.addAlert);
 
-  const irrigateZoneB = () => {
+  const irrigateQuick = () => {
     setPumpManual(true, 10);
-    const msg = `Zone B at ${snapshot.soilMoistureB.toFixed(1)}% — 10s quick irrigation started.`;
-    addAlert({ level: "info", title: "Irrigating Zone B (10s)", message: msg });
-    toast.success("Irrigating Zone B — 10s", { description: msg });
+    const soilVal = (snapshot?.soil ?? snapshot?.soilMoistureB ?? 0).toFixed(1);
+    const msg = `Soil at ${soilVal}% — 10s quick irrigation started.`;
+    addAlert({ level: "info", title: "Quick Irrigation (10s)", message: msg });
+    toast.success("Quick Irrigation — 10s", { description: msg });
   };
 
   const actions: Action[] = [
     { key: "scan", label: t("dashboard.scanLeaf"), sub: "Crop doctor", icon: Camera, tint: "bg-rose-500/15 text-rose-300", href: "/camera" },
-    { key: "irrigate", label: t("dashboard.irrigateZoneB"), sub: "Run pump 10s", icon: Droplets, tint: "bg-sky-500/15 text-sky-300", run: irrigateZoneB },
+    { key: "irrigate", label: t("dashboard.irrigateZoneB"), sub: "Run pump 10s", icon: Droplets, tint: "bg-sky-500/15 text-sky-300", run: irrigateQuick },
     { key: "gpt", label: t("dashboard.openGPT"), sub: "Ask anything", icon: MessageCircle, tint: "bg-emerald-500/15 text-emerald-300", href: "/assistant" },
     { key: "map", label: t("dashboard.viewMap"), sub: "Field zones", icon: Map, tint: "bg-amber-500/15 text-amber-300", href: "/map" },
   ];

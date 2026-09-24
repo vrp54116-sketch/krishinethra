@@ -118,21 +118,21 @@ interface RuleDef {
 const RULES: RuleDef[] = [
   {
     id: "soil-critical",
-    trigger: "Soil moisture < 20% (Zone A / B) — immediate irrigation",
+    trigger: "Soil moisture < 20% — immediate irrigation",
     channel: "App + Telegram + Sound",
     priority: "critical",
     control: { type: "fixed", text: "20% · engine" },
   },
   {
     id: "soil-low",
-    trigger: "Zone moisture below the low threshold — consider irrigating",
+    trigger: "Soil moisture below the low threshold — consider irrigating",
     channel: "App + Telegram",
     priority: "warning",
     control: { type: "threshold", key: "moistureLow" },
   },
   {
     id: "pump-auto",
-    trigger: "Auto pump stops when Zone B rises above the high threshold",
+    trigger: "Auto pump stops when soil moisture rises above the high threshold",
     channel: "App",
     priority: "info",
     control: { type: "threshold", key: "moistureHigh" },

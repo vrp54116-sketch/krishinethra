@@ -11,6 +11,7 @@ import ForecastCards from "@/components/climate/ForecastCards";
 import SensorRow from "@/components/climate/SensorRow";
 import PageSkeleton from "@/components/layout/PageSkeleton";
 import { fallbackForecast } from "@/components/climate/shared";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 
 // V2.5 performance — code-split the Recharts history graphs.
 const HistoryGraphs = dynamic(() => import("@/components/climate/HistoryGraphs"), {
@@ -57,32 +58,42 @@ export default function ClimatePage() {
     <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-5">
       {/* 1. SENSOR ROW — 6 live cards */}
       <Rise>
-        <SensorRow />
+        <ErrorBoundary name="sensor-row">
+          <SensorRow />
+        </ErrorBoundary>
       </Rise>
 
       {/* 2. WEATHER FORECAST */}
       <Rise delay={0.06}>
-        <ForecastCards
-          onForecast={(days, offline) => {
-            setForecast(days);
-            setIsOffline(offline);
-          }}
-        />
+        <ErrorBoundary name="weather-forecast">
+          <ForecastCards
+            onForecast={(days, offline) => {
+              setForecast(days);
+              setIsOffline(offline);
+            }}
+          />
+        </ErrorBoundary>
       </Rise>
 
       {/* 3 + 5. AI ADVISOR + CROP COMFORT */}
       <div className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-2">
         <Rise delay={0.1}>
-          <AdvisorCard forecast={forecast} />
+          <ErrorBoundary name="advisor-card">
+            <AdvisorCard forecast={forecast} />
+          </ErrorBoundary>
         </Rise>
         <Rise delay={0.14}>
-          <ComfortPanel />
+          <ErrorBoundary name="comfort-panel">
+            <ComfortPanel />
+          </ErrorBoundary>
         </Rise>
       </div>
 
       {/* 4. HISTORY GRAPHS */}
       <Rise delay={0.18}>
-        <HistoryGraphs />
+        <ErrorBoundary name="history-graphs">
+          <HistoryGraphs />
+        </ErrorBoundary>
       </Rise>
     </div>
   );

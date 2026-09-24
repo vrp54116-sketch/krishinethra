@@ -6,6 +6,7 @@ import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFarmStore } from "@/lib/store";
 import PageSkeleton from "@/components/layout/PageSkeleton";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 
 // V2.5 performance — code-split the heavy digital-twin map.
 const FarmMap = dynamic(() => import("@/components/map/FarmMap"), {
@@ -49,7 +50,9 @@ export default function MapPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <FarmMap />
+        <ErrorBoundary name="map">
+          <FarmMap />
+        </ErrorBoundary>
       </motion.div>
     </div>
   );

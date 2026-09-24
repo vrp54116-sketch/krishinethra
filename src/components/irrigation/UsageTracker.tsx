@@ -12,7 +12,7 @@ const MANUAL_BASELINE_L_PER_DAY = 6;
 
 function UsageTrackerInner() {
   const t = useT();
-  const totalWaterUsedL = useFarmStore((s) => s.totalWaterUsedL);
+  const totalWaterUsedL = useFarmStore((s) => s.totalWaterUsedL ?? 0);
   const mounted = useMounted();
 
   const week = useMemo(() => {

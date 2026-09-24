@@ -119,8 +119,8 @@ function Shell({
 export default function SensorRow() {
   const snapshot = useFarmStore((s) => s.snapshot);
   const sensorHistory = useFarmStore((s) => s.sensorHistory);
-  const tempHigh = useFarmStore((s) => s.settings.thresholds.tempHigh);
-  const aqiHigh = useFarmStore((s) => s.settings.thresholds.aqiHigh);
+  const tempHigh = useFarmStore((s) => s.settings?.thresholds?.tempHigh ?? 35);
+  const aqiHigh = useFarmStore((s) => s.settings?.thresholds?.aqiHigh ?? 150);
 
   const series = useMemo(
     () => buildTwelveHourSeries(snapshot, sensorHistory, 48),
@@ -131,12 +131,17 @@ export default function SensorRow() {
   const humSeries = useMemo(() => series.map((p) => p.humidity), [series]);
   const aqiSeries = useMemo(() => series.map((p) => p.aqi), [series]);
 
-  const band = aqiBand(snapshot.aqi);
+  const tempVal = snapshot?.temp ?? snapshot?.tempC ?? 0;
+  const humVal = snapshot?.hum ?? snapshot?.humidity ?? 0;
+  const aqiVal = snapshot?.aqi ?? 0;
+  const isRaining = Boolean(snapshot?.rain);
+
+  const band = aqiBand(aqiVal);
 
   const tempTone: PillTone =
-    snapshot.temp > tempHigh ? "warn" : snapshot.temp < 10 ? "warn" : "good";
+    tempVal > tempHigh ? "warn" : tempVal < 10 ? "warn" : "good";
   const humTone: PillTone =
-    snapshot.hum > 80 || snapshot.hum < 30 ? "warn" : "good";
+    humVal > 80 || humVal < 30 ? "warn" : "good";
 
   return (
     <div className="space-y-3">
@@ -149,13 +154,13 @@ export default function SensorRow() {
         <div
           className={cn(
             "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold backdrop-blur-md transition-all self-start sm:self-auto",
-            snapshot.rain
+            isRaining
               ? "border-blue-400/50 bg-blue-500/20 text-blue-300 shadow-[0_0_14px_rgba(59,130,246,0.4)] animate-pulse"
               : "border-white/10 bg-white/[0.04] text-zinc-400"
           )}
         >
-          <CloudRain className={cn("h-4 w-4", snapshot.rain ? "text-blue-300" : "text-zinc-500")} />
-          <span>Rain Detected: <strong className="text-white">{snapshot.rain ? "Yes" : "No"}</strong></span>
+          <CloudRain className={cn("h-4 w-4", isRaining ? "text-blue-300" : "text-zinc-500")} />
+          <span>Rain Detected: <strong className="text-white">{isRaining ? "Yes" : "No"}</strong></span>
         </div>
       </div>
 
@@ -169,19 +174,19 @@ export default function SensorRow() {
           pill={{
             tone: tempTone,
             label:
-              snapshot.temp > tempHigh
+              tempVal > tempHigh
                 ? "Hot"
-                : snapshot.temp < 10
+                : tempVal < 10
                   ? "Cold"
                   : "Comfort",
           }}
         >
           <p className="text-2xl font-extrabold tracking-tight text-white">
-            <AnimatedNumber value={snapshot.temp} decimals={1} />
+            <AnimatedNumber value={tempVal} decimals={1} />
             <span className="ml-0.5 text-sm font-semibold text-zinc-400">°C</span>
           </p>
           <Sparkline data={tempSeries} color="#ef4444" />
-          <ComfortBar min={0} max={45} idealMin={18} idealMax={32} value={snapshot.temp} />
+          <ComfortBar min={0} max={45} idealMin={18} idealMax={32} value={tempVal} />
         </Shell>
 
         {/* Humidity */}
@@ -192,15 +197,15 @@ export default function SensorRow() {
           pill={{
             tone: humTone,
             label:
-              snapshot.hum > 80
+              humVal > 80
                 ? "Humid"
-                : snapshot.hum < 30
+                : humVal < 30
                   ? "Dry"
                   : "Optimal",
           }}
         >
           <p className="text-2xl font-extrabold tracking-tight text-white">
-            <AnimatedNumber value={snapshot.hum} decimals={1} />
+            <AnimatedNumber value={humVal} decimals={1} />
             <span className="ml-0.5 text-sm font-semibold text-zinc-400">%</span>
           </p>
           <Sparkline data={humSeries} color="#22d3ee" />
@@ -216,18 +221,18 @@ export default function SensorRow() {
           label="Air Quality Index · 12h history"
           pill={{
             tone:
-              snapshot.aqi > aqiHigh ? "bad" : snapshot.aqi > 100 ? "warn" : "good",
+              aqiVal > aqiHigh ? "bad" : aqiVal > 100 ? "warn" : "good",
             label: band.label,
           }}
         >
           <p className="text-2xl font-extrabold tracking-tight text-white">
-            <AnimatedNumber value={snapshot.aqi} decimals={0} />
+            <AnimatedNumber value={aqiVal} decimals={0} />
             <span className="ml-1 text-xs font-semibold" style={{ color: band.color }}>
               {band.label}
             </span>
           </p>
           <Sparkline data={aqiSeries} color="#a78bfa" />
-          <AqiScale value={snapshot.aqi} />
+          <AqiScale value={aqiVal} />
         </Shell>
       </div>
     </div>

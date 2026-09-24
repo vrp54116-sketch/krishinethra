@@ -37,10 +37,10 @@ export default function EdgeAiStatusBanners({ className }: { className?: string 
   const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
 
   // Evaluate candidate banner
-  const stale = snapshot.stale;
-  const rain = snapshot.rain && !pump.running;
+  const stale = Boolean(snapshot?.stale);
+  const rain = Boolean(snapshot?.rain) && !pump?.running;
   const cloudOffline = !mqttConnected;
-  const weakWifi = snapshot.rssi != null && snapshot.rssi < -80;
+  const weakWifi = snapshot?.rssi != null && snapshot.rssi < -80;
 
   let candidate: BannerItem | null = null;
 
@@ -60,11 +60,12 @@ export default function EdgeAiStatusBanners({ className }: { className?: string 
       },
     };
   } else if (rain) {
+    const rainMmVal = (snapshot?.rainMm ?? 0).toFixed(1);
     candidate = {
       id: "rain-lock",
       type: "warning",
       title: "Rain detected — pump locked OFF",
-      description: `Precipitation active (${snapshot.rainMm.toFixed(1)} mm). Water savings algorithm engaged.`,
+      description: `Precipitation active (${rainMmVal} mm). Water savings algorithm engaged.`,
       icon: CloudRain,
       tone: {
         bg: "bg-amber-500/15",

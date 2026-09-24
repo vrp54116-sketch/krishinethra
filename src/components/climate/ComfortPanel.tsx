@@ -88,7 +88,7 @@ export default function ComfortPanel() {
       max: 45,
       idealMin: profile.temp[0],
       idealMax: profile.temp[1],
-      value: snapshot.tempC,
+      value: snapshot?.tempC ?? snapshot?.temp ?? 0,
       unit: "°C",
       decimals: 1,
     },
@@ -99,20 +99,20 @@ export default function ComfortPanel() {
       max: 100,
       idealMin: profile.humidity[0],
       idealMax: profile.humidity[1],
-      value: snapshot.humidity,
+      value: snapshot?.humidity ?? snapshot?.hum ?? 0,
       unit: "%",
       decimals: 1,
     },
     {
-      key: "light",
-      label: "Light",
+      key: "soil",
+      label: "Soil moisture",
       min: 0,
-      max: 900,
-      idealMin: profile.light[0],
-      idealMax: profile.light[1],
-      value: snapshot.lightLux,
-      unit: " lux",
-      decimals: 0,
+      max: 100,
+      idealMin: profile.soil[0],
+      idealMax: profile.soil[1],
+      value: snapshot?.soil ?? 0,
+      unit: "%",
+      decimals: 1,
     },
     {
       key: "aqi",
@@ -121,7 +121,7 @@ export default function ComfortPanel() {
       max: 300,
       idealMin: 0,
       idealMax: profile.aqiMax,
-      value: snapshot.aqi,
+      value: snapshot?.aqi ?? 0,
       unit: "",
       decimals: 0,
       invert: true,
@@ -133,10 +133,10 @@ export default function ComfortPanel() {
   ).length;
 
   function snapshotFor(key: string): number {
-    if (key === "temp") return snapshot.tempC;
-    if (key === "humidity") return snapshot.humidity;
-    if (key === "light") return snapshot.lightLux;
-    return snapshot.aqi;
+    if (key === "temp") return snapshot?.tempC ?? snapshot?.temp ?? 0;
+    if (key === "humidity") return snapshot?.humidity ?? snapshot?.hum ?? 0;
+    if (key === "soil") return snapshot?.soil ?? 0;
+    return snapshot?.aqi ?? 0;
   }
 
   const allGood = insideCount === rows.length;

@@ -29,8 +29,8 @@ const ENERGY_RATE = 8; // ₹/kWh
 
 function WaterCardInner() {
   const t = useT();
-  const totalWaterUsedL = useFarmStore((s) => s.totalWaterUsedL);
-  const totalRunSeconds = useFarmStore((s) => s.pump.totalRunSeconds);
+  const totalWaterUsedL = useFarmStore((s) => s.totalWaterUsedL ?? 0);
+  const totalRunSeconds = useFarmStore((s) => s.pump?.totalRunSeconds ?? 0);
   // Weekday names also differ between Node (SSR) and Chrome — swap in the
   // real labels only after mount so chart hydration always matches.
   const mounted = useMounted();

@@ -8,6 +8,7 @@ import SchedulePanel from "@/components/irrigation/SchedulePanel";
 import EdgeStaleBanner from "@/components/mqtt/EdgeStaleBanner";
 import PumpRunLog from "@/components/irrigation/PumpRunLog";
 import RainSkipLog from "@/components/irrigation/RainSkipLog";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 function Rise({
   children,
@@ -43,31 +44,43 @@ export default function IrrigationPage() {
       {/* 1. PUMP HERO + EXPLAINABLE AI */}
       <div className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-2">
         <Rise>
-          <PumpHeroCard />
+          <ErrorBoundary name="PumpHeroCard">
+            <PumpHeroCard />
+          </ErrorBoundary>
         </Rise>
         <Rise delay={0.06}>
-          <AiExplainerCard />
+          <ErrorBoundary name="AiExplainerCard">
+            <AiExplainerCard />
+          </ErrorBoundary>
         </Rise>
       </div>
 
       {/* 2. PUMP RUN LOG & WATER SAVINGS */}
       <div className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-2">
         <Rise delay={0.1}>
-          <PumpRunLog />
+          <ErrorBoundary name="PumpRunLog">
+            <PumpRunLog />
+          </ErrorBoundary>
         </Rise>
         <Rise delay={0.14}>
-          <RainSkipLog />
+          <ErrorBoundary name="RainSkipLog">
+            <RainSkipLog />
+          </ErrorBoundary>
         </Rise>
       </div>
 
       {/* 3. SCHEDULE */}
       <Rise delay={0.18}>
-        <SchedulePanel />
+        <ErrorBoundary name="SchedulePanel">
+          <SchedulePanel />
+        </ErrorBoundary>
       </Rise>
 
       {/* 4. HISTORY */}
       <Rise delay={0.22}>
-        <HistoryTable />
+        <ErrorBoundary name="HistoryTable">
+          <HistoryTable />
+        </ErrorBoundary>
       </Rise>
     </div>
   );

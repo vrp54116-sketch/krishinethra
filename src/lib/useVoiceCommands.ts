@@ -266,8 +266,8 @@ export const VOICE_COMMAND_REFERENCE: VoiceCommandInfo[] = [
     id: "water",
     enSay: "water usage",
     hiSay: "पानी कितना",
-    enDoes: "Speaks today's litres used + tank level",
-    hiDoes: "आज का पानी + टंकी स्तर बताता है",
+    enDoes: "Speaks today's litres used",
+    hiDoes: "आज का पानी उपयोग बताता है",
   },
   {
     id: "weather",
@@ -373,27 +373,26 @@ export function executeVoiceCommand(
 
   // --- Farm status summary ---
   if (containsAny(said, STATUS_PHRASES)) {
-    const health = Math.round(s.farmHealthScore);
-    const moistureB = snap.soilMoistureB.toFixed(1);
-    const temp = snap.tempC.toFixed(1);
+    const health = Math.round(s.farmHealthScore ?? 85);
+    const moisture = (snap?.soil ?? snap?.soilMoistureB ?? 0).toFixed(1);
+    const temp = (snap?.tempC ?? snap?.temp ?? 0).toFixed(1);
     return {
       key: "status",
       spoken: hindi
-        ? `खेत स्वास्थ्य ${health}, Zone B नमी ${moistureB} प्रतिशत, तापमान ${temp} डिग्री, ${unread} चेतावनी।`
-        : `Farm health ${health} out of 100. Zone B moisture ${moistureB} percent, temperature ${temp} degrees, ${unread} unread alerts.`,
+        ? `खेत स्वास्थ्य ${health}, मिट्टी की नमी ${moisture} प्रतिशत, तापमान ${temp} डिग्री, ${unread} चेतावनी।`
+        : `Farm health ${health} out of 100. Soil moisture ${moisture} percent, temperature ${temp} degrees, ${unread} unread alerts.`,
       success: true,
     };
   }
 
   // --- Water usage ---
   if (containsAny(said, WATER_PHRASES)) {
-    const liters = s.totalWaterUsedL.toFixed(2);
-    const tank = snap.tankLevelPercent.toFixed(0);
+    const liters = (s.totalWaterUsedL ?? 0).toFixed(2);
     return {
       key: "water",
       spoken: hindi
-        ? `आज ${liters} लीटर पानी इस्तेमाल हुआ है, टंकी ${tank} प्रतिशत भरी है।`
-        : `Today you used ${liters} litres of water. The tank is at ${tank} percent.`,
+        ? `आज ${liters} लीटर पानी इस्तेमाल हुआ है।`
+        : `Today you used ${liters} litres of water.`,
       success: true,
     };
   }

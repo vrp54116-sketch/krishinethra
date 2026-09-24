@@ -106,10 +106,11 @@ export default function PumpHeroCard() {
 
   const handlePower = (on: boolean) => {
     setPumpManual(on);
+    const soilStr = (snapshot?.soil ?? 0).toFixed(1);
     logPump(
       on ? "Pump turned ON (Manual)" : "Pump turned OFF (Manual)",
       on
-        ? `Manual run for ${thresholds.pumpDurationSec}s — Soil moisture at ${snapshot.soil.toFixed(1)}%.`
+        ? `Manual run for ${thresholds?.pumpDurationSec ?? 30}s — Soil moisture at ${soilStr}%.`
         : "Manual run stopped by user.",
     );
   };
@@ -117,9 +118,10 @@ export default function PumpHeroCard() {
   const handleCustomTimedRun = () => {
     const sec = Math.max(1, Math.min(3600, customSec || 30));
     setPumpManual(true, sec);
+    const soilStr = (snapshot?.soil ?? 0).toFixed(1);
     logPump(
       `Pump ON for ${sec}s`,
-      `Manual timed run — Soil moisture at ${snapshot.soil.toFixed(1)}%.`,
+      `Manual timed run — Soil moisture at ${soilStr}%.`,
     );
   };
 
@@ -143,10 +145,11 @@ export default function PumpHeroCard() {
       pump: { ...s.pump, running: false },
       manualPumpRemainingSec: null,
     }));
+    const soilStr = (snapshot?.soil ?? 0).toFixed(1);
     addAlert({
       level: "critical",
       title: "Emergency STOP pressed",
-      message: `Pump force-stopped by user at Soil ${snapshot.soil.toFixed(1)}%.${pump.mode === "auto" ? " Auto AI may restart it if dry conditions persist." : ""}`,
+      message: `Pump force-stopped by user at Soil ${soilStr}%.${pump.mode === "auto" ? " Auto AI may restart it if dry conditions persist." : ""}`,
     });
     toast.error("Emergency STOP", {
       description: "Pump halted immediately. All timed runs cancelled.",
@@ -165,7 +168,7 @@ export default function PumpHeroCard() {
       )}
       <CardHeader
         title={t("irrigation.pumpTitle")}
-        subtitle={`Mode: ${pump.mode === "auto" ? "Auto AI" : pump.mode === "manual" ? "Manual" : "Schedule"} · Rain: ${snapshot.rain ? "Detected" : "Dry"}`}
+        subtitle={`Mode: ${pump.mode === "auto" ? "Auto AI" : pump.mode === "manual" ? "Manual" : "Schedule"} · Rain: ${snapshot?.rain ? "Detected" : "Dry"}`}
         action={
           <span
             className={cn(

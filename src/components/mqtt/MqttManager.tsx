@@ -71,13 +71,13 @@ export default function MqttManager() {
         s.mqttStatus !== "online"
       )
         return;
-      const t = s.snapshot.tempC.toFixed(1);
-      const h = Math.round(s.snapshot.humidity);
-      const soil = Math.round(s.snapshot.soilMoistureB);
-      const tank = Math.round(s.snapshot.tankLevelPercent);
-      const pump = s.pump.running ? "PUMP ON" : "PUMP OFF";
-      const l1 = `T${t} H${h}% S${soil}%`.slice(0, 16);
-      const l2 = `Tank${tank}% ${pump}`.slice(0, 16);
+      const t = (s.snapshot?.tempC ?? s.snapshot?.temp ?? 0).toFixed(1);
+      const h = Math.round(s.snapshot?.humidity ?? s.snapshot?.hum ?? 0);
+      const soil = Math.round(s.snapshot?.soil ?? s.snapshot?.soilMoistureB ?? 0);
+      const rain = s.snapshot?.rain ? "RAIN" : "DRY";
+      const pump = s.pump?.running ? "PUMP:ON" : "PUMP:OFF";
+      const l1 = `T:${t} H:${h}% S:${soil}%`.slice(0, 16);
+      const l2 = `${rain} ${pump}`.slice(0, 16);
       void import("@/lib/mqtt-bridge").then((m) => m.cmdLcd(l1, l2));
     }, 3000);
     return () => clearInterval(id);

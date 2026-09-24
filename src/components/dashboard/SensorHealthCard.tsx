@@ -9,15 +9,18 @@ export default function SensorHealthCard({ className }: { className?: string }) 
   const snapshot = useFarmStore((s) => s.snapshot);
   const settings = useFarmStore((s) => s.settings);
 
-  const stale = snapshot.stale;
-  const soilRaw = snapshot.soilRaw ?? (snapshot.soil ? Math.round(1023 - (snapshot.soil * 6.5)) : 540);
-  const mqRaw = snapshot.mqRaw ?? 230;
-  const showRaw = settings.showRawCalibrationValues ?? false;
+  const stale = snapshot?.stale ?? false;
+  const soilRaw = snapshot?.soilRaw ?? (snapshot?.soil ? Math.round(1023 - (snapshot.soil * 6.5)) : 540);
+  const mqRaw = snapshot?.mqRaw ?? 230;
+  const showRaw = settings?.showRawCalibrationValues ?? false;
 
   // Simulate MQ-135 preheat (60 seconds after boot)
-  const uptimeSec = snapshot.uptime ? (typeof snapshot.uptime === "number" ? snapshot.uptime : 120) : 120;
+  const uptimeSec = snapshot?.uptime ? (typeof snapshot.uptime === "number" ? snapshot.uptime : 120) : 120;
   const isMqPreheating = uptimeSec < 60;
   const mqPreheatRemain = Math.max(0, 60 - uptimeSec);
+
+  const isRaining = Boolean(snapshot?.rain);
+  const rainMmVal = (snapshot?.rainMm ?? 0).toFixed(1);
 
   const sensors = [
     {
@@ -26,7 +29,7 @@ export default function SensorHealthCard({ className }: { className?: string }) 
       icon: <Droplets className="h-4 w-4 text-emerald-400" />,
       status: stale ? "stale" : "healthy",
       statusLabel: stale ? "Stale" : "Connected",
-      value: `${Math.round(snapshot.soil ?? 45)}%`,
+      value: `${Math.round(snapshot?.soil ?? 45)}%`,
       raw: `raw: ${soilRaw}`,
       subtext: "Capacitive / Resistive A0",
     },
@@ -35,9 +38,9 @@ export default function SensorHealthCard({ className }: { className?: string }) 
       name: "DHT22 Climate",
       icon: <Thermometer className="h-4 w-4 text-sky-400" />,
       status: stale ? "stale" : "healthy",
-      statusLabel: stale ? "Stale" : `${Math.round(snapshot.temp ?? 30)}°C / ${Math.round(snapshot.hum ?? 60)}%`,
-      value: `${Math.round(snapshot.temp ?? 30)}°C`,
-      raw: `Hum: ${Math.round(snapshot.hum ?? 60)}%`,
+      statusLabel: stale ? "Stale" : `${Math.round(snapshot?.temp ?? 30)}°C / ${Math.round(snapshot?.hum ?? 60)}%`,
+      value: `${Math.round(snapshot?.temp ?? 30)}°C`,
+      raw: `Hum: ${Math.round(snapshot?.hum ?? 60)}%`,
       subtext: "Digital D4 Bus",
     },
     {
@@ -49,8 +52,8 @@ export default function SensorHealthCard({ className }: { className?: string }) 
         ? "Stale"
         : isMqPreheating
           ? `Preheating ${mqPreheatRemain}s`
-          : `AQI ${snapshot.aqi ?? 85}`,
-      value: isMqPreheating ? "Warming" : `AQI ${snapshot.aqi ?? 85}`,
+          : `AQI ${snapshot?.aqi ?? 85}`,
+      value: isMqPreheating ? "Warming" : `AQI ${snapshot?.aqi ?? 85}`,
       raw: `raw: ${mqRaw}`,
       subtext: isMqPreheating ? "Heater cycle 45/60s" : "SnO2 Metal Oxide A1",
     },
@@ -58,10 +61,10 @@ export default function SensorHealthCard({ className }: { className?: string }) 
       id: "rain",
       name: "Rain Detector",
       icon: <CloudRain className="h-4 w-4 text-blue-400" />,
-      status: stale ? "stale" : snapshot.rain ? "alert" : "healthy",
-      statusLabel: stale ? "Stale" : snapshot.rain ? "Rain Detected" : "No Rain",
-      value: snapshot.rain ? "Wet" : "Dry",
-      raw: `Precip: ${snapshot.rainMm.toFixed(1)}mm`,
+      status: stale ? "stale" : isRaining ? "alert" : "healthy",
+      statusLabel: stale ? "Stale" : isRaining ? "Rain Detected" : "No Rain",
+      value: isRaining ? "Wet" : "Dry",
+      raw: `Precip: ${rainMmVal}mm`,
       subtext: "Digital Comparator D2",
     },
     {
@@ -71,7 +74,7 @@ export default function SensorHealthCard({ className }: { className?: string }) 
       status: stale ? "stale" : "healthy",
       statusLabel: stale ? "Dead (5s+)" : "Active (1s ago)",
       value: stale ? "Offline" : "UART 9600",
-      raw: `RSSI: ${snapshot.rssi ?? -55} dBm`,
+      raw: `RSSI: ${snapshot?.rssi ?? -55} dBm`,
       subtext: "Serial Hardware UART",
     },
   ];

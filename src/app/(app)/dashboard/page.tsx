@@ -14,6 +14,7 @@ import EdgeAiStatusBanners from "@/components/dashboard/EdgeAiStatusBanners";
 import AiAgentReasoning from "@/components/dashboard/AiAgentReasoning";
 import SensorHealthCard from "@/components/dashboard/SensorHealthCard";
 import LiveCameraCard from "@/components/dashboard/LiveCameraCard";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { LiquidStaggerContainer, LiquidStaggerItem } from "@/components/ui/glass";
 
 /**
@@ -72,29 +73,43 @@ export default function DashboardPage() {
         {/* ---- LEFT: 4 sensor cards (2×2) + AI Agent Reasoning + Sensor Health ---- */}
         <div className="liquid-contain flex min-w-0 flex-col gap-4">
           <LiquidStaggerItem>
-            <SensorGrid />
+            <ErrorBoundary name="SensorGrid">
+              <SensorGrid />
+            </ErrorBoundary>
           </LiquidStaggerItem>
           <LiquidStaggerItem>
-            <AiAgentReasoning />
+            <ErrorBoundary name="AiAgentReasoning">
+              <AiAgentReasoning />
+            </ErrorBoundary>
           </LiquidStaggerItem>
           <LiquidStaggerItem>
-            <SensorHealthCard />
+            <ErrorBoundary name="SensorHealthCard">
+              <SensorHealthCard />
+            </ErrorBoundary>
           </LiquidStaggerItem>
         </div>
 
         {/* ---- RIGHT: Farm Health score + Pump + Live camera + Alerts ---- */}
         <div className="flex min-w-0 flex-col gap-4">
           <LiquidStaggerItem>
-            <HealthScoreCard />
+            <ErrorBoundary name="HealthScoreCard">
+              <HealthScoreCard />
+            </ErrorBoundary>
           </LiquidStaggerItem>
           <LiquidStaggerItem>
-            <PumpControl />
+            <ErrorBoundary name="PumpControl">
+              <PumpControl />
+            </ErrorBoundary>
           </LiquidStaggerItem>
           <LiquidStaggerItem>
-            <LiveCameraCard />
+            <ErrorBoundary name="LiveCameraCard">
+              <LiveCameraCard />
+            </ErrorBoundary>
           </LiquidStaggerItem>
           <LiquidStaggerItem>
-            <AlertsFeed />
+            <ErrorBoundary name="AlertsFeed">
+              <AlertsFeed />
+            </ErrorBoundary>
           </LiquidStaggerItem>
         </div>
       </div>
@@ -102,13 +117,19 @@ export default function DashboardPage() {
       {/* Secondary row: report, AI suggestions, quick actions */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <LiquidStaggerItem className="lg:col-span-1">
-          <DailyReportCard />
+          <ErrorBoundary name="DailyReportCard">
+            <DailyReportCard />
+          </ErrorBoundary>
         </LiquidStaggerItem>
         <LiquidStaggerItem className="lg:col-span-1">
-          <SuggestionsCard />
+          <ErrorBoundary name="SuggestionsCard">
+            <SuggestionsCard />
+          </ErrorBoundary>
         </LiquidStaggerItem>
         <LiquidStaggerItem className="lg:col-span-1">
-          <QuickActions />
+          <ErrorBoundary name="QuickActions">
+            <QuickActions />
+          </ErrorBoundary>
         </LiquidStaggerItem>
       </div>
     </LiquidStaggerContainer>

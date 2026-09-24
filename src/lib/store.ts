@@ -1417,12 +1417,13 @@ export const useFarmStore = create<FarmState>()(
               runSec >= 60
                 ? `${Math.floor(runSec / 60)} min ${runSec % 60 > 0 ? `${runSec % 60} sec` : ""}`.trim()
                 : `${runSec} sec`;
+            const soilStr = (s.snapshot?.soil ?? s.snapshot?.soilMoistureB ?? 0).toFixed(1);
             const entry: DiaryEntry = {
               id: uid("diary"),
               date: todayISO(),
               type: "irrigation",
-              details: `Irrigated Zone B for ${label} (manual stop) — soil moisture B ${s.snapshot.soilMoistureB.toFixed(1)}%, tank at ${s.snapshot.tankLevelPercent.toFixed(0)}%.`,
-              zone: "B",
+              details: `Irrigated field for ${label} (manual stop) — soil moisture ${soilStr}%.`,
+              zone: "A",
             };
             return {
               pump: { ...s.pump, mode: "manual", running: false },
@@ -1775,29 +1776,17 @@ export const useFarmStore = create<FarmState>()(
             return `${d.getFullYear()}-${mm}-${dd}`;
           };
 
-          // 1. Dry soil → irrigate (spec: moisture < 30 → Zone B high).
-          const dryZones = s.zones.filter((z) => z.soilMoisture < 30);
-          const zoneB = s.zones.find((z) => z.id === "B");
-          if (zoneB && zoneB.soilMoisture < 30) {
+          // 1. Dry soil → irrigate (single-zone soil moisture < 30).
+          const soilVal = s.snapshot?.soil ?? s.snapshot?.soilMoistureB ?? 45;
+          if (soilVal < 30) {
             candidates.push({
-              title: `Irrigate Zone B — moisture at ${zoneB.soilMoisture.toFixed(0)}%`,
+              title: `Irrigate field — soil moisture at ${soilVal.toFixed(0)}%`,
               priority: "high",
               dueDate: today,
               done: false,
               source: "ai",
-              zone: "B",
+              zone: "A",
             });
-          } else {
-            for (const z of dryZones) {
-              candidates.push({
-                title: `Irrigate Zone ${z.id} — moisture at ${z.soilMoisture.toFixed(0)}%`,
-                priority: "high",
-                dueDate: today,
-                done: false,
-                source: "ai",
-                zone: z.id,
-              });
-            }
           }
 
           // 2. Active spray plan with a due step → neem spray task (high).
@@ -1818,8 +1807,8 @@ export const useFarmStore = create<FarmState>()(
             }
           }
 
-          // 3. Low tank → refill (spec: tank < 25 → medium).
-          if (s.snapshot.tankLevelPercent < 25) {
+          // 3. Low tank check (if telemetry provides tank level).
+          if (typeof s.snapshot?.tankLevelPercent === "number" && s.snapshot.tankLevelPercent < 25) {
             candidates.push({
               title: `Refill water tank — ${s.snapshot.tankLevelPercent.toFixed(0)}% left`,
               priority: "medium",

@@ -139,25 +139,15 @@ export default function AssistantPage() {
     }
     if (a.kind === "pump10") {
       const st = useFarmStore.getState();
-      const tank = st.snapshot.tankLevelPercent;
-      const zb =
-        st.zones.find((z) => z.id === "B")?.soilMoisture ?? st.snapshot.soilMoistureB;
-      if (tank < 5) {
-        const warn =
-          `Tank sirf ${Math.round(tank)}% hai — pehle tank refill karo, pump start nahi hoga. ` +
-          `Irrigation page par tank status dekho?`;
-        addChatMessage({ role: "assistant", text: warn, actions: [] });
-        if (st.settings.voiceOutput) speak(warn, st.settings.language);
-        return;
-      }
+      const soilVal = st.snapshot?.soil ?? 45;
       setPumpManual(true, 10);
       const msg =
-        `✅ Pump started for 10 seconds. Zone B ${((Math.round(zb * 10) / 10)).toFixed(1)}% ` +
-        `se nami badh rahi hai, tank ${Math.round(tank)}% hai. 10 sec baad pump apne-aap band ho jayega. ` +
+        `✅ Pump started for 10 seconds. Soil moisture ${soilVal.toFixed(1)}% ` +
+        `se nami badh rahi hai. 10 sec baad pump apne-aap band ho jayega. ` +
         `Aur paani chahiye to dobara dabayein?`;
       addChatMessage({ role: "assistant", text: msg, actions: [] });
       toast.success("Pump ON for 10s");
-      if (st.settings.voiceOutput) speak("Pump started for 10 seconds.", st.settings.language);
+      if (st.settings?.voiceOutput) speak("Pump started for 10 seconds.", st.settings?.language ?? "en");
     }
   };
 

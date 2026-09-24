@@ -38,6 +38,7 @@ import MqttManager from "@/components/mqtt/MqttManager";
 import EdgeLiveChip, { edgeChipState } from "@/components/mqtt/EdgeLiveChip";
 import InstallAppButton from "@/components/pwa/InstallAppButton";
 import PageSkeleton from "@/components/layout/PageSkeleton";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import AppToaster from "@/components/layout/AppToaster";
 import QuickActionsFAB from "@/components/layout/QuickActionsFAB";
 import LiveAnnouncer from "@/components/layout/LiveAnnouncer";
@@ -645,9 +646,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         >
           <div className="relative mx-auto max-w-7xl">
             <RouteLiquidMorph routeKey={pathname}>
-              <Suspense fallback={<PageSkeleton rows={3} />}>
-                {mounted && hydrated ? children : <PageSkeleton rows={3} />}
-              </Suspense>
+              <ErrorBoundary name={pathname}>
+                <Suspense fallback={<PageSkeleton rows={3} />}>
+                  {mounted && hydrated ? children : <PageSkeleton rows={3} />}
+                </Suspense>
+              </ErrorBoundary>
             </RouteLiquidMorph>
           </div>
         </main>

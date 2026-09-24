@@ -89,22 +89,25 @@ export function getHealthBreakdown(
   unresolvedDiseaseCount: number,
   activeSprayPlansCount: number = 0,
 ): HealthFactor[] {
-  const moistureAvg = snapshot.soil ?? ((snapshot.soilMoistureA + snapshot.soilMoistureB) / 2);
+  const moistureAvg = snapshot?.soil ?? 45;
   const moistureScore = clamp(100 - Math.abs(moistureAvg - 45) * 2.5, 0, 100);
 
+  const tempVal = snapshot?.tempC ?? snapshot?.temp ?? 28;
   const tempScore =
-    snapshot.tempC <= 32
+    tempVal <= 32
       ? 100
-      : clamp(100 - (snapshot.tempC - 32) * 15, 0, 100);
+      : clamp(100 - (tempVal - 32) * 15, 0, 100);
 
+  const humVal = snapshot?.humidity ?? snapshot?.hum ?? 60;
   const humidityScore =
-    snapshot.humidity >= 50 && snapshot.humidity <= 70
+    humVal >= 50 && humVal <= 70
       ? 100
-      : snapshot.humidity < 50
-        ? clamp(100 - (50 - snapshot.humidity) * 3, 0, 100)
-        : clamp(100 - (snapshot.humidity - 70) * 3, 0, 100);
+      : humVal < 50
+        ? clamp(100 - (50 - humVal) * 3, 0, 100)
+        : clamp(100 - (humVal - 70) * 3, 0, 100);
 
-  const aqiScore = clamp(100 - ((snapshot.aqi - 60) * 100) / 140, 0, 100);
+  const aqiVal = snapshot?.aqi ?? 60;
+  const aqiScore = clamp(100 - ((aqiVal - 60) * 100) / 140, 0, 100);
 
   const totalInfestations = Math.max(unresolvedDiseaseCount, activeSprayPlansCount);
   const diseaseScore = clamp(100 - totalInfestations * 35, 0, 100);
@@ -211,25 +214,35 @@ function activeDiseaseScan(scans: DiseaseScan[]): DiseaseScan | undefined {
  * English when settings.language is "en", Hindi otherwise.
  */
 export function generateDailyReport(state: DashboardAiState): string {
-  const { snapshot: s, zones, settings, farmHealthScore, totalWaterUsedL, tasks, scans } =
+  const { snapshot: s, settings, farmHealthScore, totalWaterUsedL, tasks, scans } =
     state;
-  const hindi = settings.language !== "en";
-  const t = settings.thresholds;
-  const pending = tasks.filter((x) => !x.done);
-  const disease = activeDiseaseScan(scans);
-  const zoneA = zones.find((z) => z.id === "A");
-  const zoneB = zones.find((z) => z.id === "B");
+  const hindi = settings?.language !== "en";
+  const t = settings?.thresholds ?? {
+    moistureLow: 30,
+    moistureHigh: 75,
+    tempHigh: 35,
+    humidityLow: 40,
+    aqiHigh: 150,
+  };
+  const pending = (tasks ?? []).filter((x) => !x.done);
+  const disease = activeDiseaseScan(scans ?? []);
+  const soilVal = s?.soil ?? 45;
+  const tempVal = s?.tempC ?? s?.temp ?? 28;
+  const humVal = s?.humidity ?? s?.hum ?? 60;
+  const rainMmVal = s?.rainMm ?? 0;
+  const aqiVal = s?.aqi ?? 50;
+  const waterL = totalWaterUsedL ?? 0;
 
   if (hindi) {
     const parts: string[] = [];
     parts.push(
-      `खेत का स्वास्थ्य स्कोर 100 में से ${Math.round(farmHealthScore)} है — कुल मिलाकर ${healthWord(farmHealthScore, true)} स्थिति है।`,
+      `खेत का स्वास्थ्य स्कोर 100 में से ${Math.round(farmHealthScore ?? 85)} है — कुल मिलाकर ${healthWord(farmHealthScore ?? 85, true)} स्थिति है।`,
     );
     parts.push(
-      `${zoneMoistureNote(zoneA, t.moistureLow, t.moistureHigh, true)}; ${zoneMoistureNote(zoneB, t.moistureLow, t.moistureHigh, true)}।`,
+      `मिट्टी की नमी ${f1(soilVal)}% है (${soilVal < t.moistureLow ? "कम नमी" : soilVal > t.moistureHigh ? "अधिक नमी" : "अनुकूल"})।`,
     );
     parts.push(
-      `आज अब तक ${totalWaterUsedL.toFixed(2)} लीटर पानी इस्तेमाल हुआ है और टंकी ${f1(s.tankLevelPercent)}% भरी है।`,
+      `आज अब तक ${waterL.toFixed(2)} लीटर पानी इस्तेमाल हुआ है।`,
     );
     if (pending.length === 0) {
       parts.push("कोई कार्य बकाया नहीं है।");
@@ -243,19 +256,19 @@ export function generateDailyReport(state: DashboardAiState): string {
         ? `सक्रिय रोग पर ध्यान दें: ${disease.disease} (${disease.severity}) — स्प्रे योजना से इलाज जारी रखें।`
         : "फसल में कोई सक्रिय रोग नहीं है।",
     );
-    const weatherBits = `${f1(s.tempC)}°C तापमान और ${f1(s.humidity)}% आर्द्रता है`;
+    const weatherBits = `${f1(tempVal)}°C तापमान और ${f1(humVal)}% आर्द्रता है`;
     const rainBit =
-      s.rainMm > 0.2
-        ? `, ${f1(s.rainMm)} मिमी बारिश हो रही है — सिंचाई छोड़ी जा सकती है`
+      rainMmVal > 0.2
+        ? `, ${f1(rainMmVal)} मिमी बारिश हो रही है — सिंचाई छोड़ी जा सकती है`
         : ", अभी बारिश नहीं है";
     const aqiBit =
-      s.aqi > t.aqiHigh ? `। AQI ${s.aqi} ज़्यादा है — पत्तों पर छिड़काव टालें` : "";
+      aqiVal > t.aqiHigh ? `। AQI ${aqiVal} ज़्यादा है — पत्तों पर छिड़काव टालें` : "";
     parts.push(`${weatherBits}${rainBit} है${aqiBit}।`);
     parts.push(
-      state.pump.running
+      state.pump?.running
         ? "पंप अभी चल रहा है — नमी बढ़ रही है।"
-        : zoneB && zoneB.soilMoisture < t.moistureLow
-          ? "सलाह: पंप को Auto AI मोड पर रखें ताकि Zone B को समय पर पानी मिले।"
+        : soilVal < t.moistureLow
+          ? "सलाह: पंप को Auto AI मोड पर रखें ताकि खेत को समय पर पानी मिले।"
           : "सलाह: स्थिति स्थिर है — पंप Auto AI मोड पर ही रखें।",
     );
     return parts.join(" ");
@@ -263,13 +276,13 @@ export function generateDailyReport(state: DashboardAiState): string {
 
   const parts: string[] = [];
   parts.push(
-    `Farm health stands at ${Math.round(farmHealthScore)} out of 100 — a ${healthWord(farmHealthScore, false)} day overall.`,
+    `Farm health stands at ${Math.round(farmHealthScore ?? 85)} out of 100 — a ${healthWord(farmHealthScore ?? 85, false)} day overall.`,
   );
   parts.push(
-    `${zoneMoistureNote(zoneA, t.moistureLow, t.moistureHigh, false)}; ${zoneMoistureNote(zoneB, t.moistureLow, t.moistureHigh, false)}.`,
+    `Soil moisture is at ${f1(soilVal)}% (${soilVal < t.moistureLow ? "dry" : soilVal > t.moistureHigh ? "wet" : "optimal"}).`,
   );
   parts.push(
-    `You have used ${totalWaterUsedL.toFixed(2)} litres of water so far today, and the tank is ${f1(s.tankLevelPercent)}% full.`,
+    `You have used ${waterL.toFixed(2)} litres of water so far today.`,
   );
   if (pending.length === 0) {
     parts.push("No tasks are pending.");
@@ -284,21 +297,21 @@ export function generateDailyReport(state: DashboardAiState): string {
       : "No active crop disease.",
   );
   const rainBit =
-    s.rainMm > 0.2
-      ? ` Rainfall of ${f1(s.rainMm)} mm is topping up the field, so irrigation can be skipped.`
+    rainMmVal > 0.2
+      ? ` Rainfall of ${f1(rainMmVal)} mm is topping up the field, so irrigation can be skipped.`
       : " No rain at the moment.";
   const aqiBit =
-    s.aqi > t.aqiHigh
-      ? ` AQI ${s.aqi} is above the safe limit — postpone foliar sprays.`
+    aqiVal > t.aqiHigh
+      ? ` AQI ${aqiVal} is above the safe limit — postpone foliar sprays.`
       : "";
   parts.push(
-    `It is ${f1(s.tempC)}°C with ${f1(s.humidity)}% humidity.${rainBit}${aqiBit}`,
+    `It is ${f1(tempVal)}°C with ${f1(humVal)}% humidity.${rainBit}${aqiBit}`,
   );
   parts.push(
-    state.pump.running
+    state.pump?.running
       ? "The pump is running right now — moisture is recovering."
-      : zoneB && zoneB.soilMoisture < t.moistureLow
-        ? "Recommendation: keep the pump in Auto AI mode so Zone B gets watered on time."
+      : soilVal < t.moistureLow
+        ? "Recommendation: keep the pump in Auto AI mode so the soil gets watered on time."
         : "Recommendation: conditions are stable — keep the pump in Auto AI mode.",
   );
   return parts.join(" ");
@@ -796,26 +809,15 @@ export function suggestActions(state: DashboardAiState): Suggestion[] {
     });
   }
 
-  // 5. Tank refill.
-  if (s.tankLevelPercent < 5) {
+  // 5. Rain skip recommendation.
+  if (s.rain) {
     out.push({
-      id: "tank-critical",
-      title: "Tank nearly empty",
-      message: `Only ${f1(s.tankLevelPercent)}% left — the pump cannot run. Refill now.`,
-      severity: "critical",
-      icon: "tank",
-      score: 98,
-      actionLabel: "Irrigation",
-      actionHref: "/irrigation",
-    });
-  } else if (s.tankLevelPercent < t.tankLow) {
-    out.push({
-      id: "tank",
-      title: "Refill water tank",
-      message: `Tank at ${f1(s.tankLevelPercent)}% (below ${t.tankLow}%) — refill soon.`,
-      severity: "warning",
-      icon: "tank",
-      score: 90,
+      id: "rain-skip",
+      title: "Rain detected",
+      message: `Active rainfall (${(s.rainMm ?? 0).toFixed(1)} mm) — hold scheduled irrigation to save water.`,
+      severity: "info",
+      icon: "rain",
+      score: 75,
       actionLabel: "Irrigation",
       actionHref: "/irrigation",
     });

@@ -22,7 +22,7 @@ export default function AppRouteError({
           <TriangleAlert className="h-7 w-7" />
         </div>
         <h2 className="mt-5 text-xl font-extrabold tracking-tight text-white">
-          Something went wrong
+          Something broke here
         </h2>
         <p className="mt-2 text-xs leading-relaxed text-zinc-400">
           This section had trouble loading, but your live farm sensors and data are safe.
@@ -40,6 +40,15 @@ export default function AppRouteError({
           >
             <RotateCcw className="h-3.5 w-3.5" strokeWidth={2.5} />
             Retry
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined") window.location.reload();
+            }}
+            className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-5 py-2.5 text-xs font-semibold text-zinc-200 transition-all hover:border-emerald-500/40 hover:text-white active:scale-95 cursor-pointer"
+          >
+            Reload
           </button>
           <Link
             href="/dashboard"

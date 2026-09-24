@@ -74,8 +74,6 @@ const PLANTS: { x: number; y: number; s: number; zone: "A" | "B" | "C" }[] = (()
   return out;
 })();
 
-const TANK_SX = 1810;
-
 function drawPlant(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -146,8 +144,7 @@ export default function SimulatedCamera() {
         (p) => p.x > camX - 40 && p.x < camX + CAM_VIEW_W + 40,
       ).slice(0, 4);
       const dets: Detection[] = visible.map((p, i) => {
-        const zone = st.zones.find((z) => z.id === p.zone);
-        const m = zone?.soilMoisture ?? 40;
+        const m = st.snapshot?.soil ?? 45;
         const dry = m < low;
         const conf = 82 + Math.floor(Math.random() * 14);
         return {
@@ -162,18 +159,6 @@ export default function SimulatedCamera() {
           color: dry ? "#fbbf24" : "#4ade80",
         };
       });
-      // Tank telemetry box when the tank is in frame.
-      if (TANK_SX > camX - 60 && TANK_SX < camX + CAM_VIEW_W + 60) {
-        dets.push({
-          id: "det-tank",
-          sx: TANK_SX - 55,
-          sy: 120,
-          w: 110,
-          h: 92,
-          label: `Tank: ${st.snapshot.tankLevelPercent.toFixed(0)}%`,
-          color: "#38bdf8",
-        });
-      }
       detectionsRef.current = dets;
       setDetectionsTick((v) => v + 1);
     };
@@ -203,20 +188,13 @@ export default function SimulatedCamera() {
       const camX = sm.pan;
       const tiltY = sm.tilt;
 
-      const d = new Date(st.snapshot.timestamp);
+      const d = new Date(st.snapshot?.timestamp ?? Date.now());
       const hour = d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
       const [skyTop, skyBottom] = skyColors(hour);
       const isDay = hour >= 6 && hour <= 19;
 
-      const zoneA = st.zones.find((z) => z.id === "A");
-      const zoneB = st.zones.find((z) => z.id === "B");
-      const zoneC = st.zones.find((z) => z.id === "C");
-      const moistureOf = (id: string) =>
-        id === "A"
-          ? (zoneA?.soilMoisture ?? 45)
-          : id === "B"
-            ? (zoneB?.soilMoisture ?? 22)
-            : (zoneC?.soilMoisture ?? 33);
+      const singleSoil = st.snapshot?.soil ?? 45;
+      const moistureOf = (_id?: string) => singleSoil;
 
       /* ---- base (fills tilt gaps) ---- */
       const base = ctx.createLinearGradient(0, 0, 0, CAM_VIEW_H);
@@ -334,22 +312,6 @@ export default function SimulatedCamera() {
       ctx.moveTo(camX - 10, 228);
       ctx.lineTo(camX + CAM_VIEW_W + 10, 228);
       ctx.stroke();
-
-      /* ---- water tank (far right of scene) ---- */
-      const tankH = 110;
-      const tankY = 175 - tankH;
-      const pct = Math.max(0, Math.min(100, st.snapshot.tankLevelPercent));
-      ctx.fillStyle = "#0f172a";
-      ctx.fillRect(TANK_SX - 45, tankY, 90, tankH);
-      ctx.strokeStyle = "#38bdf8";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(TANK_SX - 45, tankY, 90, tankH);
-      const wh = (tankH - 8) * (pct / 100);
-      ctx.fillStyle = "#0284c7";
-      ctx.fillRect(TANK_SX - 41, tankY + tankH - 4 - wh, 82, wh);
-      ctx.fillStyle = "#e7f5ec";
-      ctx.font = "bold 11px monospace";
-      ctx.fillText(`TANK ${pct.toFixed(0)}%`, TANK_SX - 38, tankY + tankH + 16);
 
       /* ---- plants ---- */
       const low = st.settings.thresholds.moistureLow;
