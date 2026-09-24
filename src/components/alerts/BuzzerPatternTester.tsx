@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Bell, Sparkles, AlertCircle, AlertTriangle, Info, Play } from "lucide-react";
 import { useFarmStore } from "@/lib/store";
-import { cmdBuzzPattern } from "@/lib/mqtt-bridge";
 import { LiquidToggle } from "@/components/ui/glass";
 import { cn } from "@/lib/utils";
 
@@ -54,7 +53,9 @@ export default function BuzzerPatternTester({ className }: { className?: string 
 
     if (!muteBuzzer) {
       playBuzzerAudio(beeps, ms);
-      cmdBuzzPattern(beeps, ms);
+      void import("@/lib/mqtt-bridge")
+        .then((m) => m.cmdBuzzPattern(beeps, ms))
+        .catch(() => {});
     }
   };
 

@@ -176,7 +176,7 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
   return (
     <div
       className={cn(
-        "liquid-glass-card relative overflow-hidden rounded-3xl p-5 md:p-6 transition-all duration-300",
+        "liquid-glass-card relative overflow-hidden rounded-3xl transition-all duration-300",
         tone.border,
         tone.glow,
         className,

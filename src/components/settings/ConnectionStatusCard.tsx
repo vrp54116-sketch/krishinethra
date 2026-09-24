@@ -1,9 +1,8 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Clock, MessageSquare, Radio, Server, Wifi } from "lucide-react";
 import { useFarmStore } from "@/lib/store";
-import { getActiveBroker } from "@/lib/mqtt-bridge";
 import { cn } from "@/lib/utils";
 
 function subscribeNow(callback: () => void) {
@@ -49,7 +48,27 @@ export default function ConnectionStatusCard({ className }: { className?: string
   };
 
   const wifi = getWifiQuality(rawRssi);
-  const brokerName = getActiveBroker() || "wss://broker.emqx.io:8084/mqtt";
+
+  // Broker URL lives in the mqtt-bridge module — load it lazily so the
+  // `mqtt` package stays out of the initial bundle.
+  const [activeBroker, setActiveBroker] = useState("");
+  useEffect(() => {
+    let alive = true;
+    const tick = () => {
+      void import("@/lib/mqtt-bridge")
+        .then((m) => {
+          if (alive) setActiveBroker(m.getActiveBroker());
+        })
+        .catch(() => {});
+    };
+    tick();
+    const id = setInterval(tick, 5000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, []);
+  const brokerName = activeBroker || "wss://broker.emqx.io:8084/mqtt";
 
   return (
     <div

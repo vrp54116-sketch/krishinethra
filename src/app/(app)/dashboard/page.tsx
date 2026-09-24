@@ -13,11 +13,19 @@ import EdgeStaleBanner from "@/components/mqtt/EdgeStaleBanner";
 import EdgeAiStatusBanners from "@/components/dashboard/EdgeAiStatusBanners";
 import AiAgentReasoning from "@/components/dashboard/AiAgentReasoning";
 import SensorHealthCard from "@/components/dashboard/SensorHealthCard";
+import LiveCameraCard from "@/components/dashboard/LiveCameraCard";
 import { LiquidStaggerContainer, LiquidStaggerItem } from "@/components/ui/glass";
 
 /**
- * /dashboard — the KrishiNethra command center.
- * Everything is live from the zustand simulation store.
+ * /dashboard — the KrishiNethra liquid-glass command center.
+ *
+ * V2.5 layout:
+ *  - Desktop (xl+): 2 columns.
+ *      Left : 4 sensor cards (2×2) + AI Agent Reasoning + Sensor Health
+ *      Right: Farm Health score + Pump control + Live camera + Alerts feed
+ *  - Tablet/mobile: single column, cards stack with a 16px gap;
+ *    mobile uses the shell's compact card padding, bottom tab bar + FAB.
+ * All cards use liquid-glass-card styling (24px padding).
  */
 export default function DashboardPage() {
   const profile = useFarmStore((s) => s.settings.farmProfile);
@@ -56,49 +64,52 @@ export default function DashboardPage() {
         <EdgeAiStatusBanners />
       </LiquidStaggerItem>
 
-      {/* 1. SIGNATURE AI AGENT REASONING DISPLAY */}
-      <LiquidStaggerItem>
-        <AiAgentReasoning />
-      </LiquidStaggerItem>
-
-      {/* V2.1 LIQUID GLASS LAYOUT
-          Desktop (xl+): 2-column — left: sensors + AI reasoning,
-          right: health + pump + camera quick actions.
-          Tablet/mobile: single column, cards stack (right column first). */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        {/* ---- LEFT: sensors + health monitor (+ alerts/water) ---- */}
-        <div className="order-2 flex min-w-0 flex-col gap-4 xl:order-1 space-y-4">
-          <LiquidStaggerItem>
-            <SensorHealthCard />
-          </LiquidStaggerItem>
+      {/* V2.5 LIQUID GLASS GRID
+          Desktop (xl+): left = sensors (2×2) + AI reasoning + sensor health,
+          right = farm health + pump + live camera + alerts.
+          Tablet/mobile: single column, 16px (gap-4) stack. */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:items-start">
+        {/* ---- LEFT: 4 sensor cards (2×2) + AI Agent Reasoning + Sensor Health ---- */}
+        <div className="liquid-contain flex min-w-0 flex-col gap-4">
           <LiquidStaggerItem>
             <SensorGrid />
           </LiquidStaggerItem>
           <LiquidStaggerItem>
-            <SuggestionsCard />
+            <AiAgentReasoning />
+          </LiquidStaggerItem>
+          <LiquidStaggerItem>
+            <SensorHealthCard />
+          </LiquidStaggerItem>
+        </div>
+
+        {/* ---- RIGHT: Farm Health score + Pump + Live camera + Alerts ---- */}
+        <div className="flex min-w-0 flex-col gap-4">
+          <LiquidStaggerItem>
+            <HealthScoreCard />
+          </LiquidStaggerItem>
+          <LiquidStaggerItem>
+            <PumpControl />
+          </LiquidStaggerItem>
+          <LiquidStaggerItem>
+            <LiveCameraCard />
           </LiquidStaggerItem>
           <LiquidStaggerItem>
             <AlertsFeed />
           </LiquidStaggerItem>
         </div>
+      </div>
 
-        {/* ---- RIGHT: health + pump + camera ---- */}
-        <div className="order-1 flex min-w-0 flex-col gap-4 xl:order-2 space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <LiquidStaggerItem className="h-full sm:col-span-1">
-              <HealthScoreCard />
-            </LiquidStaggerItem>
-            <LiquidStaggerItem className="h-full sm:col-span-2">
-              <DailyReportCard />
-            </LiquidStaggerItem>
-          </div>
-          <LiquidStaggerItem>
-            <PumpControl />
-          </LiquidStaggerItem>
-          <LiquidStaggerItem>
-            <QuickActions />
-          </LiquidStaggerItem>
-        </div>
+      {/* Secondary row: report, AI suggestions, quick actions */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <LiquidStaggerItem className="lg:col-span-1">
+          <DailyReportCard />
+        </LiquidStaggerItem>
+        <LiquidStaggerItem className="lg:col-span-1">
+          <SuggestionsCard />
+        </LiquidStaggerItem>
+        <LiquidStaggerItem className="lg:col-span-1">
+          <QuickActions />
+        </LiquidStaggerItem>
       </div>
     </LiquidStaggerContainer>
   );

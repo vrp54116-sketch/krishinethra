@@ -4,6 +4,7 @@ import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useFocusTrap } from "./useFocusTrap";
 
 export interface GlassSheetProps {
   open: boolean;
@@ -20,14 +21,8 @@ export function GlassSheet({
   className,
   showClose = true,
 }: GlassSheetProps) {
-  React.useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  // V2.5 a11y — trap focus while open, Escape closes, focus restored on close.
+  const sheetRef = useFocusTrap<HTMLDivElement>(open, onClose);
 
   return (
     <AnimatePresence>
@@ -42,8 +37,10 @@ export function GlassSheet({
           role="presentation"
         >
           <motion.div
+            ref={sheetRef}
             role="dialog"
             aria-modal="true"
+            tabIndex={-1}
             className={cn(
               "glass-strong w-full max-w-lg p-6",
               "rounded-t-[28px] sm:rounded-[24px]",

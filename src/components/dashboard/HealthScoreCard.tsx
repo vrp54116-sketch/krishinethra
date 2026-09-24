@@ -40,7 +40,7 @@ export default function HealthScoreCard() {
   );
 
   return (
-    <Card className="relative flex flex-col items-center justify-between overflow-visible text-center max-h-[220px] h-[220px] p-3.5 sm:p-4">
+    <Card className="relative flex flex-col items-center justify-between overflow-visible text-center max-h-[220px] h-[220px]">
       <div className="flex w-full items-center justify-between">
         <h2 className="text-xs font-bold tracking-tight text-white sm:text-sm">
           {t("common.farmHealthScore")}

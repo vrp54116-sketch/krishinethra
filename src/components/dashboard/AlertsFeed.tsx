@@ -45,6 +45,7 @@ export default function AlertsFeed() {
               <button
                 type="button"
                 onClick={markAlertsRead}
+                aria-label={`Mark all ${unread} alerts as read`}
                 className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-bold text-[#F3F4F6] transition-colors hover:border-[#34D399]/40 hover:text-[#34D399]"
               >
                 {t("common.markAllRead")}
@@ -52,6 +53,7 @@ export default function AlertsFeed() {
             )}
             <Link
               href="/alerts"
+              aria-label="View all alerts"
               className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-bold text-[#F3F4F6] transition-colors hover:border-[#34D399]/40 hover:text-[#34D399]"
             >
               {t("common.viewAll")}
@@ -98,6 +100,7 @@ export default function AlertsFeed() {
                 type="button"
                 onClick={() => markAlertRead(a.id)}
                 title="Mark as read"
+                aria-label={`Mark alert as read: ${a.title}`}
                 className={cn(
                   "w-full rounded-[16px] border border-white/10 border-l-4 bg-[rgba(18,26,22,0.66)] p-3 text-left backdrop-blur-md transition-all hover:bg-[rgba(18,26,22,0.85)]",
                   LEVEL_BORDER[a.level] ?? "border-l-[#34D399]",

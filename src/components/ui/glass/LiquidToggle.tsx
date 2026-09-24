@@ -1,8 +1,6 @@
 "use client";
 
 import * as React from "react";
-import gsap from "gsap";
-import { Draggable } from "gsap/Draggable";
 import { cn } from "@/lib/utils";
 import { playToggleClick } from "@/lib/audio";
 
@@ -10,6 +8,8 @@ import { playToggleClick } from "@/lib/audio";
  * LiquidToggle — Apple-style liquid switch.
  *
  * - GSAP Draggable drives the handle with real drag physics (bounds = track).
+ *   gsap is loaded via dynamic import so it never lands in the initial
+ *   page bundle; a CSS-transition fallback covers the pre-load window.
  * - The whole track+handle group sits under the #liquid-gooey SVG filter so
  *   the handle visibly melts into the track while it travels.
  * - The handle morphs scale 1.1 → 1.65 during a drag and springs back with
@@ -20,8 +20,24 @@ import { playToggleClick } from "@/lib/audio";
  *   native button Enter/Space activation.
  */
 
-if (typeof window !== "undefined") {
-  gsap.registerPlugin(Draggable);
+type Gsap = typeof import("gsap")["default"];
+type DraggablePlugin = typeof import("gsap/Draggable")["Draggable"];
+
+let gsapPromise: Promise<{ gsap: Gsap; Draggable: DraggablePlugin }> | null =
+  null;
+
+function loadGsap(): Promise<{ gsap: Gsap; Draggable: DraggablePlugin }> {
+  if (!gsapPromise) {
+    gsapPromise = Promise.all([import("gsap"), import("gsap/Draggable")]).then(
+      ([gsapMod, dragMod]) => {
+        if (typeof window !== "undefined") {
+          gsapMod.default.registerPlugin(dragMod.Draggable);
+        }
+        return { gsap: gsapMod.default, Draggable: dragMod.Draggable };
+      },
+    );
+  }
+  return gsapPromise;
 }
 
 export interface LiquidToggleProps {
@@ -66,6 +82,20 @@ export const LiquidToggle = React.forwardRef<HTMLButtonElement, LiquidToggleProp
     const movedRef = React.useRef(false);
     const pressProgressRef = React.useRef(checked ? 1 : 0);
     const reduceMotionRef = React.useRef(false);
+    const gsapRef = React.useRef<Gsap | null>(null);
+
+    /** Position the handle; uses gsap when loaded, plain CSS otherwise. */
+    const applyHandle = React.useCallback((x: number, scale = 1) => {
+      const handle = handleRef.current;
+      if (!handle) return;
+      const g = gsapRef.current;
+      if (g) {
+        g.set(handle, { x, scale });
+      } else {
+        handle.style.transition = "none";
+        handle.style.transform = `translate(${x}px, 0) scale(${scale})`;
+      }
+    }, []);
 
     /** Paint track + handle colours for a 0→1 progress value. */
     const paint = React.useCallback((p: number) => {
@@ -106,13 +136,23 @@ export const LiquidToggle = React.forwardRef<HTMLButtonElement, LiquidToggleProp
         paint(progressRef.current);
         const handle = handleRef.current;
         if (handle) {
-          gsap.to(handle, {
-            x: (next ? 1 : 0) * TRAVEL,
-            scale: 1,
-            duration: reduceMotionRef.current ? 0 : 0.7,
-            ease: reduceMotionRef.current ? "none" : "elastic.out(1, 0.45)",
-            overwrite: "auto",
-          });
+          const x = (next ? 1 : 0) * TRAVEL;
+          const g = gsapRef.current;
+          if (g) {
+            g.to(handle, {
+              x,
+              scale: 1,
+              duration: reduceMotionRef.current ? 0 : 0.7,
+              ease: reduceMotionRef.current ? "none" : "elastic.out(1, 0.45)",
+              overwrite: "auto",
+            });
+          } else {
+            // gsap chunk not loaded yet — spring with a plain CSS transition.
+            handle.style.transition = reduceMotionRef.current
+              ? "none"
+              : "transform 0.65s cubic-bezier(0.34, 1.56, 0.64, 1)";
+            handle.style.transform = `translate(${x}px, 0) scale(1)`;
+          }
         }
         if (next !== checked) {
           playToggleClick();
@@ -135,62 +175,70 @@ export const LiquidToggle = React.forwardRef<HTMLButtonElement, LiquidToggleProp
         typeof window !== "undefined" &&
         window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       paint(progressRef.current);
-      if (handleRef.current) {
-        gsap.set(handleRef.current, {
-          x: progressRef.current * TRAVEL,
-          scale: 1,
-        });
-      }
+      applyHandle(progressRef.current * TRAVEL, 1);
       // Only repaint when the prop actually changed externally.
       if (checkedRef.current !== checked) {
         checkedRef.current = checked;
         progressRef.current = checked ? 1 : 0;
         paint(progressRef.current);
-        if (handleRef.current) {
-          gsap.set(handleRef.current, {
-            x: progressRef.current * TRAVEL,
-            scale: 1,
-          });
-        }
+        applyHandle(progressRef.current * TRAVEL, 1);
       }
-    }, [checked, paint]);
+    }, [checked, paint, applyHandle]);
 
-    // Physics-driven drag.
+    // Physics-driven drag (gsap loaded lazily on first mount).
     React.useLayoutEffect(() => {
       const handle = handleRef.current;
       const track = trackRef.current;
       if (!handle || !track) return;
 
-      const instances = Draggable.create(handle, {
-        type: "x",
-        bounds: track,
-        edgeResistance: 0.72,
-        dragResistance: 0.08,
-        onPress() {
-          movedRef.current = false;
-          pressProgressRef.current = progressRef.current;
-          gsap.killTweensOf(handle);
-        },
-        onDrag() {
-          movedRef.current = true;
-          const x = Number(gsap.getProperty(handle, "x")) || 0;
-          const p = clamp01(x / TRAVEL);
-          progressRef.current = p;
-          // Stretch: 1.1 at grab → up to 1.65 the further you throw it.
-          const stretch = Math.abs(p - pressProgressRef.current);
+      let killed = false;
+      let instances: { kill: () => void }[] = [];
+
+      loadGsap()
+        .then(({ gsap, Draggable }) => {
+          if (killed) return;
+          gsapRef.current = gsap;
+          // Sync position via gsap and cancel any CSS fallback transition.
+          handle.style.transition = "none";
           gsap.set(handle, {
-            scale: reduceMotionRef.current ? 1 : 1.1 + 0.55 * clamp01(stretch),
+            x: progressRef.current * TRAVEL,
+            scale: 1,
           });
-          paint(p);
-        },
-        onDragEnd() {
-          const x = Number(gsap.getProperty(handle, "x")) || 0;
-          const next = x / TRAVEL > 0.5;
-          settleRef.current(next);
-        },
-      });
+          instances = Draggable.create(handle, {
+            type: "x",
+            bounds: track,
+            edgeResistance: 0.72,
+            dragResistance: 0.08,
+            onPress() {
+              movedRef.current = false;
+              pressProgressRef.current = progressRef.current;
+              gsap.killTweensOf(handle);
+            },
+            onDrag() {
+              movedRef.current = true;
+              const x = Number(gsap.getProperty(handle, "x")) || 0;
+              const p = clamp01(x / TRAVEL);
+              progressRef.current = p;
+              // Stretch: 1.1 at grab → up to 1.65 the further you throw it.
+              const stretch = Math.abs(p - pressProgressRef.current);
+              gsap.set(handle, {
+                scale: reduceMotionRef.current ? 1 : 1.1 + 0.55 * clamp01(stretch),
+              });
+              paint(p);
+            },
+            onDragEnd() {
+              const x = Number(gsap.getProperty(handle, "x")) || 0;
+              const next = x / TRAVEL > 0.5;
+              settleRef.current(next);
+            },
+          });
+        })
+        .catch(() => {
+          /* offline/guest — CSS fallback stays in effect */
+        });
 
       return () => {
+        killed = true;
         instances.forEach((d) => d.kill());
       };
     }, [paint]);

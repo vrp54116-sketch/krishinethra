@@ -14,14 +14,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useFarmStore } from "@/lib/store";
-import {
-  cmdBuzzPattern,
-  cmdMode,
-  cmdPumpOff,
-  cmdPumpOn,
-  cmdServo,
-} from "@/lib/mqtt-bridge";
 import { cn } from "@/lib/utils";
+
+/** Lazy MQTT bridge — keeps the `mqtt` package out of the initial bundle. */
+const withMqtt = (
+  fn: (m: typeof import("@/lib/mqtt-bridge")) => void,
+): void => {
+  void import("@/lib/mqtt-bridge").then(fn).catch(() => {});
+};
 
 export default function QuickActionsFAB() {
   const [open, setOpen] = useState(false);
@@ -51,7 +51,7 @@ export default function QuickActionsFAB() {
   // Actions
   const handlePumpOn = () => {
     setPumpManual(true);
-    cmdPumpOn();
+    withMqtt((m) => m.cmdPumpOn());
     toast.success("Pump Dispatched (ON)", {
       description: "Manual 30s cycle started via Quick Actions.",
     });
@@ -60,7 +60,7 @@ export default function QuickActionsFAB() {
 
   const handlePumpOff = () => {
     setPumpManual(false);
-    cmdPumpOff();
+    withMqtt((m) => m.cmdPumpOff());
     toast.success("Pump Stopped (OFF)", {
       description: "Pump turned off by operator.",
     });
@@ -68,7 +68,7 @@ export default function QuickActionsFAB() {
   };
 
   const handleTestBuzzer = () => {
-    cmdBuzzPattern(2, 150);
+    withMqtt((m) => m.cmdBuzzPattern(2, 150));
     // Web Audio beep feedback
     try {
       const AudioCtx =
@@ -96,7 +96,7 @@ export default function QuickActionsFAB() {
   };
 
   const handleCenterCamera = () => {
-    cmdServo(90);
+    withMqtt((m) => m.cmdServo(90));
     useFarmStore.setState((s) => ({
       snapshot: { ...s.snapshot, servo: 90 },
     }));
@@ -116,9 +116,11 @@ export default function QuickActionsFAB() {
   const handleEmergencyStop = () => {
     setPumpManual(false);
     setPumpMode("manual");
-    cmdPumpOff();
-    cmdMode("MANUAL");
-    cmdBuzzPattern(3, 300);
+    withMqtt((m) => {
+      m.cmdPumpOff();
+      m.cmdMode("MANUAL");
+      m.cmdBuzzPattern(3, 300);
+    });
 
     addAlert({
       level: "critical",

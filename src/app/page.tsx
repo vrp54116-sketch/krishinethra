@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, MotionConfig } from "framer-motion";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -40,18 +40,10 @@ const SOIL_TYPES = ["Sandy", "Loamy", "Clay", "Black cotton"];
 const WATER_SOURCES = ["Borewell", "Canal", "Rain-fed", "Tank"];
 const IRRIGATION_METHODS = ["Flood", "Drip", "Sprinkler", "None"];
 const POWER_SOURCES = ["Electricity", "Solar", "Diesel", "None"];
-const CROP_LIST = [
-  "Tomato",
-  "Chili",
-  "Spinach",
-  "Onion",
-  "Potato",
-  "Wheat",
-  "Cotton",
-  "Okra",
-  "Banana",
-  "Groundnut",
-];
+/** V2.5 — single default crop (multi-crop picker removed). */
+const DEFAULT_CROP = "Tomato";
+const HARDWARE_NOTE =
+  "Hardware: 1 soil sensor, 1 air quality sensor, 1 temp/humidity sensor, 1 rain sensor, 1 pump";
 
 const inputCls =
   "w-full rounded-2xl border border-white/10 bg-black/50 px-4 py-3 pl-11 text-sm font-semibold text-white outline-none transition-all placeholder:font-normal placeholder:text-zinc-600 focus:border-emerald-400/70 focus:shadow-[0_0_20px_rgba(34,197,94,0.3)] focus:bg-black/70";
@@ -323,20 +315,27 @@ function Wizard() {
     );
   };
 
-  const toggleCrop = (crop: string) => {
-    const slug = crop.toLowerCase();
-    const has = (profile.crops ?? []).includes(slug);
-    const next = has
-      ? (profile.crops ?? []).filter((c) => c !== slug)
-      : [...(profile.crops ?? []), slug];
-    updateSettings({ farmProfile: { crops: next } });
-    const names = next.slice(0, 3).map((c) => mandiById(c)?.crop ?? c.charAt(0).toUpperCase() + c.slice(1));
-    if (names.length > 0) {
-      useFarmStore.setState((s) => ({
-        zones: s.zones.map((z, i) => (i < names.length ? { ...z, crop: names[i] } : z)),
-      }));
+  // V2.5 — step 4 defaults to a single crop ("Tomato") + single zone "Your Farm".
+  useEffect(() => {
+    if (step !== 4) return;
+    updateSettings({ farmProfile: { crops: ["tomato"] } });
+    const st = useFarmStore.getState();
+    const first = st.zones[0];
+    if (st.zones.length !== 1 || first?.name !== "Your Farm") {
+      useFarmStore.setState({
+        zones: [
+          {
+            id: "A",
+            name: "Your Farm",
+            crop: DEFAULT_CROP,
+            soilMoisture: first?.soilMoisture ?? 45,
+            status: first?.status ?? "healthy",
+          },
+        ],
+      });
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   const finish = () => {
     if (pinEnabled && pin.join("").length !== 4) {
@@ -364,26 +363,29 @@ function Wizard() {
     router.replace("/dashboard");
   };
 
-  const zoneNames = [0, 1, 2].map((i) => {
-    const slug = (profile.crops ?? [])[i];
-    if (!slug) return "—";
-    return mandiById(slug)?.crop ?? slug.charAt(0).toUpperCase() + slug.slice(1);
-  });
-
   return (
     <main className="relative flex h-full overflow-y-auto flex-col items-center overflow-x-hidden bg-transparent px-4 pb-10 pt-6 sm:pt-10">
       <FarmBackground />
       <div className="relative z-10 w-full max-w-xl">
-        {/* Progress */}
+        {/* Progress — liquid glass pill track + emerald fill, gooey morph per step */}
         <div className="mb-2 flex items-center justify-between text-xs font-bold">
           <span className="text-emerald-200/70">
             {t("onboarding.stepOf").replace("{step}", String(step))}
           </span>
           <span className="font-mono text-zinc-500">{step}/5</span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-white/10">
+        <div
+          className="liquid-glass liquid-glass-pill h-2.5 overflow-hidden rounded-full border border-white/15"
+          role="progressbar"
+          aria-valuemin={1}
+          aria-valuemax={5}
+          aria-valuenow={step}
+          aria-label="Onboarding progress"
+        >
           <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-[#34D399] via-[#2DD4BF] to-[#A3E635] shadow-[0_0_16px_rgba(52,211,153,0.65)]"
+            key={step}
+            className="liquid-gooey h-full rounded-full bg-gradient-to-r from-[#34D399] via-[#2DD4BF] to-[#A3E635] shadow-[0_0_16px_rgba(52,211,153,0.65)]"
+            initial={{ width: `${((step - 1) / 5) * 100}%` }}
             animate={{ width: `${(step / 5) * 100}%` }}
             transition={{ type: "spring", stiffness: 120, damping: 20 }}
           />
@@ -398,14 +400,21 @@ function Wizard() {
                 if (d < step) go(d);
               }}
               className={cn(
-                "h-2.5 rounded-full transition-all",
-                d === step
-                  ? "w-8 bg-emerald-400 shadow-[0_0_12px_rgba(34,197,94,0.7)]"
-                  : d < step
-                    ? "w-2.5 bg-emerald-500/70"
-                    : "w-2.5 bg-white/15",
+                "relative h-6 w-6 rounded-full transition-all",
               )}
-            />
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "absolute left-1/2 top-1/2 block h-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all",
+                  d === step
+                    ? "w-8 bg-emerald-400 shadow-[0_0_12px_rgba(34,197,94,0.7)]"
+                    : d < step
+                      ? "w-2.5 bg-emerald-500/70"
+                      : "w-2.5 bg-white/15",
+                )}
+              />
+            </button>
           ))}
         </div>
 
@@ -417,7 +426,7 @@ function Wizard() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -64 * dir }}
             transition={{ duration: 0.28, ease: "easeOut" }}
-            className="glass-strong rounded-[24px] p-6 sm:p-8 border border-white/10 shadow-2xl"
+            className="liquid-glass-card rounded-[24px] border border-white/10 shadow-2xl"
           >
             {step > 1 && (
               <button
@@ -884,36 +893,26 @@ function Wizard() {
                   </div>
                   <div>
                     <span className={labelCls}>{t("onboarding.crops")}</span>
-                    <div className="flex flex-wrap gap-2">
-                      {CROP_LIST.map((c) => {
-                        const active = (profile.crops ?? []).includes(c.toLowerCase());
-                        return (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={() => toggleCrop(c)}
-                            aria-pressed={active}
-                            className={cn(
-                              "rounded-full border px-3.5 py-2 text-xs font-bold transition-all active:scale-95",
-                              active
-                                ? "border-emerald-400/60 bg-emerald-500/15 text-white shadow-[0_0_12px_rgba(34,197,94,0.3)]"
-                                : "border-white/10 bg-black/30 text-zinc-400 hover:border-emerald-500/30 hover:text-white",
-                            )}
-                          >
-                            🌱 {c}
-                          </button>
-                        );
-                      })}
+                    {/* V2.5 — single default crop (multi-crop picker removed) */}
+                    <div
+                      className="flex items-center justify-between rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3"
+                      aria-label={`Crop: ${DEFAULT_CROP}`}
+                    >
+                      <span className="text-sm font-bold text-white">🌱 {DEFAULT_CROP}</span>
+                      <span className="rounded-full bg-emerald-500 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-black">
+                        Default
+                      </span>
                     </div>
-                    <p className="mt-2 text-[11px] text-zinc-500">{t("onboarding.cropsHint")}</p>
-                    {(profile.crops?.length ?? 0) > 0 && (
-                      <p className="mt-2 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-2 text-[11px] font-bold text-emerald-200">
-                        {t("onboarding.zonesPreview")
-                          .replace("{a}", zoneNames[0])
-                          .replace("{b}", zoneNames[1])
-                          .replace("{c}", zoneNames[2])}
-                      </p>
-                    )}
+                    <p className="mt-2 text-[11px] text-zinc-500">
+                      Single crop in v2 — your zone is set up automatically.
+                    </p>
+                    {/* Single zone — zone assignment removed */}
+                    <p className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] font-bold text-emerald-200">
+                      Zone: <span className="text-white">Your Farm</span> — single-zone setup
+                    </p>
+                    <p className="mt-2 rounded-xl border border-sky-400/25 bg-sky-500/[0.07] px-3 py-2 text-[11px] leading-relaxed text-sky-200">
+                      {HARDWARE_NOTE}
+                    </p>
                   </div>
                 </div>
                 <button
@@ -1082,7 +1081,12 @@ export default function LandingPage() {
   }
 
   if (onboardingDone) {
-    if (appPinHash && !isAuthenticated) return <PinUnlock />;
+    if (appPinHash && !isAuthenticated)
+      return (
+        <MotionConfig reducedMotion="user">
+          <PinUnlock />
+        </MotionConfig>
+      );
     return (
       <main className="relative flex h-full items-center justify-center bg-[#070B09]">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-500/30 border-t-emerald-400" />
@@ -1090,5 +1094,9 @@ export default function LandingPage() {
     );
   }
 
-  return <Wizard />;
+  return (
+    <MotionConfig reducedMotion="user">
+      <Wizard />
+    </MotionConfig>
+  );
 }

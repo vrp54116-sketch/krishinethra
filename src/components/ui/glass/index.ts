@@ -19,6 +19,7 @@ export { GlassModal } from "./GlassModal";
 export type { GlassModalProps } from "./GlassModal";
 export { GlassSheet } from "./GlassSheet";
 export type { GlassSheetProps } from "./GlassSheet";
+export { useFocusTrap } from "./useFocusTrap";
 export { AmbientBackground } from "./AmbientBackground";
 export { LiquidSpinner } from "./LiquidSpinner";
 export type { LiquidSpinnerProps } from "./LiquidSpinner";

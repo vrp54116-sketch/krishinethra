@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import type { ClimateForecastDay } from "@/lib/ai-engine";
@@ -7,9 +8,15 @@ import { useFarmStore } from "@/lib/store";
 import AdvisorCard from "@/components/climate/AdvisorCard";
 import ComfortPanel from "@/components/climate/ComfortPanel";
 import ForecastCards from "@/components/climate/ForecastCards";
-import HistoryGraphs from "@/components/climate/HistoryGraphs";
 import SensorRow from "@/components/climate/SensorRow";
+import PageSkeleton from "@/components/layout/PageSkeleton";
 import { fallbackForecast } from "@/components/climate/shared";
+
+// V2.5 performance — code-split the Recharts history graphs.
+const HistoryGraphs = dynamic(() => import("@/components/climate/HistoryGraphs"), {
+  ssr: false,
+  loading: () => <PageSkeleton rows={2} />,
+});
 
 function Rise({
   children,

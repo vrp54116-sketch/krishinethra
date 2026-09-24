@@ -25,7 +25,7 @@ export const chartTooltipStyle = {
 } as const;
 
 /** Custom glass-pill tooltip for Recharts (blur + white/15 border + 999px radius with spring entrance). */
-export function GlassChartTooltip({
+export const GlassChartTooltip = memo(function GlassChartTooltip({
   active,
   payload,
   label,
@@ -63,7 +63,7 @@ export function GlassChartTooltip({
       })}
     </motion.div>
   );
-}
+});
 
 /* ------------------------------------------------------------------ */
 /* Card shell — Aurora Harvest GlassCard with click ripple & hover     */
@@ -102,7 +102,7 @@ export function Card({
     <div
       onClick={handleClick}
       className={cn(
-        "relative overflow-hidden liquid-card-hover",
+        "relative overflow-hidden liquid-card-hover will-change-transform",
         variant === "strong"
           ? "liquid-glass-strong rounded-[28px]"
           : "liquid-glass-card",
@@ -139,7 +139,7 @@ export function CardHeader({
   return (
     <div className="mb-3 flex items-start justify-between gap-2">
       <div className="min-w-0">
-        <h2 className="truncate text-[13px] font-semibold uppercase tracking-wider text-white/50">
+        <h2 className="truncate text-[13px] font-semibold uppercase tracking-wider text-zinc-300">
           {title}
         </h2>
         {subtitle && (

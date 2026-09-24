@@ -4,6 +4,7 @@ import * as React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useFocusTrap } from "./useFocusTrap";
 
 export interface GlassModalProps {
   open: boolean;
@@ -20,14 +21,8 @@ export function GlassModal({
   className,
   showClose = true,
 }: GlassModalProps) {
-  React.useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  // V2.5 a11y — trap focus while open, Escape closes, focus restored on close.
+  const dialogRef = useFocusTrap<HTMLDivElement>(open, onClose);
 
   return (
     <AnimatePresence>
@@ -42,8 +37,10 @@ export function GlassModal({
           role="presentation"
         >
           <motion.div
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
+            tabIndex={-1}
             className={cn("glass-strong w-full max-w-lg p-6", className)}
             initial={{ opacity: 0, scale: 0.94, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}

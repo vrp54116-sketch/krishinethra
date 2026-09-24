@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import AppToaster from "@/components/layout/AppToaster";
 import ServiceWorkerRegister from "@/components/pwa/ServiceWorkerRegister";
 import DemoSeedBoot from "@/components/pwa/DemoSeedBoot";
@@ -16,13 +18,19 @@ import "../lib/liquid-glass.css";
 // runtime via <link> below with a system-font fallback, so the build is
 // fully offline-safe.
 
+const SITE_TITLE = "KrishiNethra AI v2 — Liquid Glass Smart Farm";
+const SITE_DESCRIPTION =
+  "KrishiNethra AI v2 liquid glass edition — Har Khet Ka AI Doctor: offline-first smart farm command center with live sensors, AI agent reasoning, irrigation, weather, market and ESP32 MQTT edge control from anywhere.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://krishinethra.vercel.app",
+  ),
   title: {
-    default: "KrishiNethra AI",
-    template: "%s • KrishiNethra AI",
+    default: SITE_TITLE,
+    template: "%s • KrishiNethra AI v2",
   },
-  description:
-    "Har Khet Ka AI Doctor — offline-first smart farm command center: live sensors, crop doctor, irrigation, weather, market and AI tasks.",
+  description: SITE_DESCRIPTION,
   applicationName: "KrishiNethra AI",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
@@ -31,18 +39,41 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
   },
   formatDetection: { telephone: false },
+  keywords: [
+    "smart farm",
+    "precision agriculture",
+    "liquid glass",
+    "ESP32",
+    "MQTT",
+    "irrigation",
+    "KrishiNethra",
+  ],
   icons: {
     icon: [
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
   openGraph: {
-    title: "KrishiNethra AI",
-    description: "Har Khet Ka AI Doctor — offline-first smart farm command center.",
-    siteName: "KrishiNethra AI",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    siteName: "KrishiNethra AI v2",
     type: "website",
+    images: [
+      {
+        url: "/icon-512.png",
+        width: 512,
+        height: 512,
+        alt: "KrishiNethra AI v2 liquid glass smart farm",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: ["/icon-512.png"],
   },
 };
 
@@ -87,6 +118,10 @@ export default function RootLayout({
         <AlertPipelineListener />
         <ServiceWorkerRegister />
         <DemoSeedBoot />
+        {/* Vercel Web Vitals + Speed Insights (only on Vercel — the scripts
+            404 locally and would log console errors on self-hosted builds) */}
+        {process.env.VERCEL ? <Analytics /> : null}
+        {process.env.VERCEL ? <SpeedInsights /> : null}
       </body>
     </html>
   );

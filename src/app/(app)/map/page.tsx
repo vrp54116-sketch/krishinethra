@@ -1,10 +1,17 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFarmStore } from "@/lib/store";
-import FarmMap from "@/components/map/FarmMap";
+import PageSkeleton from "@/components/layout/PageSkeleton";
+
+// V2.5 performance — code-split the heavy digital-twin map.
+const FarmMap = dynamic(() => import("@/components/map/FarmMap"), {
+  ssr: false,
+  loading: () => <PageSkeleton rows={3} />,
+});
 
 export default function MapPage() {
   const mode = useFarmStore((s) => s.settings.mode);

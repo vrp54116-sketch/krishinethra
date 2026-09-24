@@ -131,6 +131,20 @@ html.light {
   padding: 24px;
 }
 
+/* V2.5 performance — animated glass cards promote their transform layer so
+   hover/entrance transitions never repaint the whole surface. */
+.liquid-glass-card,
+.liquid-card-hover {
+  will-change: transform;
+}
+
+/* V2.5 performance — isolate rendering of liquid glass containers so layout/
+   paint work inside a card never leaks to siblings. Use on static containers
+   (grids/columns) only — NOT on cards that host overflowing popovers. */
+.liquid-contain {
+  contain: strict;
+}
+
 @media (max-width: 640px) {
   .liquid-glass-card {
     padding: 18px;
@@ -661,6 +675,15 @@ html.light {
 }
 
 } /* @layer components */
+
+/* --------------------------------------------------------------------------
+   6b. V2.5 GLOBAL FOCUS RING (keyboard-only, WCAG 2.4.7)
+   -------------------------------------------------------------------------- */
+
+:focus-visible {
+  outline: 2px solid rgba(52, 211, 153, 0.9);
+  outline-offset: 2px;
+}
 
 /* --------------------------------------------------------------------------
    6. LEGACY SURFACE ADOPTION

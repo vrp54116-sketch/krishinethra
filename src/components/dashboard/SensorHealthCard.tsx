@@ -79,7 +79,7 @@ export default function SensorHealthCard({ className }: { className?: string }) 
   return (
     <div
       className={cn(
-        "liquid-glass-card rounded-3xl p-5 md:p-6 transition-all duration-300",
+        "liquid-glass-card rounded-3xl transition-all duration-300",
         className,
       )}
     >

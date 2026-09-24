@@ -26,30 +26,20 @@
  */
 
 import mqtt, { type MqttClient } from "mqtt";
+import throttle from "lodash.throttle";
 import { useFarmStore } from "./store";
 import { logCommand } from "./command-logger";
+import {
+  DEFAULT_BROKERS,
+  DEFAULT_FARM_TOKEN,
+  ENV_BROKER_URL,
+  topicsFor,
+} from "./mqtt-config";
 
-export const DEFAULT_BROKERS = [
-  "wss://broker.emqx.io:8084/mqtt",
-  "wss://broker.hivemq.com:8884/mqtt",
-] as const;
-
-export const DEFAULT_FARM_TOKEN = "patelfarm01";
+// Re-export light constants so existing `mqtt-bridge` imports keep working.
+export { DEFAULT_BROKERS, DEFAULT_FARM_TOKEN, topicsFor } from "./mqtt-config";
 
 export type MqttConnStatus = "connecting" | "online" | "offline";
-
-export function topicsFor(token: string): {
-  up: string;
-  state: string;
-  cmd: string;
-} {
-  const t = (token || DEFAULT_FARM_TOKEN).trim() || DEFAULT_FARM_TOKEN;
-  return {
-    up: `krishinethra/${t}/up`,
-    state: `krishinethra/${t}/state`,
-    cmd: `krishinethra/${t}/cmd`,
-  };
-}
 
 /* ------------------------------------------------------------------ */
 /* Singleton client state                                               */
@@ -88,6 +78,7 @@ function brokerCandidates(preferred?: string): string[] {
   const list: string[] = [];
   const p = (preferred || "").trim();
   if (p) list.push(p);
+  if (ENV_BROKER_URL && !list.includes(ENV_BROKER_URL)) list.push(ENV_BROKER_URL);
   for (const b of DEFAULT_BROKERS) {
     if (!list.includes(b)) list.push(b);
   }
@@ -300,6 +291,16 @@ function applyEdgePayload(raw: unknown): void {
   } as never);
 }
 
+/**
+ * V2.5 performance — throttle telemetry merges to max 10 store updates per
+ * second (100ms) with lodash.throttle. Leading edge keeps the first frame
+ * snappy; trailing edge guarantees the latest frame is never dropped.
+ */
+const applyEdgePayloadThrottled = throttle(applyEdgePayload, 100, {
+  leading: true,
+  trailing: true,
+});
+
 function startClient(brokerUrl: string, token: string, candidates: string[]): void {
   activeBroker = brokerUrl;
   activeToken = token;
@@ -344,7 +345,7 @@ function startClient(brokerUrl: string, token: string, candidates: string[]): vo
     const { up, state } = topicsFor(activeToken);
     if (topic !== up && topic !== state) return;
     try {
-      applyEdgePayload(text);
+      applyEdgePayloadThrottled(text);
     } catch {
       /* malformed frame — ignore, link stays up */
     }
@@ -384,9 +385,9 @@ function startClient(brokerUrl: string, token: string, candidates: string[]): vo
 export function connect(brokerUrl: string, token: string): void {
   if (typeof window === "undefined") return;
   const t = (token || DEFAULT_FARM_TOKEN).trim() || DEFAULT_FARM_TOKEN;
-  const b = (brokerUrl || "auto").trim();
+  const b = (brokerUrl || ENV_BROKER_URL || "auto").trim();
   const candidates =
-    !b || b.toLowerCase() === "auto" ? [...DEFAULT_BROKERS] : brokerCandidates(b);
+    !b || b.toLowerCase() === "auto" ? brokerCandidates(ENV_BROKER_URL) : brokerCandidates(b);
   wantConnect = true;
   failoverIdx = 0;
   try {
@@ -401,6 +402,7 @@ export function connect(brokerUrl: string, token: string): void {
 export function disconnect(): void {
   wantConnect = false;
   clearFailoverTimer();
+  applyEdgePayloadThrottled.cancel();
   try {
     client?.end(true);
   } catch {

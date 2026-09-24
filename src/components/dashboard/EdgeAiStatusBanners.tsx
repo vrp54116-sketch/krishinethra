@@ -142,6 +142,8 @@ export default function EdgeAiStatusBanners({ className }: { className?: string 
         {activeBanner && (
           <motion.div
             key={activeBanner.id}
+            role="alert"
+            aria-live="assertive"
             initial={{ opacity: 0, y: -28, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.96 }}
@@ -184,6 +186,7 @@ export default function EdgeAiStatusBanners({ className }: { className?: string 
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleDismiss}
+                  aria-label={`Dismiss banner: ${activeBanner.title}`}
                   className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-medium text-white/80 hover:text-white bg-white/10 hover:bg-white/20 border border-white/15 transition-all"
                 >
                   <X className="h-3.5 w-3.5" />

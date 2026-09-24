@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFarmStore } from "@/lib/store";
-import { DEFAULT_BROKERS, topicsFor } from "@/lib/mqtt-bridge";
+import { DEFAULT_BROKERS, topicsFor } from "@/lib/mqtt-config";
 import { Card, CardHeader } from "@/components/dashboard/ui";
 import ShareFarmLink from "./ShareFarmLink";
 import DemoTourButton from "./DemoTourButton";

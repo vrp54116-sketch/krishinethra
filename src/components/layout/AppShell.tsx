@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, MotionConfig } from "framer-motion";
 import {
   BarChart3,
   Bell,
@@ -40,9 +40,19 @@ import InstallAppButton from "@/components/pwa/InstallAppButton";
 import PageSkeleton from "@/components/layout/PageSkeleton";
 import AppToaster from "@/components/layout/AppToaster";
 import QuickActionsFAB from "@/components/layout/QuickActionsFAB";
+import LiveAnnouncer from "@/components/layout/LiveAnnouncer";
 import { AmbientBackground, LiquidButton, ThemeToggle } from "@/components/ui/glass";
+import { useFocusTrap } from "@/components/ui/glass/useFocusTrap";
 import { useMounted } from "@/components/dashboard/ui";
 import { getSectionAccent } from "@/lib/theme";
+
+/** V2.5: active nav item always uses the emerald tint + left glow bar. */
+const ACTIVE_EMERALD = {
+  color: "#34D399",
+  borderActive: "rgba(52, 211, 153, 0.60)",
+  bgLight: "rgba(52, 211, 153, 0.12)",
+  glowSubtle: "rgba(52, 211, 153, 0.10)",
+};
 
 /**
  * RouteLiquidMorph — liquid glass morph effect using SVG gooey filter:
@@ -232,13 +242,13 @@ function HealthCardInner({
   return (
     <div
       className={cn(
-        "glass-inset flex flex-col justify-between rounded-2xl p-3 border border-white/10 bg-black/40 overflow-visible",
+        "liquid-glass flex flex-col justify-between rounded-2xl p-3 border border-white/10 overflow-visible",
         className,
       )}
     >
-      {/* Row 1: 44px score ring + column (score number 18px bold, label "FARM HEALTH" 10px uppercase) */}
+      {/* Row 1: Farm Health ring in a liquid glass circle + score + LIVE badge */}
       <div className="flex items-center gap-3">
-        <div className="shrink-0">
+        <div className="liquid-glass-pill liquid-glass-strong shrink-0 flex h-[52px] w-[52px] items-center justify-center rounded-full border border-emerald-500/30 shadow-[0_0_16px_rgba(52,211,153,0.3)]">
           {mounted ? (
             <HealthRing score={score} size={44} />
           ) : (
@@ -248,10 +258,18 @@ function HealthCardInner({
             />
           )}
         </div>
-        <div className="flex flex-col justify-center min-w-0">
-          <span className="text-[18px] font-bold leading-tight text-white tracking-tight">
-            {mounted ? `${Math.round(score)}/100` : "–/100"}
-          </span>
+        <div className="flex min-w-0 flex-col justify-center">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[18px] font-bold leading-tight text-white tracking-tight">
+              {mounted ? `${Math.round(score)}/100` : "–/100"}
+            </span>
+            {mounted && chip === "live" && (
+              <span className="liquid-glass-pill inline-flex items-center gap-1 rounded-full border border-emerald-400/50 bg-emerald-500/15 px-1.5 py-px text-[9px] font-extrabold tracking-widest text-emerald-300 shadow-[0_0_8px_rgba(34,197,94,0.35)]">
+                <span className="h-1 w-1 animate-pulse rounded-full bg-emerald-400" />
+                LIVE
+              </span>
+            )}
+          </div>
           <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
             FARM HEALTH
           </span>
@@ -343,7 +361,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     setAlertsOpen(false);
   };
 
+  // V2.5 a11y — trap focus inside the mobile "More" sheet, restore on close.
+  const moreSheetRef = useFocusTrap<HTMLDivElement>(moreOpen, () => setMoreOpen(false));
+
   return (
+    <MotionConfig reducedMotion="user">
     <div
       className="relative flex h-dvh w-full overflow-hidden bg-[#070B09] text-white"
       style={
@@ -356,42 +378,44 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     >
       <AmbientBackground />
 
-      {/* ============ DESKTOP SIDEBAR ============ */}
-      <aside className="relative z-30 hidden md:flex w-64 shrink-0 h-[calc(100dvh-1.5rem)] max-h-[calc(100dvh-1.5rem)] flex-col liquid-glass-strong m-3 mr-0 rounded-3xl">
+      {/* V2.5 a11y — skip link jumps straight to the main scroll region */}
+      <a
+        href="#main-scroll"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] liquid-glass-pill liquid-glass-strong px-4 py-2 text-sm font-bold text-emerald-200 border border-emerald-400/40"
+      >
+        Skip to content
+      </a>
+
+      {/* ============ DESKTOP SIDEBAR (liquid glass panel, 16px margins) ============ */}
+      <aside className="relative z-30 hidden md:flex w-64 shrink-0 h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] flex-col liquid-glass-strong m-4 mr-0 rounded-3xl">
         <LogoBlock className="shrink-0 px-4 pt-4 pb-2" />
 
-        <nav className="flex-1 overflow-y-auto scrollbar-hide px-3 space-y-1">
+        <nav aria-label="Primary" className="flex-1 overflow-y-auto scrollbar-hide px-3 space-y-1">
           {NAV_ITEMS.map(({ href, label, labelKey, icon: Icon }) => {
             const active = pathname === href || pathname?.startsWith(href + "/");
             const showBadge = href === "/alerts" && unread > 0;
-            const itemAccent = getSectionAccent(href);
             return (
               <Link
                 key={href}
                 href={href}
+                aria-current={active ? "page" : undefined}
                 className={cn(
-                  "relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[13px] font-medium transition-colors",
+                  "liquid-glass-pill relative flex items-center gap-3 rounded-full px-3 py-2.5 text-[13px] font-medium transition-colors",
                   active
                     ? "pl-4"
                     : "border border-transparent text-zinc-400 hover:bg-white/5 hover:text-white",
                 )}
-                style={
-                  active
-                    ? {
-                        color: itemAccent.color,
-                      }
-                    : undefined
-                }
+                style={active ? { color: ACTIVE_EMERALD.color } : undefined}
               >
                 {active && (
                   <motion.div
                     layoutId="sidebar-active-pill"
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     aria-hidden
-                    className="absolute inset-0 rounded-2xl glass-inset border"
+                    className="absolute inset-0 rounded-full liquid-glass border"
                     style={{
-                      borderColor: itemAccent.borderActive,
-                      backgroundColor: itemAccent.bgLight,
+                      borderColor: ACTIVE_EMERALD.borderActive,
+                      backgroundColor: ACTIVE_EMERALD.bgLight,
                     }}
                   />
                 )}
@@ -402,14 +426,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     aria-hidden
                     className="absolute left-1.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full z-10"
                     style={{
-                      backgroundColor: itemAccent.color,
-                      boxShadow: `0 0 10px ${itemAccent.color}`,
+                      backgroundColor: ACTIVE_EMERALD.color,
+                      boxShadow: `0 0 10px ${ACTIVE_EMERALD.color}`,
                     }}
                   />
                 )}
                 <Icon
                   className="relative z-10 h-[18px] w-[18px] shrink-0 transition-colors"
-                  style={{ color: active ? itemAccent.color : "#9CA3AF" }}
+                  style={{ color: active ? ACTIVE_EMERALD.color : "#9CA3AF" }}
                 />
                 <span className="relative z-10 truncate">{label ?? t(labelKey)}</span>
                 {mounted && showBadge && (
@@ -615,7 +639,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* main id="main-scroll" is the ONLY scrollable container */}
         <main
           id="main-scroll"
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 md:px-6 pb-28 md:pb-10 pt-4 relative z-10"
+          tabIndex={-1}
+          aria-label="Main content"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 md:px-6 pb-28 md:pb-10 pt-4 relative z-10 outline-none"
         >
           <div className="relative mx-auto max-w-7xl">
             <RouteLiquidMorph routeKey={pathname}>
@@ -627,9 +653,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      {/* ============ MOBILE BOTTOM NAV ============ */}
-      <nav className="md:hidden fixed bottom-3 inset-x-3 z-50 pointer-events-none">
-        <div className="liquid-glass-strong pointer-events-auto mx-auto max-w-lg rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.65)] border border-white/12">
+      {/* ============ MOBILE BOTTOM NAV (liquid glass, mx-4 mb-4, rounded-full) ============ */}
+      <nav aria-label="Primary" className="md:hidden fixed bottom-0 inset-x-0 z-50 pointer-events-none">
+        <div className="liquid-glass-strong pointer-events-auto mx-4 mb-4 max-w-lg ml-auto mr-auto rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.65)] border border-white/12">
           <div className="grid grid-cols-5 px-2 py-1.5">
             {MOBILE_TABS.map((tab) => {
               if ("key" in tab) {
@@ -712,6 +738,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* Wireless edge supervisor: auto LIVE/SIM + LCD mirror (no UI) */}
       <MqttManager />
 
+      {/* V2.5 a11y — screen-reader announcements for pump state + new alerts */}
+      <LiveAnnouncer />
+
       {/* Floating mic trigger */}
       <FloatingMicButton />
 
@@ -740,6 +769,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm md:hidden"
             />
             <motion.div
+              ref={moreSheetRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="More destinations"
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
@@ -804,5 +837,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <QuickActionsFAB />
       <AppToaster />
     </div>
+    </MotionConfig>
   );
 }

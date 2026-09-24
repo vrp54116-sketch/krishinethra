@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Monitor, Send, Trash2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useFarmStore } from "@/lib/store";
-import { cmdLcd } from "@/lib/mqtt-bridge";
 import { LiquidButton } from "@/components/ui/glass";
 import { cn } from "@/lib/utils";
 
@@ -26,7 +25,9 @@ export default function LcdMessageSender({ className }: { className?: string }) 
       });
       return;
     }
-    cmdLcd(line1, line2);
+    void import("@/lib/mqtt-bridge")
+      .then((m) => m.cmdLcd(line1, line2))
+      .catch(() => {});
     setLastSent(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
     toast.success("Sent to Physical LCD", {
       description: `L1: "${line1}" | L2: "${line2}"`,

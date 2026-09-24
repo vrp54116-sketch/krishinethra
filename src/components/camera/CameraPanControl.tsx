@@ -4,9 +4,15 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Camera, Compass, MoveHorizontal, Pause, RotateCcw } from "lucide-react";
 import { useFarmStore } from "@/lib/store";
-import { cmdServo, cmdSweep } from "@/lib/mqtt-bridge";
 import { LiquidButton, LiquidToggle } from "@/components/ui/glass";
 import { cn } from "@/lib/utils";
+
+/** Lazy MQTT bridge — keeps the `mqtt` package out of the initial bundle. */
+const withMqtt = (
+  fn: (m: typeof import("@/lib/mqtt-bridge")) => void,
+): void => {
+  void import("@/lib/mqtt-bridge").then(fn).catch(() => {});
+};
 
 const PRESETS = [
   { label: "Center (90°)", angle: 90 },
@@ -52,7 +58,7 @@ export default function CameraPanControl({ className }: { className?: string }) 
     if (isSweeping) setIsSweeping(false);
     setAngle(newAngle);
     setActivePreset("");
-    cmdServo(newAngle);
+    withMqtt((m) => m.cmdServo(newAngle));
     useFarmStore.setState((s) => ({
       snapshot: { ...s.snapshot, servo: newAngle },
     }));
@@ -62,7 +68,7 @@ export default function CameraPanControl({ className }: { className?: string }) 
     if (isSweeping) setIsSweeping(false);
     setAngle(90);
     setActivePreset("Center (90°)");
-    cmdServo(90);
+    withMqtt((m) => m.cmdServo(90));
     useFarmStore.setState((s) => ({
       snapshot: { ...s.snapshot, servo: 90 },
     }));
@@ -70,15 +76,15 @@ export default function CameraPanControl({ className }: { className?: string }) 
 
   const handleStop = () => {
     setIsSweeping(false);
-    cmdServo(angle);
+    withMqtt((m) => m.cmdServo(angle));
   };
 
   const handleToggleSweep = (enable: boolean) => {
     setIsSweeping(enable);
     if (enable) {
-      cmdSweep();
+      withMqtt((m) => m.cmdSweep());
     } else {
-      cmdServo(angle);
+      withMqtt((m) => m.cmdServo(angle));
     }
   };
 
@@ -86,7 +92,7 @@ export default function CameraPanControl({ className }: { className?: string }) 
     if (isSweeping) setIsSweeping(false);
     setAngle(preset.angle);
     setActivePreset(preset.label);
-    cmdServo(preset.angle);
+    withMqtt((m) => m.cmdServo(preset.angle));
     useFarmStore.setState((s) => ({
       snapshot: { ...s.snapshot, servo: preset.angle },
     }));

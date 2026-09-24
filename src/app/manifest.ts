@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "KrishiNethra AI",
+    name: "KrishiNethra AI v2 — Liquid Glass Smart Farm",
     short_name: "KrishiNethra",
     description:
-      "Har Khet Ka AI Doctor — offline-first smart farm command center with live sensors, crop doctor, irrigation and AI tasks.",
+      "Har Khet Ka AI Doctor — liquid glass smart farm command center with live sensors, AI agent reasoning, crop doctor, irrigation and ESP32 edge control.",
     start_url: "/dashboard",
     scope: "/",
     display: "standalone",
