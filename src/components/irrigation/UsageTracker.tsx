@@ -85,7 +85,13 @@ function UsageTrackerInner() {
               }}
               formatter={(v) => [`${Number(v).toFixed(2)} L`, "Water"]}
             />
-            <Bar dataKey="litres" radius={[5, 5, 2, 2]} isAnimationActive={false}>
+            <Bar
+              dataKey="litres"
+              radius={[5, 5, 2, 2]}
+              isAnimationActive={true}
+              animationDuration={500}
+              animationEasing="ease-in-out"
+            >
               {week.map((d) => (
                 <Cell key={d.day} fill={d.today ? "#38BDF8" : "rgba(56,189,248,0.35)"} />
               ))}

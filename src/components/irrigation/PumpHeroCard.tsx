@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Clock, OctagonX, Play, Power, ShieldAlert, Square } from "lucide-react";
@@ -10,6 +10,7 @@ import { useT } from "@/lib/i18n";
 import { Card, CardHeader } from "@/components/dashboard/ui";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import { LiquidToggle } from "@/components/ui/glass";
+import { playWaterDrop } from "@/lib/audio";
 
 type Mode = "manual" | "auto" | "schedule";
 
@@ -82,6 +83,19 @@ export default function PumpHeroCard() {
   const alerts = useFarmStore((s) => s.alerts);
 
   const [customSec, setCustomSec] = useState<number>(30);
+  const [pulse, setPulse] = useState(false);
+  const prevRunning = useRef(pump.running);
+
+  // Requirement 8: When pump turns ON: pulse 3x + water drop sound
+  useEffect(() => {
+    if (pump.running && !prevRunning.current) {
+      playWaterDrop();
+      setPulse(true);
+      const timer = setTimeout(() => setPulse(false), 2000);
+      return () => clearTimeout(timer);
+    }
+    prevRunning.current = pump.running;
+  }, [pump.running]);
 
   const isManual = pump.mode === "manual";
 
@@ -140,7 +154,15 @@ export default function PumpHeroCard() {
   };
 
   return (
-    <Card className={pump.running ? "border-sky-400/30" : undefined}>
+    <Card className={cn("relative overflow-hidden", pump.running && "border-sky-400/30", pulse && "pump-card-pulse border-emerald-400/80")}>
+      {/* 3 staggered falling water droplets inside card when pump is ON */}
+      {pump.running && (
+        <div className="pointer-events-none absolute right-4 top-3 h-14 w-12 overflow-hidden z-10" aria-hidden>
+          <div className="absolute left-1 top-0 h-2.5 w-2.5 rounded-full bg-sky-400 pump-droplet-item shadow-[0_0_8px_rgba(56,189,248,0.8)]" style={{ animationDelay: "0s" }} />
+          <div className="absolute left-5 top-0 h-2.5 w-2.5 rounded-full bg-sky-300 pump-droplet-item shadow-[0_0_8px_rgba(56,189,248,0.8)]" style={{ animationDelay: "0.5s" }} />
+          <div className="absolute left-9 top-0 h-2.5 w-2.5 rounded-full bg-cyan-400 pump-droplet-item shadow-[0_0_8px_rgba(56,189,248,0.8)]" style={{ animationDelay: "1.0s" }} />
+        </div>
+      )}
       <CardHeader
         title={t("irrigation.pumpTitle")}
         subtitle={`Mode: ${pump.mode === "auto" ? "Auto AI" : pump.mode === "manual" ? "Manual" : "Schedule"} · Rain: ${snapshot.rain ? "Detected" : "Dry"}`}

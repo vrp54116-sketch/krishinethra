@@ -1,13 +1,15 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Droplets, Power, Square, Timer } from "lucide-react";
+import { Pause, Play, Power, Square, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { Card, CardHeader } from "./ui";
 import SegmentedControl from "@/components/ui/SegmentedControl";
+import { playWaterDrop } from "@/lib/audio";
 
 type Mode = "manual" | "auto" | "schedule";
 
@@ -27,6 +29,20 @@ export default function PumpControl() {
   const setPumpMode = useFarmStore((s) => s.setPumpMode);
   const addAlert = useFarmStore((s) => s.addAlert);
   const alerts = useFarmStore((s) => s.alerts);
+
+  const [pulse, setPulse] = useState(false);
+  const prevRunning = useRef(pump.running);
+
+  // Requirement 8: When pump turns ON: pulse 3x + water drop sound
+  useEffect(() => {
+    if (pump.running && !prevRunning.current) {
+      playWaterDrop();
+      setPulse(true);
+      const timer = setTimeout(() => setPulse(false), 2000);
+      return () => clearTimeout(timer);
+    }
+    prevRunning.current = pump.running;
+  }, [pump.running]);
 
   const logPump = (title: string, message: string) => {
     addAlert({ level: "info", title, message });
@@ -114,16 +130,25 @@ export default function PumpControl() {
   const isManual = pump.mode === "manual";
 
   return (
-    <Card>
+    <Card className={cn("relative overflow-hidden", pulse && "pump-card-pulse border-emerald-400/80")}>
+      {/* 3 staggered falling water droplets inside card when pump is ON */}
+      {pump.running && (
+        <div className="pointer-events-none absolute right-4 top-3 h-14 w-12 overflow-hidden z-10" aria-hidden>
+          <div className="absolute left-1 top-0 h-2 w-2 rounded-full bg-sky-400 pump-droplet-item shadow-[0_0_8px_rgba(56,189,248,0.8)]" style={{ animationDelay: "0s" }} />
+          <div className="absolute left-5 top-0 h-2 w-2 rounded-full bg-sky-300 pump-droplet-item shadow-[0_0_8px_rgba(56,189,248,0.8)]" style={{ animationDelay: "0.5s" }} />
+          <div className="absolute left-9 top-0 h-2 w-2 rounded-full bg-cyan-400 pump-droplet-item shadow-[0_0_8px_rgba(56,189,248,0.8)]" style={{ animationDelay: "1.0s" }} />
+        </div>
+      )}
+
       <CardHeader
         title={t("dashboard.pumpStatus")}
         subtitle={`Mode: ${pump.mode === "auto" ? "Auto AI" : pump.mode === "manual" ? "Manual" : "Schedule"}`}
         action={
           <span
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold tracking-widest",
+              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold tracking-widest transition-all",
               pump.running
-                ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-300"
+                ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.3)]"
                 : "border-white/10 bg-white/[0.03] text-zinc-400",
             )}
           >
@@ -134,14 +159,37 @@ export default function PumpControl() {
       />
 
       {/* Status visual */}
-      <div className="flex items-center gap-3 rounded-[16px] border border-white/10 bg-[rgba(18,26,22,0.66)] px-4 py-3 backdrop-blur-md">
+      <div className="relative flex items-center gap-3 rounded-[16px] border border-white/10 bg-[rgba(18,26,22,0.66)] px-4 py-3 backdrop-blur-md overflow-hidden">
+        {/* Play/Pause icon with rotation */}
         <span
           className={cn(
-            "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
-            pump.running ? "bg-sky-500/15 text-sky-400" : "bg-white/[0.04] text-[#9CA3AF]",
+            "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all duration-300 overflow-hidden",
+            pump.running ? "bg-sky-500/20 text-sky-300 shadow-[0_0_16px_rgba(56,189,248,0.5)]" : "bg-white/[0.04] text-[#9CA3AF]",
           )}
         >
-          <Droplets className="h-5 w-5" />
+          <AnimatePresence mode="wait" initial={false}>
+            {pump.running ? (
+              <motion.div
+                key="running-play"
+                initial={{ rotate: -90, scale: 0.6, opacity: 0 }}
+                animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                exit={{ rotate: 90, scale: 0.6, opacity: 0 }}
+                transition={{ duration: 0.28, ease: "easeOut" }}
+              >
+                <Play className="h-5 w-5 fill-current" />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="idle-pause"
+                initial={{ rotate: 90, scale: 0.6, opacity: 0 }}
+                animate={{ rotate: 0, scale: 1, opacity: 1 }}
+                exit={{ rotate: -90, scale: 0.6, opacity: 0 }}
+                transition={{ duration: 0.28, ease: "easeOut" }}
+              >
+                <Pause className="h-5 w-5 fill-current" />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-white">
@@ -156,19 +204,6 @@ export default function PumpControl() {
             Soil Moisture: {snapshot.soil.toFixed(1)}% · Rain: {snapshot.rain ? "Yes" : "No"}
           </p>
         </div>
-        {/* Animated droplets when ON */}
-        {pump.running && (
-          <div className="flex shrink-0 items-end gap-1" aria-hidden>
-            {[0, 1, 2].map((i) => (
-              <motion.span
-                key={i}
-                className="h-2 w-2 rounded-full bg-sky-400"
-                animate={{ y: [0, -12, 0], opacity: [0.4, 1, 0.4] }}
-                transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.22, ease: "easeInOut" }}
-              />
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Mode segmented control */}

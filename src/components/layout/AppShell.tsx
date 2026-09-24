@@ -40,24 +40,51 @@ import InstallAppButton from "@/components/pwa/InstallAppButton";
 import PageSkeleton from "@/components/layout/PageSkeleton";
 import AppToaster from "@/components/layout/AppToaster";
 import QuickActionsFAB from "@/components/layout/QuickActionsFAB";
-import { AmbientBackground, LiquidButton } from "@/components/ui/glass";
+import { AmbientBackground, LiquidButton, ThemeToggle } from "@/components/ui/glass";
 import { useMounted } from "@/components/dashboard/ui";
 import { getSectionAccent } from "@/lib/theme";
 
 /**
- * RouteFade: enter-only fade animation.
- * Zero exit animation ensures old page unmounts instantly with zero ghosting.
+ * RouteLiquidMorph — liquid glass morph effect using SVG gooey filter:
+ * - Wrap all route content in AnimatePresence with mode="wait"
+ * - Exit: current page scales to 0.95, opacity 1→0, blur 0→20px in 300ms
+ * - Enter: new page scales 1.05→1, opacity 0→1, blur 20px→0 in 300ms
  */
-function RouteFade({ children }: { children: React.ReactNode }) {
+function RouteLiquidMorph({
+  children,
+  routeKey,
+}: {
+  children: React.ReactNode;
+  routeKey: string;
+}) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.22, ease: "easeOut" }}
-      className="w-full"
-    >
-      {children}
-    </motion.div>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={routeKey}
+        initial={{
+          opacity: 0,
+          scale: 1.05,
+          filter: "blur(20px)",
+        }}
+        animate={{
+          opacity: 1,
+          scale: 1,
+          filter: "blur(0px)",
+        }}
+        exit={{
+          opacity: 0,
+          scale: 0.95,
+          filter: "blur(20px)",
+        }}
+        transition={{
+          duration: 0.3,
+          ease: [0.22, 1, 0.36, 1],
+        }}
+        className="w-full liquid-gooey"
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
@@ -343,25 +370,37 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 key={href}
                 href={href}
                 className={cn(
-                  "relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[13px] font-medium transition-all",
+                  "relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[13px] font-medium transition-colors",
                   active
-                    ? "glass-inset pl-4 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]"
+                    ? "pl-4"
                     : "border border-transparent text-zinc-400 hover:bg-white/5 hover:text-white",
                 )}
                 style={
                   active
                     ? {
                         color: itemAccent.color,
-                        borderColor: itemAccent.borderActive,
-                        backgroundColor: itemAccent.bgLight,
                       }
                     : undefined
                 }
               >
                 {active && (
-                  <span
+                  <motion.div
+                    layoutId="sidebar-active-pill"
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     aria-hidden
-                    className="absolute left-1.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full"
+                    className="absolute inset-0 rounded-2xl glass-inset border"
+                    style={{
+                      borderColor: itemAccent.borderActive,
+                      backgroundColor: itemAccent.bgLight,
+                    }}
+                  />
+                )}
+                {active && (
+                  <motion.span
+                    layoutId="sidebar-active-bar"
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    aria-hidden
+                    className="absolute left-1.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full z-10"
                     style={{
                       backgroundColor: itemAccent.color,
                       boxShadow: `0 0 10px ${itemAccent.color}`,
@@ -369,14 +408,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   />
                 )}
                 <Icon
-                  className="h-[18px] w-[18px] shrink-0 transition-colors"
+                  className="relative z-10 h-[18px] w-[18px] shrink-0 transition-colors"
                   style={{ color: active ? itemAccent.color : "#9CA3AF" }}
                 />
-                <span className="truncate">{label ?? t(labelKey)}</span>
+                <span className="relative z-10 truncate">{label ?? t(labelKey)}</span>
                 {mounted && showBadge && (
-                  <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(251,113,133,0.7)]">
+                  <motion.span
+                    key={unread}
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 450, damping: 25 }}
+                    className="relative z-10 ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(251,113,133,0.7)]"
+                  >
                     {unread > 99 ? "99+" : unread}
-                  </span>
+                  </motion.span>
                 )}
               </Link>
             );
@@ -447,6 +492,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           {/* PWA install (mobile only, appears when installable) */}
           <InstallAppButton />
 
+          {/* Theme mode toggle */}
+          <ThemeToggle />
+
           {/* Language switcher */}
           <div className="relative">
             <button
@@ -498,12 +546,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 if (!alertsOpen) markAlertsRead();
                 setAlertsOpen((v) => !v);
               }}
-              className="liquid-glass-pill relative flex h-9 w-9 items-center justify-center rounded-full text-zinc-200 transition-all hover:border-emerald-500/40 hover:text-white cursor-pointer"
+              className={cn(
+                "liquid-glass-pill relative flex h-9 w-9 items-center justify-center rounded-full text-zinc-200 transition-all hover:border-emerald-500/40 hover:text-white cursor-pointer",
+                mounted && unread > 0 && "border-red-500/40 shadow-[0_0_12px_rgba(239,68,68,0.35)]",
+              )}
               aria-label={t("nav.alerts")}
             >
-              <Bell className="h-4 w-4" />
+              <Bell className={cn("h-4 w-4", mounted && unread > 0 && "text-red-400 bell-pulse-red")} />
               {mounted && unread > 0 && (
-                <span className="absolute right-1 top-1 flex h-2.5 w-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.9)] ring-2 ring-[#0a120c]" />
+                <motion.span
+                  key={unread}
+                  initial={{ scale: 0.4, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 22 }}
+                  className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-extrabold text-white shadow-[0_0_8px_rgba(239,68,68,0.9)] ring-2 ring-[#070B09]"
+                >
+                  {unread > 99 ? "99+" : unread}
+                </motion.span>
               )}
             </button>
             {alertsOpen && (
@@ -559,11 +618,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 md:px-6 pb-28 md:pb-10 pt-4 relative z-10"
         >
           <div className="relative mx-auto max-w-7xl">
-            <RouteFade key={pathname}>
+            <RouteLiquidMorph routeKey={pathname}>
               <Suspense fallback={<PageSkeleton rows={3} />}>
                 {mounted && hydrated ? children : <PageSkeleton rows={3} />}
               </Suspense>
-            </RouteFade>
+            </RouteLiquidMorph>
           </div>
         </main>
       </div>

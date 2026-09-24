@@ -166,7 +166,9 @@ function HistoryGraphsInner() {
               strokeWidth={2.2}
               fill={`url(#climate-${active.id})`}
               dot={false}
-              isAnimationActive={false}
+              isAnimationActive={true}
+              animationDuration={500}
+              animationEasing="ease-in-out"
             />
           </AreaChart>
         </ResponsiveContainer>

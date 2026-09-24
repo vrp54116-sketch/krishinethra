@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useEffect, useId, useState, type ReactNode } from "react";
-import { animate, useMotionValue } from "framer-motion";
+import { animate, motion, useMotionValue } from "framer-motion";
 import { Area, ComposedChart, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +24,7 @@ export const chartTooltipStyle = {
   boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
 } as const;
 
-/** Custom glass-pill tooltip for Recharts (blur + white/15 border + 999px radius). */
+/** Custom glass-pill tooltip for Recharts (blur + white/15 border + 999px radius with spring entrance). */
 export function GlassChartTooltip({
   active,
   payload,
@@ -42,7 +42,13 @@ export function GlassChartTooltip({
   const title =
     labelFormatter && label != null ? labelFormatter(String(label)) : String(label ?? "");
   return (
-    <div className="g3-chart-tooltip">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.88, y: 6 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.88, y: 6 }}
+      transition={{ type: "spring", stiffness: 450, damping: 25 }}
+      className="g3-chart-tooltip"
+    >
       {title ? <p className="font-bold text-white mb-0.5">{title}</p> : null}
       {payload.map((p, i) => {
         const v = Number(p.value ?? 0);
@@ -55,28 +61,48 @@ export function GlassChartTooltip({
           </p>
         );
       })}
-    </div>
+    </motion.div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Card shell — Aurora Harvest GlassCard                               */
+/* Card shell — Aurora Harvest GlassCard with click ripple & hover     */
 /* ------------------------------------------------------------------ */
 
 export function Card({
   className,
   children,
   variant = "default",
+  interactive = true,
 }: {
   className?: string;
   children: ReactNode;
   variant?: "default" | "strong";
+  interactive?: boolean;
 }) {
-  // V2.1 — every dashboard card is a liquid glass card.
+  const [ripples, setRipples] = useState<Array<{ id: number; x: number; y: number; size: number }>>([]);
+
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!interactive) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const reach = Math.hypot(
+      Math.max(x, rect.width - x),
+      Math.max(y, rect.height - y),
+    );
+    const id = Date.now() + Math.random();
+    setRipples((prev) => [...prev, { id, x, y, size: Math.ceil(reach * 2) }]);
+    window.setTimeout(() => {
+      setRipples((prev) => prev.filter((r) => r.id !== id));
+    }, 620);
+  };
+
   return (
     <div
+      onClick={handleClick}
       className={cn(
-        "relative liquid-card-hover",
+        "relative overflow-hidden liquid-card-hover",
         variant === "strong"
           ? "liquid-glass-strong rounded-[28px]"
           : "liquid-glass-card",
@@ -84,6 +110,19 @@ export function Card({
       )}
     >
       <div className="relative z-[1]">{children}</div>
+      {ripples.map((r) => (
+        <span
+          key={r.id}
+          aria-hidden
+          className="liquid-card-ripple"
+          style={{
+            left: r.x,
+            top: r.y,
+            width: r.size,
+            height: r.size,
+          }}
+        />
+      ))}
     </div>
   );
 }
@@ -180,7 +219,9 @@ export const Sparkline = memo(function Sparkline({
             strokeWidth={2}
             fill={`url(#${gid})`}
             dot={false}
-            isAnimationActive={false}
+            isAnimationActive={true}
+            animationDuration={500}
+            animationEasing="ease-in-out"
             style={{ filter: `drop-shadow(0 0 6px ${color})` }}
           />
         </ComposedChart>

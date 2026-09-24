@@ -4,6 +4,7 @@ import * as React from "react";
 import gsap from "gsap";
 import { Draggable } from "gsap/Draggable";
 import { cn } from "@/lib/utils";
+import { playToggleClick } from "@/lib/audio";
 
 /**
  * LiquidToggle — Apple-style liquid switch.
@@ -113,7 +114,10 @@ export const LiquidToggle = React.forwardRef<HTMLButtonElement, LiquidToggleProp
             overwrite: "auto",
           });
         }
-        if (next !== checked) onChange(next);
+        if (next !== checked) {
+          playToggleClick();
+          onChange(next);
+        }
       },
       [checked, onChange, paint],
     );

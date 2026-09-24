@@ -107,7 +107,16 @@ function EnergyMonitorInner() {
               ]}
               labelFormatter={(l) => `Day ${String(l).slice(1)}`}
             />
-            <Line type="monotone" dataKey="kwh" stroke="#38BDF8" strokeWidth={2} dot={false} isAnimationActive={false} />
+            <Line
+              type="monotone"
+              dataKey="kwh"
+              stroke="#38BDF8"
+              strokeWidth={2}
+              dot={false}
+              isAnimationActive={true}
+              animationDuration={500}
+              animationEasing="ease-in-out"
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>

@@ -142,19 +142,20 @@ export default function EdgeAiStatusBanners({ className }: { className?: string 
         {activeBanner && (
           <motion.div
             key={activeBanner.id}
-            initial={{ opacity: 0, y: -20, scale: 0.98 }}
+            initial={{ opacity: 0, y: -28, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -16, scale: 0.98 }}
+            exit={{ opacity: 0, y: -20, scale: 0.96 }}
             transition={{
               type: "spring",
               stiffness: 450,
-              damping: 32,
+              damping: 28,
             }}
             className={cn(
               "liquid-glass-card relative overflow-hidden rounded-2xl p-4 border backdrop-blur-xl transition-all duration-300",
               activeBanner.tone.bg,
               activeBanner.tone.border,
               activeBanner.tone.glow,
+              activeBanner.type === "danger" && "alert-shake-horizontal",
             )}
           >
             {/* Auto-dismiss progress bar (10s) */}

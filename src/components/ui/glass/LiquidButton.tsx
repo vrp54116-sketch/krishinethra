@@ -2,17 +2,19 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { Check } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { LiquidSpinner } from "./LiquidSpinner";
 
 /**
- * LiquidButton — V2.1 liquid glass pill button.
+ * LiquidButton — V2.1 liquid glass pill button with micro-interactions.
  *
- * - .liquid-button surface (frost + blur + 6-layer shadow; primary adds the
- *   emerald glow 0 0 28px rgba(52,211,153,0.35)).
- * - 40px dark icon circle badge (white icon) that scales 1.1 on hover.
- * - Hover translateY(-3px) + brightness(1.1), active scale(0.94).
- * - Click spawns an expanding ripple from the exact click point that runs
- *   opacity 0 → 1 → 0 over 600ms (hidden under prefers-reduced-motion).
+ * - Hover translateY(-3px), icon circle scale(1.1)
+ * - Active scale(0.94), icon scale(0.94), text color darkens
+ * - Loading state: button width shrinks to 40px, shows gooey spinner, then expands back
+ * - Success state: checkmark icon appears, button turns emerald, then reverts after 2s
+ * - Click spawns an expanding ripple (600ms)
  */
 
 export interface LiquidButtonProps
@@ -22,6 +24,9 @@ export interface LiquidButtonProps
   label?: React.ReactNode;
   variant?: "primary" | "glass";
   iconOnly?: boolean;
+  loading?: boolean;
+  success?: boolean;
+  onSuccessRevert?: () => void;
 }
 
 interface Ripple {
@@ -39,6 +44,9 @@ export const LiquidButton = React.forwardRef<HTMLButtonElement, LiquidButtonProp
       label,
       variant = "primary",
       iconOnly = false,
+      loading = false,
+      success = false,
+      onSuccessRevert,
       className,
       onClick,
       disabled,
@@ -48,9 +56,23 @@ export const LiquidButton = React.forwardRef<HTMLButtonElement, LiquidButtonProp
     ref,
   ) => {
     const [ripples, setRipples] = React.useState<Ripple[]>([]);
+    const [internalSuccess, setInternalSuccess] = React.useState(success);
     const nextId = React.useRef(0);
 
+    // Sync external success prop
+    React.useEffect(() => {
+      setInternalSuccess(success);
+      if (success) {
+        const timer = setTimeout(() => {
+          setInternalSuccess(false);
+          onSuccessRevert?.();
+        }, 2000);
+        return () => clearTimeout(timer);
+      }
+    }, [success, onSuccessRevert]);
+
     const spawnRipple = (e: React.MouseEvent<HTMLElement>) => {
+      if (loading || internalSuccess) return;
       const el = e.currentTarget;
       const rect = el.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -67,18 +89,62 @@ export const LiquidButton = React.forwardRef<HTMLButtonElement, LiquidButtonProp
     };
 
     const handleClick = (e: React.MouseEvent<HTMLElement>) => {
+      if (loading) return;
       spawnRipple(e);
       onClick?.(e as React.MouseEvent<HTMLButtonElement>);
     };
 
+    const EffectiveIcon = internalSuccess ? Check : Icon;
+
     const inner = (
       <>
-        <span className="liquid-button-badge">
-          <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} />
-        </span>
-        {!iconOnly && label ? (
-          <span className="liquid-button-label whitespace-nowrap">{label}</span>
-        ) : null}
+        <AnimatePresence mode="wait">
+          {loading ? (
+            <motion.div
+              key="spinner"
+              initial={{ opacity: 0, scale: 0.6 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.6 }}
+              className="flex items-center justify-center w-full h-full"
+            >
+              <LiquidSpinner size="sm" />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="content"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="inline-flex items-center gap-3 w-full justify-center"
+            >
+              <span
+                className={cn(
+                  "liquid-button-badge transition-transform duration-150",
+                  internalSuccess && "bg-white text-emerald-700 shadow-[0_0_12px_rgba(255,255,255,0.7)]",
+                )}
+              >
+                <EffectiveIcon
+                  className={cn(
+                    "h-[18px] w-[18px] transition-transform duration-150",
+                    internalSuccess && "text-emerald-700 stroke-[2.8]",
+                  )}
+                  strokeWidth={2.2}
+                />
+              </span>
+              {!iconOnly && label ? (
+                <span
+                  className={cn(
+                    "liquid-button-label whitespace-nowrap transition-colors duration-150 active:text-white/70",
+                    internalSuccess && "text-white font-bold",
+                  )}
+                >
+                  {internalSuccess ? "Success" : label}
+                </span>
+              ) : null}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {ripples.map((r) => (
           <span
             key={r.id}
@@ -96,14 +162,17 @@ export const LiquidButton = React.forwardRef<HTMLButtonElement, LiquidButtonProp
     );
 
     const classes = cn(
-      "liquid-button",
+      "liquid-button transition-all duration-300",
       variant === "primary" ? "liquid-button-primary" : "liquid-glass-pill",
       iconOnly && "liquid-button-icon-only",
+      internalSuccess &&
+        "bg-emerald-500! border-emerald-400! shadow-[0_0_28px_rgba(52,211,153,0.75)]! text-white!",
+      loading && "w-10! min-w-10! max-w-10! p-0! justify-center overflow-hidden cursor-wait",
       "focus-visible:outline-none",
       className,
     );
 
-    if (href && !disabled) {
+    if (href && !disabled && !loading) {
       return (
         <Link
           href={href}
@@ -120,7 +189,7 @@ export const LiquidButton = React.forwardRef<HTMLButtonElement, LiquidButtonProp
       <button
         ref={ref}
         type={type}
-        disabled={disabled}
+        disabled={disabled || loading}
         onClick={handleClick}
         className={cn(classes, "text-sm")}
         {...rest}

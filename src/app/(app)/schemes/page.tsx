@@ -124,7 +124,7 @@ function printSchemeChecklist(
 </style></head><body>
 <h1>${escHtml(scheme.name)}</h1>
 <div class="hindi">${escHtml(scheme.nameHindi)} · ${escHtml(scheme.shortName)} · ${escHtml(scheme.category)}</div>
-<p class="meta">Farmer profile: ${escHtml(profile.state)} · ${escHtml(String(profile.farmSizeAcres))} acre(s) · ${profile.hasPump ? "has pump" : "no pump"} · grows ${escHtml(profile.crops.join(", ") || "—")}</p>
+<p class="meta">Farmer profile: ${escHtml(profile.state)} · ${escHtml(String(profile.farmSizeAcres))} acre(s) · ${profile.hasPump ? "has pump" : "no pump"} · grows ${escHtml((profile.crops || []).join(", ") || "—")}</p>
 ${typeof score === "number" ? `<p class="meta">Match score for your farm: <b>${score}/100</b></p>` : ""}
 ${reason ? `<div class="reason">${escHtml(reason)}</div>` : ""}
 <div class="benefit">Benefit: ${escHtml(scheme.benefit)}</div>
@@ -356,7 +356,13 @@ export default function SchemesPage() {
   const [filter, setFilter] = useState<SchemeFilter>("All");
   const [query, setQuery] = useState("");
 
-  const profile = useMemo(() => farmProfile ?? FALLBACK_PROFILE, [farmProfile]);
+  const profile = useMemo(() => {
+    const p = farmProfile ?? FALLBACK_PROFILE;
+    return {
+      ...p,
+      crops: Array.isArray(p.crops) && p.crops.length > 0 ? p.crops : FALLBACK_PROFILE.crops,
+    };
+  }, [farmProfile]);
   const portal = getStatePortal(profile.state);
   const visible = useMemo(() => getVisibleSchemes(profile.state), [profile.state]);
 
@@ -425,7 +431,7 @@ export default function SchemesPage() {
         <Card className="border-amber-400/25">
           <CardHeader
             title="Recommended for YOU"
-            subtitle={`${profile.state} · ${profile.farmSizeAcres} acre${profile.farmSizeAcres === 1 ? "" : "s"} · ${profile.hasPump ? "has pump" : "no pump"} · grows ${profile.crops.join(", ")} · edit in Settings`}
+            subtitle={`${profile.state} · ${profile.farmSizeAcres} acre${profile.farmSizeAcres === 1 ? "" : "s"} · ${profile.hasPump ? "has pump" : "no pump"} · grows ${(profile.crops || []).join(", ") || "—"} · edit in Settings`}
             action={
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-300">
                 <Sparkles className="h-4 w-4" />
