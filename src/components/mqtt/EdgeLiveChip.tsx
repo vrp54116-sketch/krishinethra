@@ -35,12 +35,12 @@ export default function EdgeLiveChip({ className }: { className?: string }) {
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border border-emerald-400/50 bg-emerald-500/15 px-2.5 py-1.5 text-[11px] font-bold tracking-wider text-emerald-200",
+          "inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-[11px] font-bold tracking-wider text-[var(--text)]",
           className,
         )}
         title={`Wireless edge live${mqttRssi != null ? ` · WiFi ${mqttRssi} dBm` : ""}`}
       >
-        <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
+        <span className="h-2 w-2 animate-pulse rounded-full bg-[#22C55E] shadow-[0_0_8px_rgba(34,197,94,0.9)]" />
         EDGE-LIVE
       </span>
     );
@@ -49,12 +49,12 @@ export default function EdgeLiveChip({ className }: { className?: string }) {
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border border-rose-400/50 bg-rose-500/10 px-2.5 py-1.5 text-[11px] font-bold tracking-wider text-rose-200",
+          "inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-[11px] font-bold tracking-wider text-[var(--text)]",
           className,
         )}
         title="Edge telemetry stale — falling back to simulation"
       >
-        <span className="h-2 w-2 rounded-full bg-rose-400" />
+        <span className="h-2 w-2 rounded-full bg-[#FF453A] shadow-[0_0_8px_rgba(255,69,58,0.7)]" />
         EDGE-LIVE·STALE
       </span>
     );
@@ -62,12 +62,12 @@ export default function EdgeLiveChip({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border border-amber-400/40 bg-amber-500/10 px-2.5 py-1.5 text-[11px] font-bold tracking-wider text-amber-300",
+        "inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 text-[11px] font-bold tracking-wider text-[var(--text-2)]",
         className,
       )}
       title="Simulation mode — connect the wireless edge in Settings"
     >
-      <span className="h-2 w-2 rounded-full bg-amber-400" />
+      <span className="h-2 w-2 rounded-full bg-[#FBBF24]" />
       SIMULATION
     </span>
   );

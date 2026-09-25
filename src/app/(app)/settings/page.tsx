@@ -13,9 +13,11 @@ import {
   Languages,
   Loader2,
   Mic,
+  Moon,
   Send,
   SlidersHorizontal,
   Sparkles,
+  Sun,
   Thermometer,
   Tractor,
   Trash2,
@@ -36,6 +38,7 @@ import BuzzerPatternTester from "@/components/alerts/BuzzerPatternTester";
 import LcdMessageSender from "@/components/settings/LcdMessageSender";
 import CommandLogCard from "@/components/settings/CommandLogCard";
 import SensorCalibrationCard from "@/components/settings/SensorCalibrationCard";
+import ThemeToggle, { useTheme, applyTheme } from "@/components/ui/glass/ThemeToggle";
 
 function Rise({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   return (
@@ -50,9 +53,9 @@ function Rise({ children, delay = 0 }: { children: React.ReactNode; delay?: numb
 }
 
 const inputCls =
-  "w-full rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm font-semibold text-white outline-none transition-colors placeholder:font-normal placeholder:text-zinc-600 focus:border-emerald-500/50 [&>option]:bg-[#0a120c]";
+  "w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 text-sm font-semibold text-[var(--text)] outline-none transition-colors placeholder:font-normal placeholder:text-[var(--text-2)] focus:border-[var(--accent)] focus:shadow-[0_0_16px_var(--accent-glow)] [&>option]:bg-black [&>option]:text-white";
 
-const labelCls = "mb-1 block text-[11px] font-bold uppercase tracking-wider text-zinc-500";
+const labelCls = "mb-1 block text-[11px] font-bold uppercase tracking-wider text-[var(--text-2)]";
 
 const STATES = INDIAN_STATES;
 const AVATARS = ["🧑‍🌾", "👩‍🌾", "🧔", "👳‍♀️", "🧕", "👨‍🌾"];
@@ -87,8 +90,8 @@ function Toggle({
       aria-label={label}
       onClick={() => onChange(!checked)}
       className={cn(
-        "relative h-7 w-12 shrink-0 rounded-full transition-colors",
-        checked ? "bg-emerald-500 shadow-[0_0_12px_rgba(34,197,94,0.5)]" : "bg-white/10",
+        "relative h-7 w-12 shrink-0 rounded-full transition-colors cursor-pointer",
+        checked ? "bg-[var(--accent)] shadow-[0_0_12px_var(--accent-glow)]" : "bg-white/10",
       )}
     >
       <span
@@ -121,10 +124,10 @@ function ThresholdRow({
 }) {
   const clamp = (n: number) => Math.min(max, Math.max(min, n));
   return (
-    <div className="rounded-xl border border-white/5 bg-black/30 p-3">
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[13px] font-bold text-white">{label}</span>
-        <span className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-black/40 px-2 py-1 focus-within:border-emerald-500/50">
+        <span className="text-[13px] font-bold text-[var(--text)]">{label}</span>
+        <span className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 focus-within:border-[var(--accent)]">
           <input
             value={String(value)}
             aria-label={`${label} value`}
@@ -133,9 +136,9 @@ function ThresholdRow({
               const n = Number(e.target.value.replace(/[^0-9.]/g, ""));
               if (Number.isFinite(n)) onChange(clamp(Math.round((n / step)) * step));
             }}
-            className="w-16 bg-transparent text-right font-mono text-[13px] font-bold text-white outline-none"
+            className="w-16 bg-transparent text-right font-mono text-[13px] font-bold text-[var(--text)] outline-none"
           />
-          <span className="text-[11px] font-semibold text-zinc-500">{unit}</span>
+          <span className="text-[11px] font-semibold text-[var(--text-2)]">{unit}</span>
         </span>
       </div>
       <input
@@ -146,9 +149,9 @@ function ThresholdRow({
         value={value}
         onChange={(e) => onChange(clamp(Number(e.target.value)))}
         aria-label={label}
-        className="mt-2 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-emerald-400"
+        className="mt-2 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-[var(--accent)]"
       />
-      <div className="mt-1 flex justify-between font-mono text-[10px] text-zinc-600">
+      <div className="mt-1 flex justify-between font-mono text-[10px] text-[var(--text-2)]">
         <span>
           {min}
           {unit}
@@ -159,6 +162,86 @@ function ThresholdRow({
         </span>
       </div>
     </div>
+  );
+}
+
+function ThemeSettingsCard() {
+  const { theme, setTheme } = useTheme();
+
+  return (
+    <Card>
+      <CardHeader
+        title="Theme & Appearance"
+        subtitle="Carbon & Ember Design System: switch between Carbon (Dark) and Paper (Light) mode"
+        action={<ThemeToggle showLabel />}
+      />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => setTheme("dark")}
+          aria-pressed={theme === "dark"}
+          className={cn(
+            "flex items-center gap-4 rounded-2xl border p-4 text-left transition-all active:scale-[0.98] cursor-pointer",
+            theme === "dark"
+              ? "border-[var(--accent)] bg-[var(--accent-soft)] shadow-[0_0_20px_var(--accent-glow)]"
+              : "border-[var(--border)] bg-[var(--surface-2)]/40 hover:border-[var(--accent)]/40 hover:bg-[var(--surface-2)]",
+          )}
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-black border border-white/20 text-xl shadow-inner">
+            <Moon className="h-6 w-6 text-[#FF8A4C]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-extrabold text-[var(--text)]">Carbon (Dark)</span>
+              {theme === "dark" && (
+                <span className="rounded-full bg-[var(--accent)] px-2 py-0.5 text-[10px] font-extrabold text-white">
+                  Active
+                </span>
+              )}
+            </div>
+            <p className="mt-0.5 text-xs text-[var(--text-2)]">
+              #000000 pure OLED black surface with Ember orange accent
+            </p>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setTheme("light")}
+          aria-pressed={theme === "light"}
+          className={cn(
+            "flex items-center gap-4 rounded-2xl border p-4 text-left transition-all active:scale-[0.98] cursor-pointer",
+            theme === "light"
+              ? "border-[var(--accent)] bg-[var(--accent-soft)] shadow-[0_0_20px_var(--accent-glow)]"
+              : "border-[var(--border)] bg-[var(--surface-2)]/40 hover:border-[var(--accent)]/40 hover:bg-[var(--surface-2)]",
+          )}
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#FAFAFA] border border-black/15 text-xl shadow-inner">
+            <Sun className="h-6 w-6 text-[#FF6B1A]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-extrabold text-[var(--text)]">Paper (Light)</span>
+              {theme === "light" && (
+                <span className="rounded-full bg-[var(--accent)] px-2 py-0.5 text-[10px] font-extrabold text-white">
+                  Active
+                </span>
+              )}
+            </div>
+            <p className="mt-0.5 text-xs text-[var(--text-2)]">
+              #FAFAFA clean paper surface with Ember orange accent
+            </p>
+          </div>
+        </button>
+      </div>
+      <div className="mt-3 flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/30 px-3 py-2 text-[11px] text-[var(--text-2)]">
+        <span>Persistent across sessions via <code>localStorage.krishinethra-theme</code></span>
+        <span className="inline-flex items-center gap-1.5 font-mono font-bold text-[var(--accent)]">
+          <span className="h-2 w-2 rounded-full bg-[var(--accent)] shadow-[0_0_6px_var(--accent-glow)]" />
+          {theme === "light" ? "PAPER" : "CARBON"}
+        </span>
+      </div>
+    </Card>
   );
 }
 
@@ -780,10 +863,10 @@ export default function SettingsPage() {
                     onClick={() => toggleCrop(m.id)}
                     aria-pressed={active}
                     className={cn(
-                      "rounded-full border px-3 py-1.5 text-xs font-bold transition-all active:scale-[0.97]",
+                      "rounded-full border px-3 py-1.5 text-xs font-bold transition-all active:scale-[0.97] cursor-pointer",
                       active
-                        ? "border-emerald-400/60 bg-emerald-500/15 text-white shadow-[0_0_12px_rgba(34,197,94,0.3)]"
-                        : "border-white/10 bg-black/30 text-zinc-400 hover:border-emerald-500/30 hover:text-white",
+                        ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--text)] shadow-[0_0_12px_var(--accent-glow)]"
+                        : "border-[var(--border)] bg-[var(--surface-2)]/40 text-[var(--text-2)] hover:border-[var(--accent)]/30 hover:text-[var(--text)]",
                     )}
                   >
                     🌱 {m.crop}
@@ -791,7 +874,7 @@ export default function SettingsPage() {
                 );
               })}
             </div>
-            <p className="mt-2 text-[11px] text-zinc-500">
+            <p className="mt-2 text-[11px] text-[var(--text-2)]">
               Zone A/B/C crops follow your first 3 picks — schemes + market advice update instantly.
             </p>
           </div>
@@ -831,7 +914,7 @@ export default function SettingsPage() {
             </label>
             <div>
               <span className={labelCls}>{t("settings.hasPump")}</span>
-              <div className="grid grid-cols-2 gap-1 rounded-xl border border-white/10 bg-black/40 p-1">
+              <div className="grid grid-cols-2 gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/50 p-1">
                 {[
                   { label: t("settings.pumpYes"), value: true },
                   { label: t("settings.pumpNo"), value: false },
@@ -842,10 +925,10 @@ export default function SettingsPage() {
                     onClick={() => updateSettings({ farmProfile: { hasPump: o.value } })}
                     aria-pressed={profile.hasPump === o.value}
                     className={cn(
-                      "rounded-lg px-3 py-2 text-xs font-bold transition-all",
+                      "rounded-lg px-3 py-2 text-xs font-bold transition-all cursor-pointer",
                       profile.hasPump === o.value
-                        ? "bg-emerald-500 text-black shadow-[0_0_14px_rgba(34,197,94,0.4)]"
-                        : "text-zinc-400 hover:bg-white/5 hover:text-white",
+                        ? "bg-[var(--accent)] text-white shadow-[0_0_14px_var(--accent-glow)]"
+                        : "text-[var(--text-2)] hover:bg-[var(--surface)] hover:text-[var(--text)]",
                     )}
                   >
                     {o.label}
@@ -854,18 +937,18 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
-          <p className="mt-2 flex items-center gap-1.5 text-[11px] text-zinc-600">
-            <Globe2 className="h-3.5 w-3.5" /> {t("settings.gps")} — {(location.label || "Custom").toString()} ·{" "}
+          <p className="mt-2 flex items-center gap-1.5 text-[11px] text-[var(--text-2)]">
+            <Globe2 className="h-3.5 w-3.5 text-[var(--accent)]" /> {t("settings.gps")} — {(location.label || "Custom").toString()} ·{" "}
             {Number(location.latitude).toFixed(2)}, {Number(location.longitude).toFixed(2)}
             {profile.location
               ? ` · farm GPS ${profile.location.lat.toFixed(2)}, ${profile.location.lng.toFixed(2)}`
               : ""}
           </p>
-          <div className="mt-3 flex flex-col gap-2 rounded-xl border border-white/10 bg-black/40 p-3 sm:flex-row sm:items-center">
+          <div className="mt-3 flex flex-col gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-3 sm:flex-row sm:items-center">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-white">Edit Registration</p>
-              <p className="text-[11px] text-zinc-500">
-                Re-open the 5-step onboarding wizard with everything pre-filled.
+              <p className="text-sm font-bold text-[var(--text)]">Edit Registration</p>
+              <p className="text-[11px] text-[var(--text-2)]">
+                Re-open the 5-step onboarding wizard with 120+ crop selector.
               </p>
             </div>
             <button
@@ -875,15 +958,15 @@ export default function SettingsPage() {
                 toast.info("Opening registration wizard…");
                 router.push("/");
               }}
-              className="shrink-0 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-xs font-extrabold text-emerald-200 transition-all hover:bg-emerald-500/20 active:scale-[0.98]"
+              className="shrink-0 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent-soft)] px-4 py-2 text-xs font-extrabold text-[var(--accent)] transition-all hover:bg-[var(--accent-soft)]/80 active:scale-[0.98] cursor-pointer"
             >
               {t("common.edit")} Registration
             </button>
           </div>
-          <div className="mt-2 flex flex-col gap-2 rounded-xl border border-white/10 bg-black/40 p-3 sm:flex-row sm:items-center">
+          <div className="mt-2 flex flex-col gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-3 sm:flex-row sm:items-center">
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-white">App PIN</p>
-              <p className="text-[11px] text-zinc-500">
+              <p className="text-sm font-bold text-[var(--text)]">App PIN</p>
+              <p className="text-[11px] text-[var(--text-2)]">
                 {appPinHash ? "PIN is set — unlock screen shows on next visit." : "No PIN — wizard is skipped straight to the dashboard."}
               </p>
             </div>
@@ -894,7 +977,7 @@ export default function SettingsPage() {
                   setAppPin(null);
                   toast.success("PIN removed");
                 }}
-                className="shrink-0 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-2 text-xs font-extrabold text-red-200 transition-all hover:bg-red-500/20 active:scale-[0.98]"
+                className="shrink-0 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-2 text-xs font-extrabold text-red-200 transition-all hover:bg-red-500/20 active:scale-[0.98] cursor-pointer"
               >
                 Remove PIN
               </button>
@@ -907,7 +990,7 @@ export default function SettingsPage() {
                   inputMode="numeric"
                   maxLength={4}
                   aria-label="New 4-digit PIN"
-                  className="w-20 rounded-xl border border-white/10 bg-black/60 px-3 py-2 text-center font-mono text-sm font-bold tracking-[0.3em] text-white outline-none placeholder:text-zinc-600 focus:border-emerald-500/50"
+                  className="w-20 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-center font-mono text-sm font-bold tracking-[0.3em] text-[var(--text)] outline-none placeholder:text-[var(--text-2)] focus:border-[var(--accent)]"
                 />
                 <button
                   type="button"
@@ -920,7 +1003,7 @@ export default function SettingsPage() {
                     setNewPin("");
                     toast.success("PIN set — it will lock on next visit.");
                   }}
-                  className="rounded-xl bg-emerald-500 px-4 py-2 text-xs font-extrabold text-black transition-all hover:bg-emerald-400 active:scale-[0.98]"
+                  className="btn-primary rounded-xl px-4 py-2 text-xs font-extrabold text-white transition-all active:scale-[0.98] cursor-pointer"
                 >
                   Set PIN
                 </button>
@@ -930,14 +1013,19 @@ export default function SettingsPage() {
         </Card>
       </Rise>
 
-      {/* ============ 2. LANGUAGE ============ */}
+      {/* ============ 2. THEME & APPEARANCE ============ */}
+      <Rise delay={0.035}>
+        <ThemeSettingsCard />
+      </Rise>
+
+      {/* ============ 3. LANGUAGE ============ */}
       <Rise delay={0.04}>
         <Card>
           <CardHeader
             title={t("settings.language")}
             subtitle={t("settings.languageSub")}
             action={
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent)]">
                 <Languages className="h-4 w-4" />
               </span>
             }
@@ -952,16 +1040,16 @@ export default function SettingsPage() {
                   onClick={() => setLanguage(l.code)}
                   aria-pressed={active}
                   className={cn(
-                    "rounded-2xl border p-4 text-center transition-all active:scale-[0.97]",
+                    "rounded-2xl border p-4 text-center transition-all active:scale-[0.97] cursor-pointer",
                     active
-                      ? "border-emerald-400/60 bg-emerald-500/15 shadow-[0_0_20px_rgba(34,197,94,0.35)]"
-                      : "border-white/10 bg-black/30 hover:border-emerald-500/30",
+                      ? "border-[var(--accent)] bg-[var(--accent-soft)] shadow-[0_0_20px_var(--accent-glow)]"
+                      : "border-[var(--border)] bg-[var(--surface-2)]/40 hover:border-[var(--accent)]/40",
                   )}
                 >
-                  <span className="block text-2xl font-extrabold text-white">{l.nativeLabel}</span>
-                  <span className="mt-1 block text-xs font-semibold text-zinc-400">{l.label}</span>
+                  <span className="block text-2xl font-extrabold text-[var(--text)]">{l.nativeLabel}</span>
+                  <span className="mt-1 block text-xs font-semibold text-[var(--text-2)]">{l.label}</span>
                   {active && (
-                    <span className="mt-2 inline-block rounded-full bg-emerald-500 px-2.5 py-0.5 text-[10px] font-extrabold text-black">
+                    <span className="mt-2 inline-block rounded-full bg-[var(--accent)] px-2.5 py-0.5 text-[10px] font-extrabold text-white">
                       ✓
                     </span>
                   )}

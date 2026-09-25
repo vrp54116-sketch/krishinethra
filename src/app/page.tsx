@@ -32,6 +32,8 @@ import {
 } from "@/lib/india-locations";
 import { mandiById } from "@/lib/market-data";
 import { useMounted } from "@/components/dashboard/ui";
+import CropSelector from "@/components/onboarding/CropSelector";
+import { getCrop } from "@/lib/crops";
 
 const AVATARS = ["🧑‍🌾", "👩‍🌾", "🧔", "👳‍♀️", "🧕", "👨‍🌾"];
 const ROLES = ["Farmer", "Farm Manager", "Student Researcher"];
@@ -40,23 +42,22 @@ const SOIL_TYPES = ["Sandy", "Loamy", "Clay", "Black cotton"];
 const WATER_SOURCES = ["Borewell", "Canal", "Rain-fed", "Tank"];
 const IRRIGATION_METHODS = ["Flood", "Drip", "Sprinkler", "None"];
 const POWER_SOURCES = ["Electricity", "Solar", "Diesel", "None"];
-/** V2.5 — single default crop (multi-crop picker removed). */
 const DEFAULT_CROP = "Tomato";
 const HARDWARE_NOTE =
   "Hardware: 1 soil sensor, 1 air quality sensor, 1 temp/humidity sensor, 1 rain sensor, 1 pump";
 
 const inputCls =
-  "w-full rounded-2xl border border-white/10 bg-black/50 px-4 py-3 pl-11 text-sm font-semibold text-white outline-none transition-all placeholder:font-normal placeholder:text-zinc-600 focus:border-emerald-400/70 focus:shadow-[0_0_20px_rgba(34,197,94,0.3)] focus:bg-black/70";
+  "w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 pl-11 text-sm font-semibold text-[var(--text)] outline-none transition-all placeholder:font-normal placeholder:text-[var(--text-2)] focus:border-[var(--accent)] focus:shadow-[0_0_20px_var(--accent-glow)]";
 
 const selectCls =
-  "w-full appearance-none rounded-2xl border border-white/10 bg-black/50 px-4 py-3 text-sm font-semibold text-white outline-none transition-all focus:border-emerald-400/70 focus:shadow-[0_0_20px_rgba(34,197,94,0.3)] [&>option]:bg-[#0a120c]";
+  "w-full appearance-none rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm font-semibold text-[var(--text)] outline-none transition-all focus:border-[var(--accent)] focus:shadow-[0_0_20px_var(--accent-glow)] [&>option]:bg-black [&>option]:text-white";
 
 const labelCls =
-  "mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-emerald-200/60";
+  "mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-[var(--text-2)]";
 
 function FieldIcon({ children }: { children: React.ReactNode }) {
   return (
-    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-emerald-400/70">
+    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--accent)]">
       {children}
     </span>
   );
@@ -73,31 +74,29 @@ function FarmBackground() {
         top: (i * 53) % 100,
         dur: 9 + ((i * 29) % 12),
         delay: (i % 7) * 0.9,
-        gold: i % 4 === 0,
+        warm: i % 3 === 0,
       })),
     [],
   );
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,rgba(34,197,94,0.25),transparent_70%)]" />
-      <div className="animate-drift-slow absolute -left-32 top-1/4 h-96 w-96 rounded-full bg-emerald-500/15 blur-[120px]" />
-      <div className="animate-drift-slow-reverse absolute -right-32 bottom-1/4 h-[28rem] w-[28rem] rounded-full bg-green-600/10 blur-[130px]" />
-      <div className="animate-pulse-glow absolute left-1/2 top-1/3 h-64 w-[42rem] -translate-x-1/2 rounded-full bg-emerald-400/[0.07] blur-[100px]" />
-      <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-amber-400/[0.05] blur-[110px]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,rgba(255,107,26,0.18),transparent_70%)]" />
+      <div className="animate-drift-slow absolute -left-32 top-1/4 h-96 w-96 rounded-full bg-[var(--accent-glow)]/15 blur-[130px]" />
+      <div className="animate-drift-slow-reverse absolute -right-32 bottom-1/4 h-[28rem] w-[28rem] rounded-full bg-[var(--accent-soft)]/20 blur-[130px]" />
       {particles.map((p) => (
         <motion.span
           key={p.id}
           className={cn(
             "absolute rounded-full blur-[1px]",
-            p.gold ? "bg-amber-300/25" : "bg-emerald-300/25",
+            p.warm ? "bg-amber-400/25" : "bg-[var(--accent)]/20",
           )}
           style={{ width: p.size, height: p.size, left: `${p.left}%`, top: `${p.top}%` }}
           animate={{ y: [0, -46, 0], x: [0, 18, 0], opacity: [0.15, 0.7, 0.15] }}
           transition={{ duration: p.dur, repeat: Infinity, delay: p.delay, ease: "easeInOut" }}
         />
       ))}
-      <div className="farm-grid absolute inset-0" />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#070B09]/80 via-transparent to-[#070B09]/40" />
+      <div className="farm-grid absolute inset-0 opacity-40" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg)] via-transparent to-[var(--bg)]/70" />
     </div>
   );
 }
@@ -138,15 +137,15 @@ function PinUnlock() {
         animate={{ opacity: 1, y: 0 }}
         className="relative z-10 w-full max-w-md"
       >
-        <div className="glass-strong rounded-[24px] p-8 text-center sm:p-10 border border-white/10 shadow-2xl">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/15 text-4xl">
+        <div className="glass-strong rounded-[24px] p-8 text-center sm:p-10 border border-[var(--border)] bg-[var(--surface)] shadow-2xl">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-4xl border border-[var(--accent)]/30">
             {avatar || "🧑‍🌾"}
           </div>
-          <h1 className="mt-4 text-2xl font-extrabold text-white">
+          <h1 className="mt-4 text-2xl font-extrabold text-[var(--text)]">
             {t("onboarding.pinUnlockTitle")}
             {farmerName ? `, ${farmerName.split(" ")[0]}` : ""} 🌾
           </h1>
-          <p className="mt-1.5 text-sm text-zinc-400">{t("onboarding.pinUnlockSub")}</p>
+          <p className="mt-1.5 text-sm text-[var(--text-2)]">{t("onboarding.pinUnlockSub")}</p>
           <div className="mt-6 flex items-center justify-center gap-3">
             {pin.map((d, i) => (
               <input
@@ -174,10 +173,10 @@ function PinUnlock() {
                 }}
                 aria-label={`PIN digit ${i + 1}`}
                 className={cn(
-                  "h-14 w-14 rounded-2xl border bg-black/60 text-center text-2xl font-bold text-white outline-none transition-all placeholder:text-zinc-700",
+                  "h-14 w-14 rounded-2xl border bg-[var(--surface-2)] text-center text-2xl font-bold text-[var(--text)] outline-none transition-all placeholder:text-[var(--text-2)]",
                   error
                     ? "animate-pulse border-red-400/70"
-                    : "border-emerald-500/20 focus:border-emerald-400/70 focus:shadow-[0_0_20px_rgba(52,211,153,0.35)]",
+                    : "border-[var(--border)] focus:border-[var(--accent)] focus:shadow-[0_0_20px_var(--accent-glow)]",
                 )}
                 placeholder="•"
               />
@@ -189,7 +188,7 @@ function PinUnlock() {
           <button
             type="button"
             onClick={submit}
-            className="btn-primary-aurora glow-green mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold text-black cursor-pointer transition-all hover:brightness-110"
+            className="btn-primary mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold text-white cursor-pointer transition-all"
           >
             <LockKeyhole className="h-5 w-5" /> {t("onboarding.unlockButton")}
           </button>
@@ -199,7 +198,7 @@ function PinUnlock() {
               resetOnboarding();
               toast.info(t("onboarding.editLater"));
             }}
-            className="mt-3 text-xs text-zinc-400 underline-offset-2 hover:text-emerald-300 hover:underline cursor-pointer"
+            className="mt-3 text-xs text-[var(--text-2)] underline-offset-2 hover:text-[var(--accent)] hover:underline cursor-pointer"
           >
             {t("common.edit")} registration
           </button>
@@ -315,19 +314,23 @@ function Wizard() {
     );
   };
 
-  // V2.5 — step 4 defaults to a single crop ("Tomato") + single zone "Your Farm".
+  // Step 4: initialize with default crops if none exist
   useEffect(() => {
     if (step !== 4) return;
-    updateSettings({ farmProfile: { crops: ["tomato"] } });
+    if (!profile.crops || profile.crops.length === 0) {
+      updateSettings({ farmProfile: { crops: ["tomato", "wheat"] } });
+    }
     const st = useFarmStore.getState();
     const first = st.zones[0];
+    const primaryCropId = profile.crops?.[0] || "tomato";
+    const primaryCropName = getCrop(primaryCropId)?.en || "Tomato";
     if (st.zones.length !== 1 || first?.name !== "Your Farm") {
       useFarmStore.setState({
         zones: [
           {
             id: "A",
             name: "Your Farm",
-            crop: DEFAULT_CROP,
+            crop: primaryCropName,
             soilMoisture: first?.soilMoisture ?? 45,
             status: first?.status ?? "healthy",
           },
@@ -367,15 +370,15 @@ function Wizard() {
     <main className="relative flex h-full overflow-y-auto flex-col items-center overflow-x-hidden bg-transparent px-4 pb-10 pt-6 sm:pt-10">
       <FarmBackground />
       <div className="relative z-10 w-full max-w-xl">
-        {/* Progress — liquid glass pill track + emerald fill, gooey morph per step */}
+        {/* Progress — Carbon & Ember progress bar */}
         <div className="mb-2 flex items-center justify-between text-xs font-bold">
-          <span className="text-emerald-200/70">
+          <span className="text-[var(--text-2)]">
             {t("onboarding.stepOf").replace("{step}", String(step))}
           </span>
-          <span className="font-mono text-zinc-500">{step}/5</span>
+          <span className="font-mono text-[var(--accent)]">{step}/5</span>
         </div>
         <div
-          className="liquid-glass liquid-glass-pill h-2.5 overflow-hidden rounded-full border border-white/15"
+          className="liquid-glass-pill h-2.5 overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface)]"
           role="progressbar"
           aria-valuemin={1}
           aria-valuemax={5}
@@ -384,7 +387,7 @@ function Wizard() {
         >
           <motion.div
             key={step}
-            className="liquid-gooey h-full rounded-full bg-gradient-to-r from-[#34D399] via-[#2DD4BF] to-[#A3E635] shadow-[0_0_16px_rgba(52,211,153,0.65)]"
+            className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-2)] shadow-[0_0_16px_var(--accent-glow)]"
             initial={{ width: `${((step - 1) / 5) * 100}%` }}
             animate={{ width: `${(step / 5) * 100}%` }}
             transition={{ type: "spring", stiffness: 120, damping: 20 }}
@@ -400,7 +403,7 @@ function Wizard() {
                 if (d < step) go(d);
               }}
               className={cn(
-                "relative h-6 w-6 rounded-full transition-all",
+                "relative h-6 w-6 rounded-full transition-all cursor-pointer",
               )}
             >
               <span
@@ -408,9 +411,9 @@ function Wizard() {
                 className={cn(
                   "absolute left-1/2 top-1/2 block h-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all",
                   d === step
-                    ? "w-8 bg-emerald-400 shadow-[0_0_12px_rgba(34,197,94,0.7)]"
+                    ? "w-8 bg-[var(--accent)] shadow-[0_0_12px_var(--accent-glow)]"
                     : d < step
-                      ? "w-2.5 bg-emerald-500/70"
+                      ? "w-2.5 bg-[var(--accent)]/70"
                       : "w-2.5 bg-white/15",
                 )}
               />
@@ -426,13 +429,13 @@ function Wizard() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -64 * dir }}
             transition={{ duration: 0.28, ease: "easeOut" }}
-            className="liquid-glass-card rounded-[24px] border border-white/10 shadow-2xl"
+            className="liquid-glass-card rounded-[24px] border border-[var(--border)] bg-[var(--surface)] shadow-2xl p-6 sm:p-8"
           >
             {step > 1 && (
               <button
                 type="button"
                 onClick={() => go(step - 1)}
-                className="mb-4 inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs font-bold text-zinc-300 transition-colors hover:border-emerald-500/40 hover:text-white cursor-pointer"
+                className="mb-4 inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-xs font-bold text-[var(--text-2)] transition-colors hover:border-[var(--accent)]/40 hover:text-[var(--text)] cursor-pointer"
               >
                 <ArrowLeft className="h-3.5 w-3.5" /> {t("onboarding.back")}
               </button>
@@ -445,33 +448,33 @@ function Wizard() {
                   initial={{ scale: 0.7, opacity: 0, rotate: -8 }}
                   animate={{ scale: 1, opacity: 1, rotate: 0 }}
                   transition={{ type: "spring", stiffness: 160, damping: 14 }}
-                  className="glow-green mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-500/15 text-emerald-300"
+                  className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30 shadow-[0_0_24px_var(--accent-glow)]"
                 >
                   <motion.span
                     animate={{ rotate: [0, 8, -8, 0] }}
                     transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
                     className="flex"
                   >
-                    <Sprout className="h-10 w-10" />
+                    <Sprout className="h-10 w-10 text-[var(--accent)]" />
                   </motion.span>
                 </motion.div>
-                <h1 className="glow-text mt-5 text-4xl font-extrabold tracking-tight text-white">
+                <h1 className="glow-text mt-5 text-4xl font-extrabold tracking-tight text-[var(--text)]">
                   {t("onboarding.welcomeTitle").includes("Krishi")
                     ? (
                       <>
                         KrishiNethra{" "}
-                        <span className="bg-gradient-to-r from-emerald-300 to-green-500 bg-clip-text text-transparent">
+                        <span className="bg-gradient-to-r from-[var(--accent)] to-[var(--accent-2)] bg-clip-text text-transparent">
                           AI
                         </span>
                       </>
                     )
                     : t("onboarding.welcomeTitle")}
                 </h1>
-                <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-emerald-100/70">
+                <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-[var(--text-2)]">
                   {t("onboarding.welcomeSub")}
                 </p>
-                <p className="mb-3 mt-7 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest text-emerald-200/60">
-                  <Languages className="h-3.5 w-3.5" /> {t("onboarding.chooseLanguage")}
+                <p className="mb-3 mt-7 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest text-[var(--text-2)]">
+                  <Languages className="h-3.5 w-3.5 text-[var(--accent)]" /> {t("onboarding.chooseLanguage")}
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   {LANGUAGES.map((l) => {
@@ -485,14 +488,14 @@ function Wizard() {
                         className={cn(
                           "rounded-2xl border p-4 transition-all active:scale-[0.97] cursor-pointer",
                           active
-                            ? "border-emerald-400/70 bg-emerald-500/15 shadow-[0_0_24px_rgba(34,197,94,0.4)]"
-                            : "border-white/10 bg-white/[0.02] hover:border-emerald-500/40",
+                            ? "border-[var(--accent)] bg-[var(--accent-soft)] shadow-[0_0_24px_var(--accent-glow)]"
+                            : "border-[var(--border)] bg-[var(--surface-2)]/50 hover:border-[var(--accent)]/40",
                         )}
                       >
-                        <span className="block text-xl font-extrabold text-white">{l.nativeLabel}</span>
-                        <span className="mt-0.5 block text-xs text-zinc-400">{l.label}</span>
+                        <span className="block text-xl font-extrabold text-[var(--text)]">{l.nativeLabel}</span>
+                        <span className="mt-0.5 block text-xs text-[var(--text-2)]">{l.label}</span>
                         {active && (
-                          <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-0.5 text-[10px] font-extrabold text-black">
+                          <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[var(--accent)] px-2.5 py-0.5 text-[10px] font-extrabold text-white">
                             <Check className="h-3 w-3" strokeWidth={3} /> ✓
                           </span>
                         )}
@@ -505,7 +508,7 @@ function Wizard() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => go(2)}
-                  className="btn-primary-aurora glow-green mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold text-black transition-colors hover:brightness-110 cursor-pointer"
+                  className="btn-primary mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold text-white transition-colors cursor-pointer"
                 >
                   {t("onboarding.getStarted")} <ArrowRight className="h-5 w-5" />
                 </motion.button>
@@ -515,8 +518,8 @@ function Wizard() {
             {/* ============ STEP 2 ============ */}
             {step === 2 && (
               <div>
-                <h2 className="text-xl font-extrabold text-white">{t("onboarding.farmerTitle")}</h2>
-                <p className="mt-1 text-sm text-zinc-400">{t("onboarding.farmerSub")}</p>
+                <h2 className="text-xl font-extrabold text-[var(--text)]">{t("onboarding.farmerTitle")}</h2>
+                <p className="mt-1 text-sm text-[var(--text-2)]">{t("onboarding.farmerSub")}</p>
                 <div className="mt-5 space-y-4">
                   <div>
                     <label className={labelCls} htmlFor="ob-name">{t("onboarding.fullName")}</label>
@@ -545,7 +548,7 @@ function Wizard() {
                       <FieldIcon>
                         <Phone className="h-4 w-4" />
                       </FieldIcon>
-                      <div className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 border-r border-white/10 pr-2 text-sm font-bold text-zinc-400">
+                      <div className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 border-r border-[var(--border)] pr-2 text-sm font-bold text-[var(--text-2)]">
                         +91
                       </div>
                       <input
@@ -584,10 +587,10 @@ function Wizard() {
                             onClick={() => updateSettings({ farmProfile: { role: r } })}
                             aria-pressed={active}
                             className={cn(
-                              "rounded-2xl border px-2 py-3 text-xs font-bold transition-all active:scale-[0.97]",
+                              "rounded-2xl border px-2 py-3 text-xs font-bold transition-all active:scale-[0.97] cursor-pointer",
                               active
-                                ? "border-emerald-400/60 bg-emerald-500/15 text-white shadow-[0_0_16px_rgba(34,197,94,0.3)]"
-                                : "border-white/10 bg-black/30 text-zinc-400 hover:border-emerald-500/30 hover:text-white",
+                                ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--text)] shadow-[0_0_16px_var(--accent-glow)]"
+                                : "border-[var(--border)] bg-[var(--surface-2)]/50 text-[var(--text-2)] hover:border-[var(--accent)]/40 hover:text-[var(--text)]",
                             )}
                           >
                             {label}
@@ -606,10 +609,10 @@ function Wizard() {
                           onClick={() => updateSettings({ farmProfile: { avatar: a } })}
                           aria-pressed={(profile.avatar || AVATARS[0]) === a}
                           className={cn(
-                            "flex h-12 w-12 items-center justify-center rounded-2xl border text-2xl transition-all active:scale-95",
+                            "flex h-12 w-12 items-center justify-center rounded-2xl border text-2xl transition-all active:scale-95 cursor-pointer",
                             (profile.avatar || AVATARS[0]) === a
-                              ? "border-emerald-400/70 bg-emerald-500/15 shadow-[0_0_16px_rgba(34,197,94,0.4)]"
-                              : "border-white/10 bg-black/30 hover:border-emerald-500/30",
+                              ? "border-[var(--accent)] bg-[var(--accent-soft)] shadow-[0_0_16px_var(--accent-glow)]"
+                              : "border-[var(--border)] bg-[var(--surface-2)]/50 hover:border-[var(--accent)]/40",
                           )}
                         >
                           {a}
@@ -625,7 +628,7 @@ function Wizard() {
                   className={cn(
                     "mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold transition-all cursor-pointer",
                     step2Valid
-                      ? "btn-primary-aurora glow-green text-black hover:brightness-110"
+                      ? "btn-primary text-white"
                       : "cursor-not-allowed bg-white/10 text-zinc-500",
                   )}
                 >
@@ -637,27 +640,27 @@ function Wizard() {
             {/* ============ STEP 3 ============ */}
             {step === 3 && (
               <div>
-                <h2 className="flex items-center gap-2 text-xl font-extrabold text-white">
-                  <MapPin className="h-5 w-5 text-emerald-300" /> {t("onboarding.locationTitle")}
+                <h2 className="flex items-center gap-2 text-xl font-extrabold text-[var(--text)]">
+                  <MapPin className="h-5 w-5 text-[var(--accent)]" /> {t("onboarding.locationTitle")}
                 </h2>
-                <p className="mt-1 text-sm text-zinc-400">{t("onboarding.locationSub")}</p>
+                <p className="mt-1 text-sm text-[var(--text-2)]">{t("onboarding.locationSub")}</p>
                 <button
                   type="button"
                   onClick={detectLocation}
                   disabled={locating}
                   className={cn(
-                    "mt-5 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold transition-all active:scale-[0.99]",
+                    "mt-5 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold transition-all active:scale-[0.99] cursor-pointer",
                     locating
                       ? "cursor-wait bg-white/10 text-zinc-400"
-                      : "glow-green bg-emerald-500 text-black hover:bg-emerald-400",
+                      : "btn-primary text-white",
                   )}
                 >
                   <LocateFixed className={cn("h-5 w-5", locating && "animate-spin")} />
                   {locating ? t("onboarding.detecting") : t("onboarding.detectLocation")}
                 </button>
                 {geoLabel && (
-                  <p className="mt-3 flex items-center gap-1.5 rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-200">
-                    <Check className="h-4 w-4 shrink-0" /> {t("onboarding.detectedOk")}: {geoLabel}
+                  <p className="mt-3 flex items-center gap-1.5 rounded-2xl border border-[var(--accent)]/40 bg-[var(--accent-soft)] px-4 py-3 text-sm font-bold text-[var(--text)]">
+                    <Check className="h-4 w-4 shrink-0 text-[var(--accent)]" /> {t("onboarding.detectedOk")}: {geoLabel}
                   </p>
                 )}
                 {geoDenied && (
@@ -665,7 +668,7 @@ function Wizard() {
                     {t("onboarding.permissionDenied")}
                   </p>
                 )}
-                <p className="mb-2 mt-5 text-[11px] font-bold uppercase tracking-widest text-zinc-500">
+                <p className="mb-2 mt-5 text-[11px] font-bold uppercase tracking-widest text-[var(--text-2)]">
                   {t("onboarding.manualTitle")}
                 </p>
                 <div className="space-y-4">
@@ -731,9 +734,9 @@ function Wizard() {
                       className={inputCls}
                     />
                   </div>
-                  <div className="rounded-2xl border border-white/10 bg-black/40 p-3">
+                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]/50 p-3">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-[11px] uppercase tracking-widest text-zinc-500">
+                      <span className="font-mono text-[11px] uppercase tracking-widest text-[var(--text-2)]">
                         {t("onboarding.gpsLabel")}:{" "}
                         {profile.location
                           ? `${profile.location.lat.toFixed(4)}, ${profile.location.lng.toFixed(4)}`
@@ -746,7 +749,7 @@ function Wizard() {
                           setLatText(profile.location ? String(profile.location.lat) : "");
                           setLonText(profile.location ? String(profile.location.lng) : "");
                         }}
-                        className="text-[11px] font-bold text-emerald-300 hover:underline"
+                        className="text-[11px] font-bold text-[var(--accent)] hover:underline cursor-pointer"
                       >
                         {t("common.edit")}
                       </button>
@@ -758,14 +761,14 @@ function Wizard() {
                           onChange={(e) => setLatText(e.target.value)}
                           placeholder="23.0225"
                           inputMode="decimal"
-                          className="w-full rounded-xl border border-white/10 bg-black/60 px-3 py-2 font-mono text-xs text-white outline-none focus:border-emerald-500/50"
+                          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 font-mono text-xs text-[var(--text)] outline-none focus:border-[var(--accent)]"
                         />
                         <input
                           value={lonText}
                           onChange={(e) => setLonText(e.target.value)}
                           placeholder="72.5714"
                           inputMode="decimal"
-                          className="w-full rounded-xl border border-white/10 bg-black/60 px-3 py-2 font-mono text-xs text-white outline-none focus:border-emerald-500/50"
+                          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 font-mono text-xs text-[var(--text)] outline-none focus:border-[var(--accent)]"
                         />
                         <button
                           type="button"
@@ -779,7 +782,7 @@ function Wizard() {
                             });
                             setEditingCoords(false);
                           }}
-                          className="shrink-0 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-extrabold text-black"
+                          className="shrink-0 rounded-xl bg-[var(--accent)] px-3 py-2 text-xs font-extrabold text-white cursor-pointer"
                         >
                           OK
                         </button>
@@ -794,7 +797,7 @@ function Wizard() {
                   className={cn(
                     "mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold transition-all cursor-pointer",
                     step3Valid
-                      ? "btn-primary-aurora glow-green text-black hover:brightness-110"
+                      ? "btn-primary text-white"
                       : "cursor-not-allowed bg-white/10 text-zinc-500",
                   )}
                 >
@@ -806,10 +809,10 @@ function Wizard() {
             {/* ============ STEP 4 ============ */}
             {step === 4 && (
               <div>
-                <h2 className="flex items-center gap-2 text-xl font-extrabold text-white">
-                  <Tractor className="h-5 w-5 text-emerald-300" /> {t("onboarding.farmTitle")}
+                <h2 className="flex items-center gap-2 text-xl font-extrabold text-[var(--text)]">
+                  <Tractor className="h-5 w-5 text-[var(--accent)]" /> {t("onboarding.farmTitle")}
                 </h2>
-                <p className="mt-1 text-sm text-zinc-400">{t("onboarding.farmSub")}</p>
+                <p className="mt-1 text-sm text-[var(--text-2)]">{t("onboarding.farmSub")}</p>
                 <div className="mt-5 space-y-4">
                   <div>
                     <label className={labelCls} htmlFor="ob-farm">{t("onboarding.farmName")}</label>
@@ -851,7 +854,7 @@ function Wizard() {
                           })
                         }
                         aria-label="Size unit"
-                        className="w-32 shrink-0 rounded-2xl border border-white/10 bg-black/50 px-3 py-3 text-sm font-bold text-white outline-none focus:border-emerald-400/70 [&>option]:bg-[#0a120c]"
+                        className="w-32 shrink-0 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-3 py-3 text-sm font-bold text-[var(--text)] outline-none focus:border-[var(--accent)] focus:shadow-[0_0_20px_var(--accent-glow)] [&>option]:bg-black [&>option]:text-white"
                       >
                         {SIZE_UNITS.map((u) => (
                           <option key={u} value={u}>
@@ -892,25 +895,24 @@ function Wizard() {
                     ))}
                   </div>
                   <div>
-                    <span className={labelCls}>{t("onboarding.crops")}</span>
-                    {/* V2.5 — single default crop (multi-crop picker removed) */}
-                    <div
-                      className="flex items-center justify-between rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3"
-                      aria-label={`Crop: ${DEFAULT_CROP}`}
-                    >
-                      <span className="text-sm font-bold text-white">🌱 {DEFAULT_CROP}</span>
-                      <span className="rounded-full bg-emerald-500 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-black">
-                        Default
-                      </span>
-                    </div>
-                    <p className="mt-2 text-[11px] text-zinc-500">
-                      Single crop in v2 — your zone is set up automatically.
+                    <span className={labelCls}>{t("onboarding.crops")} (120+ Database)</span>
+                    <CropSelector
+                      selectedIds={profile.crops || ["tomato"]}
+                      onChange={(crops) => {
+                        updateSettings({ farmProfile: { crops } });
+                        const first = useFarmStore.getState().zones[0];
+                        if (first && crops[0]) {
+                          const cName = getCrop(crops[0])?.en || crops[0];
+                          useFarmStore.setState({
+                            zones: [{ ...first, crop: cName }],
+                          });
+                        }
+                      }}
+                    />
+                    <p className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/60 px-3 py-2 text-[11px] font-bold text-[var(--accent)]">
+                      Zone: <span className="text-[var(--text)]">Your Farm</span> — automated multi-crop zoning & schedule
                     </p>
-                    {/* Single zone — zone assignment removed */}
-                    <p className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] font-bold text-emerald-200">
-                      Zone: <span className="text-white">Your Farm</span> — single-zone setup
-                    </p>
-                    <p className="mt-2 rounded-xl border border-sky-400/25 bg-sky-500/[0.07] px-3 py-2 text-[11px] leading-relaxed text-sky-200">
+                    <p className="mt-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/30 px-3 py-2 text-[11px] leading-relaxed text-[var(--text-2)]">
                       {HARDWARE_NOTE}
                     </p>
                   </div>
@@ -922,7 +924,7 @@ function Wizard() {
                   className={cn(
                     "mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold transition-all cursor-pointer",
                     step4Valid
-                      ? "btn-primary-aurora glow-green text-black hover:brightness-110"
+                      ? "btn-primary text-white"
                       : "cursor-not-allowed bg-white/10 text-zinc-500",
                   )}
                 >
@@ -934,58 +936,62 @@ function Wizard() {
             {/* ============ STEP 5 ============ */}
             {step === 5 && (
               <div>
-                <h2 className="text-xl font-extrabold text-white">{t("onboarding.confirmTitle")}</h2>
-                <p className="mt-1 text-sm text-zinc-400">{t("onboarding.confirmSub")}</p>
-                <div className="mt-5 overflow-hidden rounded-2xl border border-emerald-500/25 bg-gradient-to-b from-emerald-500/[0.08] to-transparent p-5">
+                <h2 className="text-xl font-extrabold text-[var(--text)]">{t("onboarding.confirmTitle")}</h2>
+                <p className="mt-1 text-sm text-[var(--text-2)]">{t("onboarding.confirmSub")}</p>
+                <div className="mt-5 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-5">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-3xl">
+                    <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-3xl border border-[var(--accent)]/30 text-[var(--accent)]">
                       {profile.avatar || "🧑‍🌾"}
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate text-lg font-extrabold text-white">{name || "—"}</p>
-                      <p className="truncate text-xs text-zinc-400">
+                      <p className="truncate text-lg font-extrabold text-[var(--text)]">{name || "—"}</p>
+                      <p className="truncate text-xs text-[var(--text-2)]">
                         {profile.role || "Farmer"} · +91 {phone || "—"}
                       </p>
                     </div>
                   </div>
                   <div className="mt-4 space-y-2 text-sm">
-                    <p className="flex items-start gap-2 text-zinc-200">
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+                    <p className="flex items-start gap-2 text-[var(--text)]">
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]" />
                       {[profile.village, profile.district, profile.state].filter(Boolean).join(", ") || "—"}
                     </p>
-                    <p className="flex items-start gap-2 text-zinc-200">
-                      <Tractor className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+                    <p className="flex items-start gap-2 text-[var(--text)]">
+                      <Tractor className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]" />
                       {farmNameEffective} · {profile.size} {profile.sizeUnit} · {profile.soilType}
                     </p>
-                    <p className="flex items-start gap-2 text-zinc-200">
-                      <Droplets className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+                    <p className="flex items-start gap-2 text-[var(--text)]">
+                      <Droplets className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]" />
                       {profile.waterSource} · {profile.irrigationMethod} · {profile.powerSource}
                     </p>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1.5">
-                    {(profile.crops ?? []).map((c) => (
-                      <span
-                        key={c}
-                        className="rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold text-emerald-200"
-                      >
-                        🌱 {mandiById(c)?.crop ?? c}
-                      </span>
-                    ))}
+                    {(profile.crops ?? []).map((c) => {
+                      const cropObj = getCrop(c);
+                      const label = cropObj ? `${cropObj.en} (${cropObj.hi})` : (mandiById(c)?.crop ?? c);
+                      return (
+                        <span
+                          key={c}
+                          className="rounded-full border border-[var(--accent)]/40 bg-[var(--accent-soft)] px-2.5 py-1 text-[11px] font-bold text-[var(--text)] shadow-[0_0_8px_var(--accent-glow)]"
+                        >
+                          🌱 {label}
+                        </span>
+                      );
+                    })}
                   </div>
                   {profile.location && (
-                    <p className="mt-3 font-mono text-[11px] text-zinc-500">
+                    <p className="mt-3 font-mono text-[11px] text-[var(--text-2)]">
                       {profile.location.lat.toFixed(4)}, {profile.location.lng.toFixed(4)}
                     </p>
                   )}
                 </div>
 
-                <div className="mt-4 rounded-2xl border border-white/10 bg-black/40 p-4">
+                <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]/50 p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="flex items-center gap-1.5 text-sm font-bold text-white">
-                        <LockKeyhole className="h-4 w-4 text-emerald-300" /> {t("onboarding.pinToggle")}
+                      <p className="flex items-center gap-1.5 text-sm font-bold text-[var(--text)]">
+                        <LockKeyhole className="h-4 w-4 text-[var(--accent)]" /> {t("onboarding.pinToggle")}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-zinc-500">{t("onboarding.pinToggleSub")}</p>
+                      <p className="mt-0.5 text-[11px] text-[var(--text-2)]">{t("onboarding.pinToggleSub")}</p>
                     </div>
                     <button
                       type="button"
@@ -994,8 +1000,8 @@ function Wizard() {
                       aria-label={t("onboarding.pinToggle")}
                       onClick={() => setPinEnabled((v) => !v)}
                       className={cn(
-                        "relative h-7 w-12 shrink-0 rounded-full transition-colors",
-                        pinEnabled ? "bg-emerald-500 shadow-[0_0_12px_rgba(34,197,94,0.5)]" : "bg-white/10",
+                        "relative h-7 w-12 shrink-0 rounded-full transition-colors cursor-pointer",
+                        pinEnabled ? "bg-[var(--accent)] shadow-[0_0_12px_var(--accent-glow)]" : "bg-white/10",
                       )}
                     >
                       <span
@@ -1032,7 +1038,7 @@ function Wizard() {
                                 pinRefs.current[i - 1]?.focus();
                             }}
                             aria-label={`PIN digit ${i + 1}`}
-                            className="h-12 w-12 rounded-xl border border-emerald-500/20 bg-black text-center text-xl font-bold text-white outline-none focus:border-emerald-400/70 focus:shadow-[0_0_16px_rgba(34,197,94,0.35)]"
+                            className="h-12 w-12 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-center text-xl font-bold text-[var(--text)] outline-none focus:border-[var(--accent)] focus:shadow-[0_0_16px_var(--accent-glow)]"
                             placeholder="•"
                           />
                         ))}
@@ -1044,11 +1050,11 @@ function Wizard() {
                 <button
                   type="button"
                   onClick={finish}
-                  className="btn-primary-aurora glow-green mt-5 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold text-black transition-all hover:brightness-110 active:scale-[0.99] cursor-pointer"
+                  className="btn-primary mt-5 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold text-white transition-all active:scale-[0.99] cursor-pointer"
                 >
                   {t("onboarding.startFarming")}
                 </button>
-                <p className="mt-3 text-center text-[11px] text-zinc-500">{t("onboarding.editLater")}</p>
+                <p className="mt-3 text-center text-[11px] text-[var(--text-2)]">{t("onboarding.editLater")}</p>
               </div>
             )}
           </motion.div>
@@ -1074,8 +1080,8 @@ export default function LandingPage() {
 
   if (!mounted) {
     return (
-      <main className="relative flex h-full items-center justify-center bg-[#070B09]">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-500/30 border-t-emerald-400" />
+      <main className="relative flex h-full items-center justify-center bg-[var(--bg)]">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--accent)]/30 border-t-[var(--accent)]" />
       </main>
     );
   }
@@ -1088,8 +1094,8 @@ export default function LandingPage() {
         </MotionConfig>
       );
     return (
-      <main className="relative flex h-full items-center justify-center bg-[#070B09]">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-emerald-500/30 border-t-emerald-400" />
+      <main className="relative flex h-full items-center justify-center bg-[var(--bg)]">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--accent)]/30 border-t-[var(--accent)]" />
       </main>
     );
   }

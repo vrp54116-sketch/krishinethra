@@ -120,13 +120,13 @@ export const LiquidButton = React.forwardRef<HTMLButtonElement, LiquidButtonProp
               <span
                 className={cn(
                   "liquid-button-badge transition-transform duration-150",
-                  internalSuccess && "bg-white text-emerald-700 shadow-[0_0_12px_rgba(255,255,255,0.7)]",
+                  internalSuccess && "bg-white text-[#22C55E] shadow-[0_0_12px_rgba(255,255,255,0.7)]",
                 )}
               >
                 <EffectiveIcon
                   className={cn(
                     "h-[18px] w-[18px] transition-transform duration-150",
-                    internalSuccess && "text-emerald-700 stroke-[2.8]",
+                    internalSuccess && "text-[#22C55E] stroke-[2.8]",
                   )}
                   strokeWidth={2.2}
                 />
@@ -163,10 +163,10 @@ export const LiquidButton = React.forwardRef<HTMLButtonElement, LiquidButtonProp
 
     const classes = cn(
       "liquid-button transition-all duration-300",
-      variant === "primary" ? "liquid-button-primary" : "liquid-glass-pill",
+      variant === "primary" ? "liquid-button-primary" : "btn-secondary",
       iconOnly && "liquid-button-icon-only",
       internalSuccess &&
-        "bg-emerald-500! border-emerald-400! shadow-[0_0_28px_rgba(52,211,153,0.75)]! text-white!",
+        "bg-[#22C55E]! border-[#22C55E]! shadow-[0_0_24px_rgba(34,197,94,0.75)]! text-white!",
       loading && "w-10! min-w-10! max-w-10! p-0! justify-center overflow-hidden cursor-wait",
       "focus-visible:outline-none",
       className,

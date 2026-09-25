@@ -108,8 +108,13 @@ export default function RootLayout({
         />
         <meta name="mobile-web-app-capable" content="yes" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('krishinethra-theme');if(t==='light'||(!t&&window.matchMedia('(prefers-color-scheme: light)').matches)){document.documentElement.classList.add('light');}else{document.documentElement.classList.remove('light');}}catch(e){}})();`,
+          }}
+        />
       </head>
-      <body className="h-full bg-[#070B09] font-sans text-[#F3F4F6] antialiased overflow-hidden">
+      <body className="h-full bg-[var(--bg)] font-sans text-[var(--text)] antialiased overflow-hidden">
         <AmbientBackground />
         {children}
         <AppToaster />

@@ -6,23 +6,29 @@ import { Area, ComposedChart, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */
-/* Aurora Harvest chart theme — shared by every Recharts surface      */
+/* Carbon & Ember chart theme — strokes: accent + white/40 + white/20 */
 /* ------------------------------------------------------------------ */
 
 export const CHART_GRID = "rgba(255,255,255,0.06)";
-export const CHART_TICK = "#9CA3AF";
+export const CHART_TICK = "#A3A3A3";
+
+export const CHART_STROKES = {
+  accent: "#FF6B1A",
+  white40: "rgba(255,255,255,0.40)",
+  white20: "rgba(255,255,255,0.20)",
+} as const;
 
 export const chartTooltipStyle = {
-  background: "rgba(18,26,22,0.95)",
-  border: "1px solid rgba(255,255,255,0.15)",
-  borderRadius: 999,
+  background: "var(--bg, #000000)",
+  border: "1px solid var(--border, rgba(255,255,255,0.10))",
+  borderRadius: 9999,
   fontSize: 12,
-  color: "#F3F4F6",
+  color: "var(--text, #FFFFFF)",
   padding: "6px 14px",
   boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
 } as const;
 
-/** Custom glass-pill tooltip for Recharts (solid dark surface + white/15 border + 999px radius with spring entrance). */
+/** Custom glass-pill tooltip for Recharts */
 export const GlassChartTooltip = memo(function GlassChartTooltip({
   active,
   payload,
@@ -53,7 +59,7 @@ export const GlassChartTooltip = memo(function GlassChartTooltip({
         const n = String(p.name ?? "");
         const [text, name] = formatter ? formatter(v, n) : [`${v}`, n];
         return (
-          <p key={i} className="tabular-nums text-zinc-200">
+          <p key={i} className="tabular-nums text-zinc-200 text-xs">
             {name ? <span className="mr-1 text-zinc-400">{name}:</span> : null}
             {text}
           </p>
@@ -64,7 +70,7 @@ export const GlassChartTooltip = memo(function GlassChartTooltip({
 });
 
 /* ------------------------------------------------------------------ */
-/* Card shell — Plain surface rgba(255,255,255,0.04), border 0.08, r:20px */
+/* Card shell — Cards radius 20px, p-20px, gap 16px                   */
 /* ------------------------------------------------------------------ */
 
 export function Card({
@@ -100,14 +106,12 @@ export function Card({
     <div
       onClick={handleClick}
       className={cn(
-        "relative overflow-hidden liquid-card-hover rounded-[20px]",
-        variant === "strong"
-          ? "liquid-glass-strong rounded-[20px]"
-          : "liquid-glass-card",
+        "relative overflow-hidden liquid-card-hover rounded-[20px] p-[20px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] transition-colors",
+        variant === "strong" && "bg-[var(--surface-2)] shadow-xl",
         className,
       )}
     >
-      <div className="relative z-[1]">{children}</div>
+      <div className="relative z-[1] flex flex-col gap-4">{children}</div>
       {ripples.map((r) => (
         <span
           key={r.id}
@@ -125,6 +129,10 @@ export function Card({
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* CardHeader — Labels 12px uppercase tracking-wide text-2            */
+/* ------------------------------------------------------------------ */
+
 export function CardHeader({
   title,
   subtitle,
@@ -135,13 +143,13 @@ export function CardHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-3 flex items-start justify-between gap-2">
+    <div className="mb-1 flex items-start justify-between gap-2">
       <div className="min-w-0">
-        <h2 className="truncate text-[13px] font-semibold uppercase tracking-wider text-zinc-300">
+        <h2 className="truncate text-[12px] font-semibold uppercase tracking-wide text-[var(--text-2)]">
           {title}
         </h2>
         {subtitle && (
-          <p className="mt-0.5 truncate text-xs text-zinc-400">{subtitle}</p>
+          <p className="mt-0.5 truncate text-xs text-[var(--text-2)]/80">{subtitle}</p>
         )}
       </div>
       {action && <div className="shrink-0">{action}</div>}
@@ -150,7 +158,7 @@ export function CardHeader({
 }
 
 /* ------------------------------------------------------------------ */
-/* AnimatedNumber — tabular-nums, font-semibold, gradient text        */
+/* AnimatedNumber — 28px semibold tabular-nums white                  */
 /* ------------------------------------------------------------------ */
 
 export function AnimatedNumber({
@@ -182,7 +190,7 @@ export function AnimatedNumber({
   return (
     <span
       className={cn(
-        "tabular-nums font-semibold bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent",
+        "text-[28px] font-semibold tabular-nums text-[var(--text)] leading-tight",
         className,
       )}
     >
@@ -197,10 +205,10 @@ export function AnimatedNumber({
 
 export const Sparkline = memo(function Sparkline({
   data,
-  color,
+  color = "#FF6B1A",
 }: {
   data: number[];
-  color: string;
+  color?: string;
 }) {
   const [hasAnimated, setHasAnimated] = useState(false);
   useEffect(() => {
@@ -259,7 +267,7 @@ export function resampleChartPoints<T>(data: T[], maxPoints: number = 60): T[] {
 }
 
 /* ------------------------------------------------------------------ */
-/* Status pill — glass-inset pill with dot + uppercase 10px label     */
+/* Status pill — Semantic dots ONLY (ok #22C55E, warn #FBBF24, crit #FF453A) */
 /* ------------------------------------------------------------------ */
 
 export type PillTone =
@@ -276,32 +284,32 @@ const PILL_CONFIG: Record<
   { pillStyle: string; dotStyle: string }
 > = {
   optimal: {
-    pillStyle: "border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
-    dotStyle: "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.85)]",
+    pillStyle: "border-[var(--border)] bg-[var(--surface)] text-[var(--text)]",
+    dotStyle: "bg-[#22C55E] shadow-[0_0_6px_rgba(34,197,94,0.85)]",
   },
   good: {
-    pillStyle: "border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
-    dotStyle: "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.85)]",
+    pillStyle: "border-[var(--border)] bg-[var(--surface)] text-[var(--text)]",
+    dotStyle: "bg-[#22C55E] shadow-[0_0_6px_rgba(34,197,94,0.85)]",
   },
   warning: {
-    pillStyle: "border-amber-400/30 bg-amber-500/10 text-amber-300",
-    dotStyle: "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.85)]",
+    pillStyle: "border-[var(--border)] bg-[var(--surface)] text-[var(--text)]",
+    dotStyle: "bg-[#FBBF24] shadow-[0_0_6px_rgba(251,191,36,0.85)]",
   },
   warn: {
-    pillStyle: "border-amber-400/30 bg-amber-500/10 text-amber-300",
-    dotStyle: "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.85)]",
+    pillStyle: "border-[var(--border)] bg-[var(--surface)] text-[var(--text)]",
+    dotStyle: "bg-[#FBBF24] shadow-[0_0_6px_rgba(251,191,36,0.85)]",
   },
   critical: {
-    pillStyle: "border-rose-400/30 bg-rose-500/10 text-rose-300",
-    dotStyle: "bg-rose-400 shadow-[0_0_6px_rgba(251,113,133,0.85)]",
+    pillStyle: "border-[var(--border)] bg-[var(--surface)] text-[var(--text)]",
+    dotStyle: "bg-[#FF453A] shadow-[0_0_6px_rgba(255,69,58,0.85)]",
   },
   bad: {
-    pillStyle: "border-rose-400/30 bg-rose-500/10 text-rose-300",
-    dotStyle: "bg-rose-400 shadow-[0_0_6px_rgba(251,113,133,0.85)]",
+    pillStyle: "border-[var(--border)] bg-[var(--surface)] text-[var(--text)]",
+    dotStyle: "bg-[#FF453A] shadow-[0_0_6px_rgba(255,69,58,0.85)]",
   },
   info: {
-    pillStyle: "border-sky-400/30 bg-sky-500/10 text-sky-300",
-    dotStyle: "bg-sky-400 shadow-[0_0_6px_rgba(56,189,248,0.85)]",
+    pillStyle: "border-[var(--border)] bg-[var(--surface)] text-[var(--text)]",
+    dotStyle: "bg-[#FF8A4C] shadow-[0_0_6px_rgba(255,138,76,0.85)]",
   },
 };
 
@@ -318,7 +326,7 @@ export function StatusPill({
   return (
     <span
       className={cn(
-        "liquid-glass-pill inline-flex items-center gap-1.5 rounded-full! border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
         cfg.pillStyle,
       )}
     >
@@ -335,7 +343,7 @@ export function StatusPill({
 }
 
 /* ------------------------------------------------------------------ */
-/* Health color scale — green >75, amber 50–75, red <50                 */
+/* Health color scale — ok #22C55E, warn #FBBF24, crit #FF453A        */
 /* ------------------------------------------------------------------ */
 
 export function healthColor(score: number): {
@@ -344,9 +352,9 @@ export function healthColor(score: number): {
   word: string;
 } {
   if (score > 75)
-    return { hex: "#34D399", text: "text-emerald-300", word: "Good" };
-  if (score >= 50) return { hex: "#FBBF24", text: "text-amber-300", word: "Fair" };
-  return { hex: "#FB7185", text: "text-rose-300", word: "Poor" };
+    return { hex: "#22C55E", text: "text-[#22C55E]", word: "Good" };
+  if (score >= 50) return { hex: "#FBBF24", text: "text-[#FBBF24]", word: "Fair" };
+  return { hex: "#FF453A", text: "text-[#FF453A]", word: "Poor" };
 }
 
 /* ------------------------------------------------------------------ */
@@ -356,7 +364,6 @@ export function healthColor(score: number): {
 export function useMounted(): boolean {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
   return mounted;

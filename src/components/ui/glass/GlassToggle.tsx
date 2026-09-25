@@ -51,15 +51,15 @@ export const GlassToggle = React.forwardRef<
         className="relative inline-flex h-8 w-14 shrink-0 items-center rounded-full border px-1"
         style={{
           background: checked
-            ? "rgba(16,185,129,0.22)"
+            ? "rgba(255, 107, 26, 0.25)"
             : "rgba(0,0,0,0.35)",
           backdropFilter: "blur(20px) saturate(170%)",
           WebkitBackdropFilter: "blur(20px) saturate(170%)",
           borderColor: checked
-            ? "rgba(16,185,129,0.4)"
+            ? "rgba(255, 107, 26, 0.50)"
             : "rgba(255,255,255,0.12)",
           boxShadow: checked
-            ? "inset 2px 2px 6px rgba(0,0,0,0.5), inset -1px -1px 3px rgba(255,255,255,0.08), 0 0 16px rgba(16,185,129,0.25)"
+            ? "inset 2px 2px 6px rgba(0,0,0,0.5), inset -1px -1px 3px rgba(255,255,255,0.08), 0 0 16px rgba(255,107,26,0.35)"
             : "inset 2px 2px 6px rgba(0,0,0,0.5), inset -1px -1px 3px rgba(255,255,255,0.08)",
           transition: "background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease",
         }}
@@ -72,16 +72,16 @@ export const GlassToggle = React.forwardRef<
           transition={{ type: "spring", stiffness: 500, damping: 32 }}
           style={{
             background: checked
-              ? "linear-gradient(180deg, #10b981 0%, #059669 100%)"
-              : "linear-gradient(180deg, #2b3833 0%, #141d19 100%)",
+              ? "linear-gradient(180deg, #FF6B1A 0%, #FF8A4C 100%)"
+              : "linear-gradient(180deg, #333333 0%, #1a1a1a 100%)",
             boxShadow: checked
-              ? "3px 3px 8px rgba(0,0,0,0.5), -2px -2px 6px rgba(255,255,255,0.10), 0 0 14px rgba(16,185,129,0.55), inset 0 1px 0 rgba(255,255,255,0.4)"
+              ? "3px 3px 8px rgba(0,0,0,0.5), -2px -2px 6px rgba(255,255,255,0.10), 0 0 14px rgba(255,107,26,0.55), inset 0 1px 0 rgba(255,255,255,0.4)"
               : "3px 3px 8px rgba(0,0,0,0.5), -2px -2px 6px rgba(255,255,255,0.10), inset 0 1px 0 rgba(255,255,255,0.12)",
           }}
         />
       </span>
       {label ? (
-        <span className="text-sm font-medium text-[#e7f5ec]/90">{label}</span>
+        <span className="text-sm font-medium text-[var(--text)]">{label}</span>
       ) : null}
     </button>
   );

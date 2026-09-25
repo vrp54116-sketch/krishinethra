@@ -53,9 +53,9 @@ const TRAVEL = 24;
 
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
-/** HSL endpoints: unchecked gray → checked emerald (#10B981). */
+/** HSL endpoints: unchecked gray → checked ember (#FF6B1A). */
 const OFF = { h: 215, s: 8, l: 30 };
-const ON = { h: 160, s: 84, l: 39 };
+const ON = { h: 21, s: 100, l: 55 };
 
 function shortestHueDelta(a: number, b: number): number {
   let d = (b - a) % 360;

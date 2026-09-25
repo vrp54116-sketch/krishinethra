@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 type GlassCardVariant = "default" | "strong" | "inset";
-type GlassGlow = "green" | "amber" | "red" | "rose" | "accent" | "none";
+type GlassGlow = "none" | "accent" | "ok" | "warn" | "crit";
 
 export interface GlassCardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: GlassCardVariant;
@@ -20,27 +20,25 @@ interface Ripple {
 }
 
 const VARIANT_CLASS: Record<GlassCardVariant, string> = {
-  default: "liquid-glass-card rounded-[20px]",
-  strong: "liquid-glass-card rounded-[20px] p-6",
-  inset: "glass-inset rounded-[16px] p-4",
+  default: "rounded-[20px] p-[20px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text)]",
+  strong: "rounded-[20px] p-[20px] border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text)] shadow-xl",
+  inset: "rounded-[16px] p-[16px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text)]",
 };
 
 const GLOW_STYLE: Record<GlassGlow, React.CSSProperties> = {
   none: {},
-  green: {
-    borderColor: "rgba(52,211,153,0.35)",
-  },
-  amber: {
-    borderColor: "rgba(251,191,36,0.35)",
-  },
-  red: {
-    borderColor: "rgba(251,113,133,0.35)",
-  },
-  rose: {
-    borderColor: "rgba(251,113,133,0.35)",
-  },
   accent: {
-    borderColor: "rgba(var(--section-accent-rgb, 52, 211, 153), 0.40)",
+    borderColor: "var(--accent)",
+    boxShadow: "0 0 16px var(--accent-glow)",
+  },
+  ok: {
+    borderColor: "rgba(34, 197, 94, 0.4)",
+  },
+  warn: {
+    borderColor: "rgba(251, 191, 36, 0.4)",
+  },
+  crit: {
+    borderColor: "rgba(255, 69, 58, 0.4)",
   },
 };
 
@@ -95,7 +93,7 @@ export const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
         style={{ ...GLOW_STYLE[glow], ...style }}
         {...rest}
       >
-        <div className="relative z-[1]">{children}</div>
+        <div className="relative z-[1] flex flex-col gap-4">{children}</div>
         {ripples.map((r) => (
           <span
             key={r.id}

@@ -47,12 +47,12 @@ import { useFocusTrap } from "@/components/ui/glass/useFocusTrap";
 import { useMounted } from "@/components/dashboard/ui";
 import { getSectionAccent } from "@/lib/theme";
 
-/** V2.5: active nav item always uses the emerald tint + left glow bar. */
-const ACTIVE_EMERALD = {
-  color: "#34D399",
-  borderActive: "rgba(52, 211, 153, 0.60)",
-  bgLight: "rgba(52, 211, 153, 0.12)",
-  glowSubtle: "rgba(52, 211, 153, 0.10)",
+/** Carbon & Ember: active nav item always uses the ember tint + left glow bar. */
+const ACTIVE_EMBER = {
+  color: "#FF6B1A",
+  borderActive: "rgba(255, 107, 26, 0.40)",
+  bgLight: "rgba(255, 107, 26, 0.14)",
+  glowSubtle: "rgba(255, 107, 26, 0.35)",
 };
 
 /**
@@ -136,7 +136,7 @@ function HealthRing({ score, size = 44 }: { score: number; size?: number }) {
   const r = (size - strokeWidth * 2) / 2;
   const c = 2 * Math.PI * r;
   const filled = (Math.max(0, Math.min(100, score)) / 100) * c;
-  const color = score >= 70 ? "#22c55e" : score >= 40 ? "#f59e0b" : "#ef4444";
+  const color = score >= 70 ? "#22C55E" : score >= 40 ? "#FBBF24" : "#FF453A";
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
@@ -188,12 +188,12 @@ function LogoBlock({ className }: { className?: string }) {
   const t = useT();
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <div className="liquid-glass-strong flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-emerald-500/30 text-emerald-300 shadow-[0_0_20px_rgba(52,211,153,0.45)]">
-        <Leaf className="h-5 w-5 text-emerald-400" />
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[rgba(255,107,26,0.14)] text-[#FF6B1A] border border-[rgba(255,107,26,0.25)] shadow-[0_0_14px_rgba(255,107,26,0.25)]">
+        <Leaf className="h-[18px] w-[18px] text-[#FF6B1A]" />
       </div>
       <div className="min-w-0">
-        <p className="truncate text-sm font-extrabold tracking-tight text-white">KrishiNethra AI</p>
-        <p className="truncate text-[11px] font-medium text-emerald-200/60">
+        <p className="truncate text-sm font-extrabold tracking-tight text-[var(--text)]">KrishiNethra AI</p>
+        <p className="truncate text-[11px] font-medium text-[var(--text-2)]">
           {t("tagline").split("—")[0].trim() || "Har Khet Ka AI Doctor"}
         </p>
       </div>
@@ -365,7 +365,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <MotionConfig reducedMotion="user">
     <div
-      className="relative flex h-dvh w-full overflow-hidden bg-[#070B09] text-white"
+      className="relative flex h-dvh w-full overflow-hidden bg-[var(--bg)] text-[var(--text)]"
       style={
         {
           "--section-accent": currentAccent.color,
@@ -376,10 +376,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     >
       <AmbientBackground />
 
-      {/* V2.5 a11y — skip link jumps straight to the main scroll region */}
+      {/* Skip link */}
       <a
         href="#main-scroll"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] liquid-glass-pill liquid-glass-strong px-4 py-2 text-sm font-bold text-emerald-200 border border-emerald-400/40"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] px-4 py-2 text-sm font-bold text-white bg-[#FF6B1A] rounded-full border border-white/20 shadow-lg"
       >
         Skip to content
       </a>
@@ -403,17 +403,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     ? "pl-4"
                     : "border border-transparent text-zinc-400 hover:bg-white/5 hover:text-white",
                 )}
-                style={active ? { color: ACTIVE_EMERALD.color } : undefined}
+                style={active ? { color: ACTIVE_EMBER.color } : undefined}
               >
                 {active && (
                   <motion.div
                     layoutId="sidebar-active-pill"
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     aria-hidden
-                    className="absolute inset-0 rounded-full liquid-glass border"
+                    className="absolute inset-0 rounded-full border"
                     style={{
-                      borderColor: ACTIVE_EMERALD.borderActive,
-                      backgroundColor: ACTIVE_EMERALD.bgLight,
+                      borderColor: ACTIVE_EMBER.borderActive,
+                      backgroundColor: ACTIVE_EMBER.bgLight,
                     }}
                   />
                 )}
@@ -422,16 +422,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     layoutId="sidebar-active-bar"
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     aria-hidden
-                    className="absolute left-1.5 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full z-10"
+                    className="absolute left-1.5 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full z-10"
                     style={{
-                      backgroundColor: ACTIVE_EMERALD.color,
-                      boxShadow: `0 0 10px ${ACTIVE_EMERALD.color}`,
+                      backgroundColor: ACTIVE_EMBER.color,
+                      boxShadow: `0 0 8px ${ACTIVE_EMBER.color}`,
                     }}
                   />
                 )}
                 <Icon
                   className="relative z-10 h-[18px] w-[18px] shrink-0 transition-colors"
-                  style={{ color: active ? ACTIVE_EMERALD.color : "#9CA3AF" }}
+                  style={{ color: active ? ACTIVE_EMBER.color : "#9CA3AF" }}
                 />
                 <span className="relative z-10 truncate">{label ?? t(labelKey)}</span>
                 {mounted && showBadge && (
@@ -464,12 +464,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {/* Header: shrink-0 z-40 mx-3 mt-3 rounded-2xl glass */}
         <header className="shrink-0 z-40 mx-3 mt-3 rounded-2xl liquid-glass px-3.5 py-2.5 flex items-center gap-2 sm:gap-3">
           {/* Mobile logo */}
-          <div className="liquid-glass-pill flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-emerald-300 border border-emerald-500/30 shadow-[0_0_12px_rgba(52,211,153,0.4)] md:hidden">
-            <Leaf className="h-4 w-4" />
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[rgba(255,107,26,0.14)] text-[#FF6B1A] border border-[rgba(255,107,26,0.25)] md:hidden">
+            <Leaf className="h-4 w-4 text-[#FF6B1A]" />
           </div>
 
           <div className="min-w-0 flex-1">
-            <h1 className="truncate text-lg sm:text-[22px] font-semibold text-white tracking-tight leading-tight">
+            <h1 className="truncate text-lg sm:text-[22px] font-semibold text-[var(--text)] tracking-tight leading-tight">
               {pageTitle}
             </h1>
             {mounted && (farmProfile?.farmerName || farmProfile?.farmName) && (
