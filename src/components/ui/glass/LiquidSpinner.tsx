@@ -30,7 +30,6 @@ export function LiquidSpinner({
     <div className={cn("inline-flex flex-col items-center justify-center gap-2", className)}>
       <div
         className={cn("relative flex items-center justify-center", conf.container)}
-        style={{ filter: "url(#liquid-gooey)" }}
       >
         {/* Blob 1: Emerald rotating */}
         <motion.div

@@ -17,14 +17,14 @@ export const liquidStaggerContainerVariants: Variants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.05,
-      delayChildren: 0.02,
+      staggerChildren: 0.04,
+      delayChildren: 0.01,
     },
   },
   exit: {
     opacity: 0,
     transition: {
-      staggerChildren: 0.04,
+      staggerChildren: 0.02,
       staggerDirection: -1,
     },
   },
@@ -33,25 +33,21 @@ export const liquidStaggerContainerVariants: Variants = {
 export const liquidStaggerItemVariants: Variants = {
   hidden: {
     opacity: 0,
-    y: 20,
-    scale: 0.98,
+    y: 12,
   },
   visible: {
     opacity: 1,
     y: 0,
-    scale: 1,
     transition: {
-      duration: 0.35,
+      duration: 0.2,
       ease: [0.22, 1, 0.36, 1],
     },
   },
   exit: {
     opacity: 0,
-    y: 20,
-    scale: 0.98,
     transition: {
-      duration: 0.22,
-      ease: [0.4, 0, 1, 1],
+      duration: 0.15,
+      ease: "easeOut",
     },
   },
 };

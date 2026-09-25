@@ -146,7 +146,7 @@ export default function HistoryTable() {
     return unsub;
   }, []);
 
-  const rows = useMemo(() => {
+  const allRows = useMemo(() => {
     const sessionTimes = new Set(sessions.map((r) => r.ts));
     const out: IrrigationRecord[] = [...sessions];
 
@@ -189,8 +189,11 @@ export default function HistoryTable() {
       const v = sortKey === "durationSec" ? r.durationSec : r.waterL;
       return v ?? -1;
     };
-    return out.sort((a, b) => (val(a) - val(b)) * sortDir).slice(0, 20);
+    return out.sort((a, b) => (val(a) - val(b)) * sortDir);
   }, [sessions, alerts, diary, sortKey, sortDir]);
+
+  const [showAll, setShowAll] = useState(false);
+  const rows = showAll ? allRows : allRows.slice(0, 20);
 
   const toggleSort = (key: SortKey) => {
     if (key === sortKey) {
@@ -205,7 +208,7 @@ export default function HistoryTable() {
     <Card>
       <CardHeader
         title={t("irrigation.historyTitle")}
-        subtitle="Pump runs from alerts, diary & live sessions · last 20"
+        subtitle="Pump runs from alerts, diary & live sessions · 20 rows"
         action={
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.04] text-zinc-400">
             <History className="h-4 w-4" />
@@ -251,6 +254,17 @@ export default function HistoryTable() {
               ))}
             </tbody>
           </table>
+          {allRows.length > 20 && (
+            <div className="py-2.5 text-center border-t border-white/5">
+              <button
+                type="button"
+                onClick={() => setShowAll((v) => !v)}
+                className="text-xs text-zinc-400 hover:text-white transition-colors"
+              >
+                {showAll ? "Show less" : `Show more (${allRows.length - 20} remaining)`}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </Card>

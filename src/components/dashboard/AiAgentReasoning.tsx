@@ -200,7 +200,7 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 backdrop-blur-md border border-white/15 shadow-inner">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 border border-white/15 shadow-inner">
             <Brain className="h-4 w-4 text-sky-400 animate-pulse" />
           </div>
           <div>
@@ -216,7 +216,7 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border backdrop-blur-md",
+              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border",
               tone.badge,
             )}
           >

@@ -73,7 +73,7 @@ export default function ConnectionStatusCard({ className }: { className?: string
   return (
     <div
       className={cn(
-        "liquid-glass-card rounded-3xl p-5 md:p-6 transition-all duration-300 space-y-5",
+        "liquid-glass-card rounded-[20px] p-5 md:p-6 transition-all duration-300 space-y-5",
         className,
       )}
     >
@@ -96,7 +96,7 @@ export default function ConnectionStatusCard({ className }: { className?: string
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border backdrop-blur-md",
+              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border",
               mqttConnected
                 ? "bg-emerald-500/15 border-emerald-400/30 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.15)]"
                 : "bg-rose-500/15 border-rose-400/30 text-rose-300",

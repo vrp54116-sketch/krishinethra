@@ -154,7 +154,7 @@ export default function EdgeAiStatusBanners({ className }: { className?: string 
               damping: 28,
             }}
             className={cn(
-              "liquid-glass-card relative overflow-hidden rounded-2xl p-4 border backdrop-blur-xl transition-all duration-300",
+              "liquid-glass-card relative overflow-hidden rounded-[20px] p-4 border transition-all duration-300",
               activeBanner.tone.bg,
               activeBanner.tone.border,
               activeBanner.tone.glow,

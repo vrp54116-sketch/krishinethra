@@ -734,12 +734,49 @@ function numOr(fallback: number, v: unknown): number {
 }
 
 /**
+ * Telemetry throttle guard: store max 2 writes/sec (min 500ms between writes).
+ */
+let lastTelemetryWriteAt = 0;
+let pendingTelemetrySnapshot: SensorSnapshot | null = null;
+let telemetryThrottleTimeout: ReturnType<typeof setTimeout> | null = null;
+
+function applyLiveSnapshot(raw: SensorSnapshot): void {
+  const now = Date.now();
+  const timeSinceLast = now - lastTelemetryWriteAt;
+  const MIN_INTERVAL_MS = 500; // max 2 writes / sec
+
+  if (timeSinceLast >= MIN_INTERVAL_MS) {
+    if (telemetryThrottleTimeout) {
+      clearTimeout(telemetryThrottleTimeout);
+      telemetryThrottleTimeout = null;
+    }
+    pendingTelemetrySnapshot = null;
+    lastTelemetryWriteAt = now;
+    applyLiveSnapshotDirect(raw);
+  } else {
+    // Schedule trailing write so the latest telemetry point is not dropped
+    pendingTelemetrySnapshot = raw;
+    if (!telemetryThrottleTimeout) {
+      telemetryThrottleTimeout = setTimeout(() => {
+        telemetryThrottleTimeout = null;
+        if (pendingTelemetrySnapshot) {
+          const snapshotToWrite = pendingTelemetrySnapshot;
+          pendingTelemetrySnapshot = null;
+          lastTelemetryWriteAt = Date.now();
+          applyLiveSnapshotDirect(snapshotToWrite);
+        }
+      }, MIN_INTERVAL_MS - timeSinceLast);
+    }
+  }
+}
+
+/**
  * Merge one gateway snapshot into the store — same slices doTick() writes:
  * snapshot, zones, sensorHistory, pump (derived from flow/current),
  * totalWaterUsedL (estimated from flowRate on the 2s cadence), alerts,
  * diary (completed runs) and farmHealthScore.
  */
-function applyLiveSnapshot(raw: SensorSnapshot): void {
+function applyLiveSnapshotDirect(raw: SensorSnapshot): void {
   const s = useFarmStore.getState();
   const now = Date.now();
   const soilA = numOr(s.snapshot.soilMoistureA, raw.soilMoistureA ?? raw.soil);

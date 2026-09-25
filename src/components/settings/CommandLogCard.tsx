@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 export default function CommandLogCard({ className }: { className?: string }) {
   const [logs, setLogs] = useState<CommandLogEntry[]>(() => getCommandLog());
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     const handleLogged = () => {
@@ -34,10 +35,12 @@ export default function CommandLogCard({ className }: { className?: string }) {
     toast.success("Exported commands CSV");
   };
 
+  const visibleLogs = showAll ? logs : logs.slice(0, 20);
+
   return (
     <div
       className={cn(
-        "liquid-glass-card rounded-3xl p-5 md:p-6 transition-all duration-300 space-y-4",
+        "liquid-glass-card rounded-[20px] p-5 md:p-6 transition-all duration-300 space-y-4",
         className,
       )}
     >
@@ -52,7 +55,7 @@ export default function CommandLogCard({ className }: { className?: string }) {
               ESP32 Command History
             </h3>
             <p className="text-[11px] text-zinc-400">
-              Audit log of last 50 MQTT instructions sent to edge firmware
+              Audit log of MQTT instructions sent to edge firmware
             </p>
           </div>
         </div>
@@ -88,7 +91,7 @@ export default function CommandLogCard({ className }: { className?: string }) {
       ) : (
         <div className="overflow-x-auto max-h-[300px] overflow-y-auto scrollbar-hide">
           <table className="w-full text-left text-xs">
-            <thead className="sticky top-0 bg-[#0d1218]/90 backdrop-blur-md z-10">
+            <thead className="sticky top-0 bg-[#0d1218] z-10">
               <tr className="border-b border-white/10 text-[11px] font-semibold text-zinc-400">
                 <th className="pb-2.5 pr-3">Time</th>
                 <th className="pb-2.5 px-3">Command</th>
@@ -97,7 +100,7 @@ export default function CommandLogCard({ className }: { className?: string }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 font-mono">
-              {logs.map((e) => {
+              {visibleLogs.map((e) => {
                 const timeStr = new Date(e.timestamp).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
@@ -137,6 +140,17 @@ export default function CommandLogCard({ className }: { className?: string }) {
               })}
             </tbody>
           </table>
+          {logs.length > 20 && (
+            <div className="pt-2 text-center">
+              <button
+                type="button"
+                onClick={() => setShowAll((prev) => !prev)}
+                className="text-xs text-zinc-400 hover:text-white transition-colors"
+              >
+                {showAll ? "Show less" : `Show more (${logs.length - 20} remaining)`}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

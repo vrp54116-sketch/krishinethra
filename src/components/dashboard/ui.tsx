@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useEffect, useId, useState, type ReactNode } from "react";
-import { animate, motion, useMotionValue } from "framer-motion";
+import { animate, motion, useMotionValue, useReducedMotion } from "framer-motion";
 import { Area, ComposedChart, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 
@@ -13,9 +13,7 @@ export const CHART_GRID = "rgba(255,255,255,0.06)";
 export const CHART_TICK = "#9CA3AF";
 
 export const chartTooltipStyle = {
-  background: "rgba(18,26,22,0.85)",
-  backdropFilter: "blur(20px) saturate(170%)",
-  WebkitBackdropFilter: "blur(20px) saturate(170%)",
+  background: "rgba(18,26,22,0.95)",
   border: "1px solid rgba(255,255,255,0.15)",
   borderRadius: 999,
   fontSize: 12,
@@ -24,7 +22,7 @@ export const chartTooltipStyle = {
   boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
 } as const;
 
-/** Custom glass-pill tooltip for Recharts (blur + white/15 border + 999px radius with spring entrance). */
+/** Custom glass-pill tooltip for Recharts (solid dark surface + white/15 border + 999px radius with spring entrance). */
 export const GlassChartTooltip = memo(function GlassChartTooltip({
   active,
   payload,
@@ -66,7 +64,7 @@ export const GlassChartTooltip = memo(function GlassChartTooltip({
 });
 
 /* ------------------------------------------------------------------ */
-/* Card shell — Aurora Harvest GlassCard with click ripple & hover     */
+/* Card shell — Plain surface rgba(255,255,255,0.04), border 0.08, r:20px */
 /* ------------------------------------------------------------------ */
 
 export function Card({
@@ -102,9 +100,9 @@ export function Card({
     <div
       onClick={handleClick}
       className={cn(
-        "relative overflow-hidden liquid-card-hover will-change-transform",
+        "relative overflow-hidden liquid-card-hover rounded-[20px]",
         variant === "strong"
-          ? "liquid-glass-strong rounded-[28px]"
+          ? "liquid-glass-strong rounded-[20px]"
           : "liquid-glass-card",
         className,
       )}
@@ -164,17 +162,22 @@ export function AnimatedNumber({
   decimals?: number;
   className?: string;
 }) {
+  const shouldReduceMotion = useReducedMotion();
   const mv = useMotionValue(value);
   const [display, setDisplay] = useState(value);
 
   useEffect(() => {
+    if (shouldReduceMotion) {
+      setDisplay(value);
+      return;
+    }
     const controls = animate(mv, value, {
       duration: 0.6,
       ease: "easeOut",
       onUpdate: (v) => setDisplay(v),
     });
     return () => controls.stop();
-  }, [value, mv]);
+  }, [value, mv, shouldReduceMotion]);
 
   return (
     <span
@@ -199,6 +202,12 @@ export const Sparkline = memo(function Sparkline({
   data: number[];
   color: string;
 }) {
+  const [hasAnimated, setHasAnimated] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setHasAnimated(true), 600);
+    return () => clearTimeout(t);
+  }, []);
+
   const pts = data.map((v, i) => ({ i, v }));
   const rawId = useId().replace(/[^a-zA-Z0-9]/g, "");
   const gid = `spark-${rawId}`;
@@ -219,16 +228,35 @@ export const Sparkline = memo(function Sparkline({
             strokeWidth={2}
             fill={`url(#${gid})`}
             dot={false}
-            isAnimationActive={true}
+            isAnimationActive={!hasAnimated}
             animationDuration={500}
             animationEasing="ease-in-out"
-            style={{ filter: `drop-shadow(0 0 6px ${color})` }}
           />
         </ComposedChart>
       </ResponsiveContainer>
     </div>
   );
 });
+
+/* ------------------------------------------------------------------ */
+/* resampleChartPoints — resample to maxPoints (e.g., 60 pts / 1 pt/s) */
+/* ------------------------------------------------------------------ */
+
+export function resampleChartPoints<T>(data: T[], maxPoints: number = 60): T[] {
+  if (!data || data.length <= maxPoints) return data;
+  const step = Math.ceil(data.length / maxPoints);
+  const result: T[] = [];
+  for (let i = 0; i < data.length; i += step) {
+    result.push(data[i]);
+  }
+  if (result[result.length - 1] !== data[data.length - 1]) {
+    result.push(data[data.length - 1]);
+    if (result.length > maxPoints) {
+      result.splice(1, 1);
+    }
+  }
+  return result;
+}
 
 /* ------------------------------------------------------------------ */
 /* Status pill — glass-inset pill with dot + uppercase 10px label     */

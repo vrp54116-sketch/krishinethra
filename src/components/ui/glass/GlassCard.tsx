@@ -20,37 +20,27 @@ interface Ripple {
 }
 
 const VARIANT_CLASS: Record<GlassCardVariant, string> = {
-  default: "liquid-glass-card rounded-[28px]",
-  strong: "liquid-glass-strong rounded-[28px] p-6",
-  inset: "glass-inset rounded-[20px] p-4",
+  default: "liquid-glass-card rounded-[20px]",
+  strong: "liquid-glass-card rounded-[20px] p-6",
+  inset: "glass-inset rounded-[16px] p-4",
 };
 
 const GLOW_STYLE: Record<GlassGlow, React.CSSProperties> = {
   none: {},
   green: {
     borderColor: "rgba(52,211,153,0.35)",
-    boxShadow:
-      "0 0 32px rgba(52,211,153,0.18), 0 8px 32px rgba(0,0,0,0.4)",
   },
   amber: {
     borderColor: "rgba(251,191,36,0.35)",
-    boxShadow:
-      "0 0 32px rgba(251,191,36,0.16), 0 8px 32px rgba(0,0,0,0.4)",
   },
   red: {
     borderColor: "rgba(251,113,133,0.35)",
-    boxShadow:
-      "0 0 32px rgba(251,113,133,0.18), 0 8px 32px rgba(0,0,0,0.4)",
   },
   rose: {
     borderColor: "rgba(251,113,133,0.35)",
-    boxShadow:
-      "0 0 32px rgba(251,113,133,0.18), 0 8px 32px rgba(0,0,0,0.4)",
   },
   accent: {
     borderColor: "rgba(var(--section-accent-rgb, 52, 211, 153), 0.40)",
-    boxShadow:
-      "0 0 24px rgba(var(--section-accent-rgb, 52, 211, 153), 0.18), 0 8px 32px rgba(0,0,0,0.4)",
   },
 };
 

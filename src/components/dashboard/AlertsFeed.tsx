@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import Link from "next/link";
+import { motion, useReducedMotion } from "framer-motion";
 import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
+import type { Alert } from "@/lib/types";
 import { Card, CardHeader, formatRelativeTime } from "./ui";
 
 const LEVEL_BORDER: Record<string, string> = {
@@ -13,6 +15,50 @@ const LEVEL_BORDER: Record<string, string> = {
   warning: "border-l-[#FBBF24]",
   info: "border-l-[#34D399]",
 };
+
+export const AlertRow = memo(function AlertRow({
+  alert,
+  now,
+  onMarkRead,
+}: {
+  alert: Alert;
+  now: number;
+  onMarkRead: (id: string) => void;
+}) {
+  const shouldReduceMotion = useReducedMotion();
+
+  return (
+    <motion.li
+      initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -12 }}
+      animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, x: 0 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className={cn(!alert.read && !shouldReduceMotion && "alert-shake-single")}
+    >
+      <button
+        type="button"
+        onClick={() => onMarkRead(alert.id)}
+        title="Mark as read"
+        aria-label={`Mark alert as read: ${alert.title}`}
+        className={cn(
+          "w-full rounded-[16px] border border-white/10 border-l-4 bg-[rgba(18,26,22,0.75)] p-3 text-left transition-all hover:bg-[rgba(18,26,22,0.92)]",
+          LEVEL_BORDER[alert.level] ?? "border-l-[#34D399]",
+          !alert.read && "bg-[rgba(18,26,22,0.92)] border-white/15",
+        )}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <p className="flex min-w-0 items-center gap-1.5 truncate text-[13px] font-bold text-white">
+            {!alert.read && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#34D399]" />}
+            <span className="truncate">{alert.title}</span>
+          </p>
+          <span className="shrink-0 font-mono text-[10px] text-[#9CA3AF]">
+            {formatRelativeTime(alert.timestamp, now)}
+          </span>
+        </div>
+        <p className="mt-0.5 line-clamp-2 text-xs text-[#9CA3AF]">{alert.message}</p>
+      </button>
+    </motion.li>
+  );
+});
 
 export default function AlertsFeed() {
   const t = useT();
@@ -31,7 +77,8 @@ export default function AlertsFeed() {
     return () => clearInterval(id);
   }, []);
 
-  const last = alerts.slice(0, 8);
+  // Cap alerts list to 5 (Rule 6)
+  const last = alerts.slice(0, 5);
   const unread = alerts.filter((a) => !a.read).length;
 
   return (
@@ -95,30 +142,12 @@ export default function AlertsFeed() {
       ) : (
         <ul className="space-y-2">
           {last.map((a) => (
-            <li key={a.id}>
-              <button
-                type="button"
-                onClick={() => markAlertRead(a.id)}
-                title="Mark as read"
-                aria-label={`Mark alert as read: ${a.title}`}
-                className={cn(
-                  "w-full rounded-[16px] border border-white/10 border-l-4 bg-[rgba(18,26,22,0.66)] p-3 text-left backdrop-blur-md transition-all hover:bg-[rgba(18,26,22,0.85)]",
-                  LEVEL_BORDER[a.level] ?? "border-l-[#34D399]",
-                  !a.read && "bg-[rgba(18,26,22,0.85)] border-white/15",
-                )}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="flex min-w-0 items-center gap-1.5 truncate text-[13px] font-bold text-white">
-                    {!a.read && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#34D399]" />}
-                    <span className="truncate">{a.title}</span>
-                  </p>
-                  <span className="shrink-0 font-mono text-[10px] text-[#9CA3AF]">
-                    {formatRelativeTime(a.timestamp, now)}
-                  </span>
-                </div>
-                <p className="mt-0.5 line-clamp-2 text-xs text-[#9CA3AF]">{a.message}</p>
-              </button>
-            </li>
+            <AlertRow
+              key={a.id}
+              alert={a}
+              now={now}
+              onMarkRead={markAlertRead}
+            />
           ))}
         </ul>
       )}

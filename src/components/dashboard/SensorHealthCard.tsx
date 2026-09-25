@@ -82,14 +82,14 @@ export default function SensorHealthCard({ className }: { className?: string }) 
   return (
     <div
       className={cn(
-        "liquid-glass-card rounded-3xl transition-all duration-300",
+        "liquid-glass-card rounded-[20px] transition-all duration-300",
         className,
       )}
     >
       {/* Header */}
       <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/10">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 backdrop-blur-md border border-white/15">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 border border-white/15">
             <Activity className="h-4 w-4 text-emerald-400" />
           </div>
           <div>

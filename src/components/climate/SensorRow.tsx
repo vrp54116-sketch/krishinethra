@@ -146,14 +146,14 @@ export default function SensorRow() {
   return (
     <div className="space-y-3">
       {/* Header with Rain status boolean chip */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:px-4 backdrop-blur-md">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-[20px] border border-white/10 bg-white/[0.04] p-3 sm:px-4">
         <div>
           <h2 className="text-sm font-extrabold text-white">Live Microclimate Telemetry</h2>
           <p className="text-xs text-zinc-400">Atmospheric readings from DHT22, MQ-135 & digital rain probe</p>
         </div>
         <div
           className={cn(
-            "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold backdrop-blur-md transition-all self-start sm:self-auto",
+            "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all self-start sm:self-auto",
             isRaining
               ? "border-blue-400/50 bg-blue-500/20 text-blue-300 shadow-[0_0_14px_rgba(59,130,246,0.4)] animate-pulse"
               : "border-white/10 bg-white/[0.04] text-zinc-400"

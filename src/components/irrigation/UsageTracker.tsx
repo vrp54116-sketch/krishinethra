@@ -73,9 +73,7 @@ function UsageTrackerInner() {
             <Tooltip
               cursor={{ fill: "rgba(56,189,248,0.08)" }}
               contentStyle={{
-                background: "rgba(18,26,22,0.85)",
-                backdropFilter: "blur(20px) saturate(170%)",
-                WebkitBackdropFilter: "blur(20px) saturate(170%)",
+                background: "rgba(18,26,22,0.95)",
                 border: "1px solid rgba(255,255,255,0.15)",
                 borderRadius: 999,
                 fontSize: 12,
@@ -88,9 +86,7 @@ function UsageTrackerInner() {
             <Bar
               dataKey="litres"
               radius={[5, 5, 2, 2]}
-              isAnimationActive={true}
-              animationDuration={500}
-              animationEasing="ease-in-out"
+              isAnimationActive={false}
             >
               {week.map((d) => (
                 <Cell key={d.day} fill={d.today ? "#38BDF8" : "rgba(56,189,248,0.35)"} />

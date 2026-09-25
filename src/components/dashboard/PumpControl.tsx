@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Pause, Play, Power, Square, Timer } from "lucide-react";
@@ -19,7 +19,7 @@ const MODES: Array<{ id: Mode; labelKey: string }> = [
   { id: "schedule", labelKey: "dashboard.scheduleMode" },
 ];
 
-export default function PumpControl() {
+export const PumpControl = memo(function PumpControl() {
   const t = useT();
   const pump = useFarmStore((s) => s.pump);
   const snapshot = useFarmStore((s) => s.snapshot);
@@ -132,14 +132,17 @@ export default function PumpControl() {
   const isManual = pump.mode === "manual";
 
   return (
-    <Card className={cn("relative overflow-hidden", pulse && "pump-card-pulse border-emerald-400/80")}>
-      {/* 3 staggered falling water droplets inside card when pump is ON */}
+    <Card className={cn("relative overflow-hidden", pulse && "ring-1 ring-orange-500/50")}>
+      {/* Rule 9: pump-ON = orange pulse ring + 3 CSS droplet particles (transform only) */}
       {pump.running && (
-        <div className="pointer-events-none absolute right-4 top-3 h-14 w-12 overflow-hidden z-10" aria-hidden>
-          <div className="absolute left-1 top-0 h-2 w-2 rounded-full bg-sky-400 pump-droplet-item shadow-[0_0_8px_rgba(56,189,248,0.8)]" style={{ animationDelay: "0s" }} />
-          <div className="absolute left-5 top-0 h-2 w-2 rounded-full bg-sky-300 pump-droplet-item shadow-[0_0_8px_rgba(56,189,248,0.8)]" style={{ animationDelay: "0.5s" }} />
-          <div className="absolute left-9 top-0 h-2 w-2 rounded-full bg-cyan-400 pump-droplet-item shadow-[0_0_8px_rgba(56,189,248,0.8)]" style={{ animationDelay: "1.0s" }} />
-        </div>
+        <>
+          <span aria-hidden className="pump-pulse-ring" />
+          <div className="pointer-events-none absolute right-4 top-3 h-14 w-12 overflow-hidden z-10" aria-hidden>
+            <div className="absolute left-1 top-0 h-2 w-2 rounded-full bg-sky-400 g3-droplet" style={{ animationDelay: "0s" }} />
+            <div className="absolute left-5 top-0 h-2 w-2 rounded-full bg-sky-300 g3-droplet" style={{ animationDelay: "0.5s" }} />
+            <div className="absolute left-9 top-0 h-2 w-2 rounded-full bg-orange-400 g3-droplet" style={{ animationDelay: "1.0s" }} />
+          </div>
+        </>
       )}
 
       <CardHeader
@@ -160,8 +163,8 @@ export default function PumpControl() {
         }
       />
 
-      {/* Status visual */}
-      <div className="relative flex items-center gap-3 rounded-[16px] border border-white/10 bg-[rgba(18,26,22,0.66)] px-4 py-3 backdrop-blur-md overflow-hidden">
+      {/* Status visual - Plain surface, no backdrop-filter */}
+      <div className="relative flex items-center gap-3 rounded-[16px] border border-white/10 bg-[rgba(18,26,22,0.85)] px-4 py-3 overflow-hidden">
         {/* Play/Pause icon with rotation */}
         <span
           className={cn(
@@ -271,9 +274,9 @@ export default function PumpControl() {
         </div>
       </div>
 
-      {/* Live Auto-AI explanation */}
+      {/* Live Auto-AI explanation - Plain surface */}
       {pump.mode === "auto" && (
-        <div className="mt-3 space-y-1.5 rounded-[16px] border border-[#34D399]/20 bg-[#34D399]/[0.05] p-3 backdrop-blur-md">
+        <div className="mt-3 space-y-1.5 rounded-[16px] border border-[#34D399]/20 bg-[#34D399]/[0.05] p-3">
           <p className="text-[11px] font-bold uppercase tracking-wider text-[#34D399]">
             Auto AI reasoning · live
           </p>
@@ -286,4 +289,7 @@ export default function PumpControl() {
       )}
     </Card>
   );
-}
+});
+
+export default PumpControl;
+export const PumpCard = PumpControl;

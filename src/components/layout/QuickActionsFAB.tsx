@@ -189,11 +189,11 @@ export default function QuickActionsFAB() {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.85, y: 16 }}
+            initial={{ opacity: 0, scale: 0.9, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.85, y: 16 }}
-            transition={{ type: "spring", stiffness: 450, damping: 28 }}
-            className="mb-3 flex flex-col items-end gap-2.5 p-3 rounded-3xl liquid-glass-card border border-white/20 shadow-2xl backdrop-blur-2xl"
+            exit={{ opacity: 0, scale: 0.9, y: 12 }}
+            transition={{ type: "spring", stiffness: 300, damping: 28 }}
+            className="mb-3 flex flex-col items-end gap-2.5 p-3 rounded-3xl cheap-glass border border-white/10 shadow-2xl"
           >
             <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 px-2 pb-1 border-b border-white/10 w-full text-right">
               Quick Dispatch
@@ -203,12 +203,12 @@ export default function QuickActionsFAB() {
               {ACTIONS.map((item, idx) => (
                 <motion.button
                   key={item.id}
-                  initial={{ opacity: 0, x: 20 }}
+                  initial={{ opacity: 0, x: 16 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.04 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 28, delay: idx * 0.04 }}
                   onClick={item.onClick}
                   className={cn(
-                    "flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border text-xs font-semibold backdrop-blur-md transition-all active:scale-95 shadow-lg",
+                    "flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border text-xs font-semibold transition-all active:scale-95 shadow-lg",
                     item.color,
                   )}
                 >
@@ -229,7 +229,7 @@ export default function QuickActionsFAB() {
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Quick Actions Floating Menu"
         className={cn(
-          "flex h-13 w-13 sm:h-14 sm:w-14 items-center justify-center rounded-full border shadow-2xl backdrop-blur-xl transition-all duration-300",
+          "cheap-glass flex h-13 w-13 sm:h-14 sm:w-14 items-center justify-center rounded-full border shadow-2xl transition-all duration-300",
           open
             ? "bg-rose-500/25 border-rose-400 text-rose-300 shadow-[0_0_24px_rgba(244,63,94,0.4)]"
             : pump.running

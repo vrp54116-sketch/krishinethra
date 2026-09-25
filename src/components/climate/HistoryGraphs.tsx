@@ -140,9 +140,7 @@ function HistoryGraphsInner() {
             <Tooltip
               cursor={{ stroke: "rgba(255,255,255,0.2)", strokeDasharray: "4 4" }}
               contentStyle={{
-                background: "rgba(18,26,22,0.85)",
-                backdropFilter: "blur(20px) saturate(170%)",
-                WebkitBackdropFilter: "blur(20px) saturate(170%)",
+                background: "rgba(18,26,22,0.95)",
                 border: `1px solid ${active.color}60`,
                 borderRadius: 999,
                 fontSize: 12,
@@ -166,9 +164,7 @@ function HistoryGraphsInner() {
               strokeWidth={2.2}
               fill={`url(#climate-${active.id})`}
               dot={false}
-              isAnimationActive={true}
-              animationDuration={500}
-              animationEasing="ease-in-out"
+              isAnimationActive={false}
             />
           </AreaChart>
         </ResponsiveContainer>

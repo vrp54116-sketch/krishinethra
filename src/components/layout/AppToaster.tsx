@@ -30,6 +30,7 @@ export default function AppToaster() {
       theme="dark"
       position={isDesktop ? "bottom-right" : "top-center"}
       duration={5000}
+      visibleToasts={6}
       className="z-[70]"
       icons={{
         success: (

@@ -45,7 +45,7 @@ export default function RootError({
           </button>
           <Link
             href="/dashboard"
-            className="flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-6 py-3 text-sm font-semibold text-[#F3F4F6] backdrop-blur-md transition-colors hover:border-[#34D399]/40 hover:text-white"
+            className="flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-6 py-3 text-sm font-semibold text-[#F3F4F6] transition-colors hover:border-[#34D399]/40 hover:text-white"
           >
             <Leaf className="h-4 w-4" />
             Back to dashboard

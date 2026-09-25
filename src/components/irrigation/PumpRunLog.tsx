@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Clock, Droplets, CheckCircle2, History } from "lucide-react";
 import { useFarmStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ export default function PumpRunLog({ className }: { className?: string }) {
   const pump = useFarmStore((s) => s.pump);
   const alerts = useFarmStore((s) => s.alerts);
   const manualRemaining = useFarmStore((s) => s.manualPumpRemainingSec);
+  const [showAll, setShowAll] = useState(false);
 
   // Derive dynamic run log from alerts and recent actions
   const logEntries = useMemo<PumpLogItem[]>(() => {
@@ -26,8 +27,7 @@ export default function PumpRunLog({ className }: { className?: string }) {
 
     // Filter alerts related to pump
     const pumpAlerts = alerts
-      .filter((a) => a.title.toLowerCase().includes("pump") || a.title.toLowerCase().includes("irrigation"))
-      .slice(0, 10);
+      .filter((a) => a.title.toLowerCase().includes("pump") || a.title.toLowerCase().includes("irrigation"));
 
     pumpAlerts.forEach((a) => {
       const isAuto = a.message.toLowerCase().includes("auto");
@@ -94,20 +94,22 @@ export default function PumpRunLog({ className }: { className?: string }) {
       list.push(...defaults);
     }
 
-    return list.slice(0, 8);
+    return list;
   }, [alerts]);
+
+  const visibleEntries = showAll ? logEntries : logEntries.slice(0, 20);
 
   return (
     <div
       className={cn(
-        "liquid-glass-card rounded-3xl p-5 md:p-6 transition-all duration-300 space-y-4",
+        "liquid-glass-card rounded-[20px] p-5 md:p-6 transition-all duration-300 space-y-4",
         className,
       )}
     >
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 backdrop-blur-md border border-white/15">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 border border-white/15">
             <History className="h-4 w-4 text-sky-400" />
           </div>
           <div>
@@ -164,7 +166,7 @@ export default function PumpRunLog({ className }: { className?: string }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5 font-mono">
-            {logEntries.map((item) => (
+            {visibleEntries.map((item) => (
               <tr key={item.id} className="hover:bg-white/[0.02] transition-colors">
                 <td className="py-2.5 pr-3 text-zinc-300 font-semibold flex items-center gap-1.5">
                   <Clock className="h-3 w-3 text-zinc-500 shrink-0" />
@@ -201,6 +203,17 @@ export default function PumpRunLog({ className }: { className?: string }) {
             ))}
           </tbody>
         </table>
+        {logEntries.length > 20 && (
+          <div className="pt-2 text-center">
+            <button
+              type="button"
+              onClick={() => setShowAll((prev) => !prev)}
+              className="text-xs text-zinc-400 hover:text-white transition-colors"
+            >
+              {showAll ? "Show less" : `Show more (${logEntries.length - 20} remaining)`}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

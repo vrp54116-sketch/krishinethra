@@ -123,7 +123,7 @@ export default function SuggestionsCard() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.25, delay: i * 0.04 }}
                 className={cn(
-                  "flex items-center gap-3 rounded-[16px] border bg-[rgba(18,26,22,0.66)] p-3 backdrop-blur-md transition-colors hover:bg-[rgba(18,26,22,0.85)]",
+                  "flex items-center gap-3 rounded-[16px] border bg-[rgba(18,26,22,0.85)] p-3 transition-colors hover:bg-[rgba(18,26,22,0.95)]",
                   sev.border,
                 )}
               >

@@ -48,7 +48,7 @@ export default function FloatingMicButton() {
         <motion.div
           initial={{ opacity: 0, y: 8, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          className="max-w-60 rounded-2xl border border-emerald-500/30 bg-[#0a120c]/95 px-3 py-2 shadow-[0_0_24px_rgba(34,197,94,0.3)] backdrop-blur-md"
+          className="max-w-60 rounded-2xl border border-emerald-500/30 bg-[#0a120c]/95 px-3 py-2 shadow-[0_0_24px_rgba(34,197,94,0.3)]"
         >
           <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-300">
             {status === "processing" ? "Processing…" : "Listening…"}

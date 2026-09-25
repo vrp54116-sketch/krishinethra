@@ -114,7 +114,7 @@ export default function LiveCameraCard() {
               type="button"
               onClick={() => setSnapshot(null)}
               aria-label="Discard snapshot and return to live feed"
-              className="liquid-glass-pill absolute right-2 top-2 inline-flex items-center gap-1 border border-white/20 bg-black/60 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-md transition-colors hover:border-emerald-400/50 cursor-pointer"
+              className="liquid-glass-pill absolute right-2 top-2 inline-flex items-center gap-1 border border-white/20 bg-black/80 px-2.5 py-1 text-[11px] font-bold text-white transition-colors hover:border-emerald-400/50 cursor-pointer"
             >
               <RefreshCcw className="h-3 w-3" /> Live view
             </button>

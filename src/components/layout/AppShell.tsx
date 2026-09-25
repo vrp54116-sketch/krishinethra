@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AnimatePresence, motion, MotionConfig } from "framer-motion";
+import { AnimatePresence, motion, MotionConfig, useReducedMotion } from "framer-motion";
 import {
   BarChart3,
   Bell,
@@ -56,10 +56,8 @@ const ACTIVE_EMERALD = {
 };
 
 /**
- * RouteLiquidMorph — liquid glass morph effect using SVG gooey filter:
- * - Wrap all route content in AnimatePresence with mode="wait"
- * - Exit: current page scales to 0.95, opacity 1→0, blur 0→20px in 300ms
- * - Enter: new page scales 1.05→1, opacity 0→1, blur 20px→0 in 300ms
+ * Page transition according to Animation Law Rule 9:
+ * Allowed motion: page enter fade+12px slide 180ms (transform and opacity only).
  */
 function RouteLiquidMorph({
   children,
@@ -68,30 +66,29 @@ function RouteLiquidMorph({
   children: React.ReactNode;
   routeKey: string;
 }) {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
     <AnimatePresence mode="wait" initial={false}>
       <motion.div
         key={routeKey}
         initial={{
           opacity: 0,
-          scale: 1.05,
-          filter: "blur(20px)",
+          y: shouldReduceMotion ? 0 : 12,
         }}
         animate={{
           opacity: 1,
-          scale: 1,
-          filter: "blur(0px)",
+          y: 0,
         }}
         exit={{
           opacity: 0,
-          scale: 0.95,
-          filter: "blur(20px)",
+          y: shouldReduceMotion ? 0 : -12,
         }}
         transition={{
-          duration: 0.3,
-          ease: [0.22, 1, 0.36, 1],
+          duration: shouldReduceMotion ? 0.05 : 0.18,
+          ease: "easeOut",
         }}
-        className="w-full liquid-gooey"
+        className="w-full"
       >
         {children}
       </motion.div>
@@ -779,7 +776,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              transition={{ type: "spring", stiffness: 300, damping: 28 }}
               className="liquid-glass-strong fixed inset-x-0 bottom-0 z-[60] max-h-[80vh] overflow-y-auto rounded-t-3xl border-t border-emerald-500/25 p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:hidden"
             >
               <div className="mb-4 flex items-center justify-between">

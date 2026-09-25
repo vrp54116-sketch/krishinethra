@@ -17,25 +17,25 @@
   --section-accent: #34D399;
   --section-accent-rgb: 52, 211, 153;
 
-  /* ---- Aurora Harvest glass foundation tokens ---- */
-  --glass-bg: rgba(18, 26, 22, 0.66);
-  --glass-bg-strong: rgba(18, 26, 22, 0.85);
+  /* ---- Cheap glass tokens (sidebar, header, FAB, modals, toasts only) ---- */
+  --glass-bg: rgba(255, 255, 255, 0.06);
+  --glass-bg-strong: rgba(255, 255, 255, 0.06);
   --glass-border: rgba(255, 255, 255, 0.10);
   --glass-highlight: rgba(255, 255, 255, 0.10);
-  --glass-backdrop: blur(20px) saturate(170%);
-  --glass-backdrop-strong: blur(28px) saturate(170%);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --glass-backdrop: blur(16px) saturate(140%);
+  --glass-backdrop-strong: blur(16px) saturate(140%);
+  --glass-shadow: 0 10px 32px rgba(0, 0, 0, 0.45);
 }
 
 html.light {
   --background: #F4F7F4;
   --foreground: #111827;
-  --card: rgba(255, 255, 255, 0.78);
+  --card: rgba(255, 255, 255, 0.85);
   --accent: #059669;
   --section-accent: #059669;
   --section-accent-rgb: 5, 150, 105;
-  --glass-bg: rgba(255, 255, 255, 0.72);
-  --glass-bg-strong: rgba(255, 255, 255, 0.90);
+  --glass-bg: rgba(255, 255, 255, 0.70);
+  --glass-bg-strong: rgba(255, 255, 255, 0.85);
   --glass-border: rgba(0, 0, 0, 0.08);
   --glass-highlight: rgba(255, 255, 255, 0.6);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
@@ -69,111 +69,53 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ---- Aurora Harvest glass utilities ---- */
-.glass {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-backdrop);
-  -webkit-backdrop-filter: var(--glass-backdrop);
-  border: 1px solid var(--glass-border);
+/* ---- Plain surfaces for all standard cards (Rule 3: NO backdrop-filter) ---- */
+.glass,
+.card-surface,
+.glass-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  position: relative;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Cheap glass allowed ONLY on: sidebar, header, FAB, modals, toasts (Rule 2) */
+.glass-strong,
+.cheap-glass {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 20px;
   box-shadow: var(--glass-shadow);
   position: relative;
-}
-
-.glass::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.10),
-    transparent 40%
-  );
-  pointer-events: none;
-}
-
-.glass-strong {
-  background: var(--glass-bg-strong);
-  backdrop-filter: var(--glass-backdrop-strong);
-  -webkit-backdrop-filter: var(--glass-backdrop-strong);
-  border: 1px solid var(--glass-border);
-  border-radius: 20px;
-  box-shadow: var(--glass-shadow);
-  position: relative;
-}
-
-.glass-strong::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.12),
-    transparent 42%
-  );
-  pointer-events: none;
 }
 
 .glass-inset {
-  background: rgba(10, 16, 12, 0.55);
-  backdrop-filter: var(--glass-backdrop);
-  -webkit-backdrop-filter: var(--glass-backdrop);
-  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 16px;
-  box-shadow:
-    inset 2px 2px 6px rgba(0, 0, 0, 0.5),
-    inset -1px -1px 3px rgba(255, 255, 255, 0.08);
   position: relative;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 .glass-pill {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-backdrop);
-  -webkit-backdrop-filter: var(--glass-backdrop);
-  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 999px;
-  box-shadow: var(--glass-shadow);
   position: relative;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 @supports not (backdrop-filter: blur(1px)) {
-  .glass,
   .glass-strong,
-  .glass-pill {
+  .cheap-glass {
     background: rgba(18, 26, 22, 0.94);
   }
-  .glass-inset {
-    background: rgba(12, 18, 14, 0.96);
-  }
-}
-
-/* OLED-optimized card surfaces */
-.card-surface {
-  background: rgba(18, 26, 22, 0.66);
-  backdrop-filter: var(--glass-backdrop);
-  -webkit-backdrop-filter: var(--glass-backdrop);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 20px;
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.4),
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.10);
-  position: relative;
-}
-
-.card-surface::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.08),
-    transparent 40%
-  );
-  pointer-events: none;
 }
 
 .glow-green {
@@ -443,91 +385,72 @@ textarea:focus-visible,
   }
 }
 
-.ambient-blob {
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(100px);
+/* Background: ONE fixed div with 3 static radial gradients (orange, warm gray, deep amber),
+   animated ONLY via transform translate, 60s+ loops, will-change: transform on that div only.
+   No mouse-tracking, no per-frame JS background updates (Rule 4) */
+.ambient-bg {
+  background:
+    radial-gradient(ellipse 65% 55% at 15% 20%, rgba(249, 115, 22, 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse 70% 60% at 85% 75%, rgba(217, 119, 6, 0.10) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 50% 50%, rgba(120, 113, 108, 0.08) 0%, transparent 70%);
+  animation: bg-ambient-translate 70s ease-in-out infinite alternate;
   will-change: transform;
-  pointer-events: none;
 }
 
-.ambient-blob-a {
-  animation: ambient-drift-a 52s ease-in-out infinite;
-}
-.ambient-blob-b {
-  animation: ambient-drift-b 64s ease-in-out infinite;
-}
-.ambient-blob-c {
-  animation: ambient-drift-c 50s ease-in-out infinite;
-}
-.ambient-blob-d {
-  animation: ambient-drift-d 78s ease-in-out infinite;
-}
-.ambient-blob-e {
-  animation: ambient-drift-e 58s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ambient-blob-a,
-  .ambient-blob-b,
-  .ambient-blob-c,
-  .ambient-blob-d,
-  .ambient-blob-e,
-  .ambient-blob-f {
-    animation: none;
+@keyframes bg-ambient-translate {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(-3%, 2%, 0);
+  }
+  100% {
+    transform: translate3d(3%, -2%, 0);
   }
 }
 
-/* ---- Aurora Harvest glass data cards ---- */
+/* ---- Card hover lift translateY(-1px)+brightness 150ms (Rule 9) ---- */
 .g3-card-hover {
-  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  transition: transform 150ms ease, filter 150ms ease;
 }
 .g3-card-hover:hover {
-  transform: translateY(-2px);
-  border-color: rgba(var(--section-accent-rgb, 52, 211, 153), 0.40);
-  box-shadow: 0 0 20px rgba(var(--section-accent-rgb, 52, 211, 153), 0.10), var(--glass-shadow);
+  transform: translateY(-1px);
+  filter: brightness(1.04);
 }
 
-@keyframes g3-pump-edge {
-  0%,
+/* Pump-ON orange pulse ring (Rule 9: transform and opacity only) */
+@keyframes pump-orange-pulse-ring {
+  0% {
+    transform: scale(0.96);
+    opacity: 0.9;
+  }
   100% {
-    box-shadow: 0 0 18px rgba(52, 211, 153, 0.35), 0 8px 32px rgba(0, 0, 0, 0.4);
-    border-color: rgba(52, 211, 153, 0.5);
+    transform: scale(1.05);
+    opacity: 0;
   }
-  50% {
-    box-shadow: 0 0 34px rgba(52, 211, 153, 0.65), 0 8px 32px rgba(0, 0, 0, 0.4);
-    border-color: rgba(52, 211, 153, 0.9);
-  }
-}
-.g3-pump-on {
-  animation: g3-pump-edge 2.2s ease-in-out infinite;
 }
 
-@keyframes g3-alert-edge {
-  0%,
-  100% {
-    box-shadow: 0 0 18px rgba(251, 113, 133, 0.35), 0 8px 32px rgba(0, 0, 0, 0.4);
-    border-color: rgba(251, 113, 133, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 34px rgba(251, 113, 133, 0.65), 0 8px 32px rgba(0, 0, 0, 0.4);
-    border-color: rgba(251, 113, 133, 0.9);
-  }
-}
-.g3-alert-critical {
-  animation: g3-alert-edge 2.2s ease-in-out infinite;
+.pump-pulse-ring {
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 2px solid #f97316;
+  pointer-events: none;
+  animation: pump-orange-pulse-ring 1.8s ease-out infinite;
 }
 
+/* 3 CSS droplet particles (Rule 9: transform and opacity only) */
 @keyframes g3-droplet-fall {
   0% {
-    transform: translateY(-4px);
+    transform: translateY(-4px) scale(0.7);
     opacity: 0;
   }
   20% {
     opacity: 0.9;
+    transform: translateY(2px) scale(1);
   }
   100% {
-    transform: translateY(16px);
+    transform: translateY(18px) scale(0.4);
     opacity: 0;
   }
 }
@@ -535,35 +458,25 @@ textarea:focus-visible,
   animation: g3-droplet-fall 1.6s ease-in infinite;
 }
 
-@keyframes g3-wave-slide {
-  from {
+/* Alert single shake (Rule 9: alert slide-in + single shake) */
+@keyframes alert-single-shake {
+  0%, 100% {
     transform: translateX(0);
   }
-  to {
-    transform: translateX(-50%);
+  25% {
+    transform: translateX(-6px);
   }
-}
-.g3-wave {
-  animation: g3-wave-slide 3.2s linear infinite;
+  75% {
+    transform: translateX(6px);
+  }
 }
 
-@keyframes g3-fill-shimmer {
-  0%,
-  100% {
-    opacity: 0.9;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-.g3-water-fill {
-  animation: g3-fill-shimmer 3s ease-in-out infinite;
+.alert-shake-single {
+  animation: alert-single-shake 0.4s ease-out;
 }
 
 .g3-chart-tooltip {
-  background: rgba(18, 26, 22, 0.85);
-  backdrop-filter: blur(20px) saturate(170%);
-  -webkit-backdrop-filter: blur(20px) saturate(170%);
+  background: rgba(18, 26, 22, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 999px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
@@ -577,15 +490,23 @@ textarea:focus-visible,
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .g3-pump-on,
-  .g3-alert-critical,
-  .g3-droplet,
-  .g3-wave,
-  .g3-water-fill {
-    animation: none;
+  .ambient-bg {
+    animation: none !important;
+    transform: none !important;
+    will-change: auto !important;
   }
   .g3-card-hover {
-    transition: none;
+    transition: none !important;
+  }
+  .g3-card-hover:hover {
+    transform: none !important;
+    filter: none !important;
+  }
+  .pump-pulse-ring,
+  .g3-droplet,
+  .alert-shake-single {
+    animation: none !important;
+    transform: none !important;
   }
 }
 

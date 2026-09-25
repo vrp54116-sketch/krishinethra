@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { memo, useMemo } from "react";
 import {
   CloudRain,
   Droplets,
@@ -38,8 +38,17 @@ interface SensorDef {
 
 export default function SensorGrid() {
   const t = useT();
-  const snapshot = useFarmStore((s) => s.snapshot);
+  // Narrow Zustand selectors so one field update doesn't re-render the whole grid
+  const soilVal = useFarmStore((s) => s.snapshot?.soil ?? 45);
+  const tempVal = useFarmStore((s) => s.snapshot?.temp ?? s.snapshot?.tempC ?? 28);
+  const humVal = useFarmStore((s) => s.snapshot?.hum ?? s.snapshot?.humidity ?? 60);
+  const aqiVal = useFarmStore((s) => s.snapshot?.aqi ?? 50);
+  const isRaining = useFarmStore((s) => Boolean(s.snapshot?.rain));
+
+  const soilRawVal = useFarmStore((s) => s.snapshot?.soilRaw);
+  const mqRawVal = useFarmStore((s) => s.snapshot?.mqRaw);
   const sensorHistory = useFarmStore((s) => s.sensorHistory ?? []);
+
   const thresholds = useFarmStore((s) => s.settings?.thresholds ?? {
     moistureLow: 30,
     moistureHigh: 75,
@@ -49,14 +58,8 @@ export default function SensorGrid() {
   });
   const showRaw = useFarmStore((s) => s.settings?.showRawCalibrationValues);
 
-  const soilVal = snapshot?.soil ?? 45;
-  const tempVal = snapshot?.temp ?? snapshot?.tempC ?? 28;
-  const humVal = snapshot?.hum ?? snapshot?.humidity ?? 60;
-  const aqiVal = snapshot?.aqi ?? 50;
-  const isRaining = Boolean(snapshot?.rain);
-
-  const soilRaw = snapshot?.soilRaw ?? Math.round(1023 - (soilVal * 6.5));
-  const mqRaw = snapshot?.mqRaw ?? 230;
+  const soilRaw = soilRawVal ?? Math.round(1023 - (soilVal * 6.5));
+  const mqRaw = mqRawVal ?? 230;
 
   const moistureTone = (m: number): PillTone =>
     m < 20 ? "bad" : m < thresholds.moistureLow ? "warn" : m > thresholds.moistureHigh ? "warn" : "good";
@@ -69,6 +72,11 @@ export default function SensorGrid() {
   const aqiTone: PillTone =
     aqiVal > thresholds.aqiHigh ? "bad" : aqiVal > 100 ? "warn" : "good";
 
+  const soilSeries = useMemo(() => to24(sensorHistory.map((p) => p.soil ?? p.soilMoistureA ?? 45), soilVal), [sensorHistory, soilVal]);
+  const tempSeries = useMemo(() => to24(sensorHistory.map((p) => p.temp ?? p.tempC ?? 28), tempVal), [sensorHistory, tempVal]);
+  const humSeries = useMemo(() => to24(sensorHistory.map((p) => p.hum ?? p.humidity ?? 60), humVal), [sensorHistory, humVal]);
+  const aqiSeries = useMemo(() => to24(sensorHistory.map((p) => p.aqi ?? 50), aqiVal), [sensorHistory, aqiVal]);
+
   const sensors: SensorDef[] = [
     {
       key: "soil",
@@ -79,7 +87,7 @@ export default function SensorGrid() {
       decimals: 1,
       unit: "%",
       pill: { tone: moistureTone(soilVal), label: moistureLabel(soilVal) },
-      series: to24(sensorHistory.map((p) => p.soil ?? p.soilMoistureA ?? 45), soilVal),
+      series: soilSeries,
       sparkColor: "#38bdf8",
       alertPulse: soilVal < thresholds.moistureLow,
     },
@@ -92,7 +100,7 @@ export default function SensorGrid() {
       decimals: 1,
       unit: "°C",
       pill: { tone: tempTone, label: tempVal > thresholds.tempHigh ? "High" : "Normal" },
-      series: to24(sensorHistory.map((p) => p.temp ?? p.tempC ?? 28), tempVal),
+      series: tempSeries,
       sparkColor: "#ef4444",
     },
     {
@@ -107,7 +115,7 @@ export default function SensorGrid() {
         tone: humidityTone,
         label: humVal < thresholds.humidityLow ? "Low" : humVal > 70 ? "High" : "Optimal",
       },
-      series: to24(sensorHistory.map((p) => p.hum ?? p.humidity ?? 60), humVal),
+      series: humSeries,
       sparkColor: "#22d3ee",
     },
     {
@@ -122,7 +130,7 @@ export default function SensorGrid() {
         tone: aqiTone,
         label: aqiVal > thresholds.aqiHigh ? "Poor" : aqiVal > 100 ? "Moderate" : "Good",
       },
-      series: to24(sensorHistory.map((p) => p.aqi ?? 50), aqiVal),
+      series: aqiSeries,
       sparkColor: "#a78bfa",
     },
   ];
@@ -133,7 +141,7 @@ export default function SensorGrid() {
         <CardHeader title={t("dashboard.liveSensors")} subtitle={t("dashboard.liveSensorsSub")} />
         <div
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border backdrop-blur-md transition-all shadow-sm",
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all shadow-sm",
             isRaining
               ? "bg-blue-500/20 border-blue-400/40 text-blue-300 shadow-[0_0_12px_rgba(59,130,246,0.4)] animate-pulse"
               : "bg-white/[0.04] border-white/10 text-white/60"
@@ -160,7 +168,7 @@ export default function SensorGrid() {
   );
 }
 
-function SensorCard({ def, rawText }: { def: SensorDef; rawText?: string }) {
+export const SensorCard = memo(function SensorCard({ def, rawText }: { def: SensorDef; rawText?: string }) {
   const Icon = def.icon;
   const body = (
     <>
@@ -199,27 +207,20 @@ function SensorCard({ def, rawText }: { def: SensorDef; rawText?: string }) {
     </>
   );
 
-  if (def.alertPulse) {
-    return (
-      <motion.section
-        className="liquid-glass liquid-glass-card liquid-card-hover liquid-card-amber"
-        animate={{
-          boxShadow: [
-            "0 0 12px rgba(245,158,11,0.25)",
-            "0 0 28px rgba(245,158,11,0.55)",
-            "0 0 12px rgba(245,158,11,0.25)",
-          ],
-        }}
-        transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-      >
-        {body}
-      </motion.section>
-    );
-  }
-
   return (
-    <section className="liquid-glass liquid-glass-card liquid-card-hover">
-      {body}
+    <section
+      className={cn(
+        "relative overflow-hidden liquid-glass-card liquid-card-hover rounded-[20px] p-4 sm:p-5",
+        def.alertPulse && "ring-1 ring-amber-500/50"
+      )}
+    >
+      {def.alertPulse && (
+        <span
+          aria-hidden
+          className="absolute inset-0 rounded-[20px] bg-amber-500/5 animate-pulse pointer-events-none"
+        />
+      )}
+      <div className="relative z-[1]">{body}</div>
     </section>
   );
-}
+});

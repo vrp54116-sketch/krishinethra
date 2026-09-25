@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Clock, OctagonX, Play, Power, ShieldAlert, Square } from "lucide-react";
@@ -71,7 +71,7 @@ function Impeller({ running }: { running: boolean }) {
   );
 }
 
-export default function PumpHeroCard() {
+export const PumpHeroCard = memo(function PumpHeroCard() {
   const t = useT();
   const pump = useFarmStore((s) => s.pump);
   const snapshot = useFarmStore((s) => s.snapshot);
@@ -157,14 +157,17 @@ export default function PumpHeroCard() {
   };
 
   return (
-    <Card className={cn("relative overflow-hidden", pump.running && "border-sky-400/30", pulse && "pump-card-pulse border-emerald-400/80")}>
-      {/* 3 staggered falling water droplets inside card when pump is ON */}
+    <Card className={cn("relative overflow-hidden", pulse && "ring-1 ring-orange-500/50")}>
+      {/* Rule 9: pump-ON = orange pulse ring + 3 CSS droplet particles (transform only) */}
       {pump.running && (
-        <div className="pointer-events-none absolute right-4 top-3 h-14 w-12 overflow-hidden z-10" aria-hidden>
-          <div className="absolute left-1 top-0 h-2.5 w-2.5 rounded-full bg-sky-400 pump-droplet-item shadow-[0_0_8px_rgba(56,189,248,0.8)]" style={{ animationDelay: "0s" }} />
-          <div className="absolute left-5 top-0 h-2.5 w-2.5 rounded-full bg-sky-300 pump-droplet-item shadow-[0_0_8px_rgba(56,189,248,0.8)]" style={{ animationDelay: "0.5s" }} />
-          <div className="absolute left-9 top-0 h-2.5 w-2.5 rounded-full bg-cyan-400 pump-droplet-item shadow-[0_0_8px_rgba(56,189,248,0.8)]" style={{ animationDelay: "1.0s" }} />
-        </div>
+        <>
+          <span aria-hidden className="pump-pulse-ring" />
+          <div className="pointer-events-none absolute right-4 top-3 h-14 w-12 overflow-hidden z-10" aria-hidden>
+            <div className="absolute left-1 top-0 h-2.5 w-2.5 rounded-full bg-sky-400 g3-droplet" style={{ animationDelay: "0s" }} />
+            <div className="absolute left-5 top-0 h-2.5 w-2.5 rounded-full bg-sky-300 g3-droplet" style={{ animationDelay: "0.5s" }} />
+            <div className="absolute left-9 top-0 h-2.5 w-2.5 rounded-full bg-orange-400 g3-droplet" style={{ animationDelay: "1.0s" }} />
+          </div>
+        </>
       )}
       <CardHeader
         title={t("irrigation.pumpTitle")}
@@ -340,4 +343,6 @@ export default function PumpHeroCard() {
       </button>
     </Card>
   );
-}
+});
+
+export default PumpHeroCard;
