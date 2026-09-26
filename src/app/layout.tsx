@@ -10,6 +10,9 @@ import "./globals.css";
 // V2.1 liquid glass system — imported after globals so its tokens/utilities
 // (e.g. --glass-blur: 20px) win the cascade over the legacy glass helpers.
 import "../lib/liquid-glass.css";
+// Field Editorial design system tokens and primitives
+import "../lib/editorial.css";
+
 
 // NOTE: next/font/google was removed — its Turbopack build-time fetch of
 // fonts.gstatic.com fails in offline/blocked CI ("Can't resolve
@@ -96,7 +99,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter+Tight:ital,wght@0,800;1,800&family=Inter:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
         />
         {/* Legacy iOS PWA tags for older Safari versions */}
@@ -110,7 +113,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('krishinethra-theme');if(t==='light'||(!t&&window.matchMedia('(prefers-color-scheme: light)').matches)){document.documentElement.classList.add('light');}else{document.documentElement.classList.remove('light');}}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('krishinethra-field-theme')||localStorage.getItem('krishinethra-theme');var isLight=t==='light'||((t==='system'||!t)&&window.matchMedia('(prefers-color-scheme: light)').matches);if(isLight){document.documentElement.classList.add('light');document.documentElement.setAttribute('data-theme','light');}else{document.documentElement.classList.remove('light');document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();`,
           }}
         />
       </head>

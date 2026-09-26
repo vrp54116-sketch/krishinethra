@@ -1,0 +1,296 @@
+/* ==========================================================================
+   FIELD EDITORIAL DESIGN SYSTEM
+   Extracted from reclaim-r-liard.vercel.app
+   Token Foundation, Typography, Hard Shadows & Motion Laws
+   ========================================================================== */
+
+/* Dark Theme (Default) Tokens */
+:root,
+[data-theme="dark"] {
+  --bg: #0A0F0B;
+  --panel: #0D120E;
+  --panel-2: #111612;
+  --line: rgba(237, 234, 227, 0.12);
+  --ink: #EDEAE3;
+  --ink-2: #9BA39B;
+  --ink-3: #6B726B;
+  --terra: #C4503A;
+  --terra-soft: rgba(196, 80, 58, 0.14);
+  --moss: #5F8B6A;
+  --moss-soft: rgba(95, 139, 106, 0.14);
+  --gold: linear-gradient(180deg, #E4C57E, #B98A3E);
+  --gold-gradient: linear-gradient(180deg, #E4C57E, #B98A3E);
+
+  color-scheme: dark;
+}
+
+/* Light Theme Tokens */
+[data-theme="light"],
+html.light {
+  --bg: #EFEDE5;
+  --panel: #E7E4DA;
+  --panel-2: #DFDBD0;
+  --line: rgba(20, 20, 20, 0.14);
+  --ink: #141414;
+  --ink-2: #55594F;
+  --ink-3: #70756B;
+  --terra: #C4503A;
+  --terra-soft: rgba(196, 80, 58, 0.14);
+  --moss: #5F8B6A;
+  --moss-soft: rgba(95, 139, 106, 0.14);
+  --gold: linear-gradient(180deg, #E4C57E, #B98A3E);
+  --gold-gradient: linear-gradient(180deg, #E4C57E, #B98A3E);
+
+  color-scheme: light;
+}
+
+/* --------------------------------------------------------------------------
+   TYPOGRAPHY SPECIFICATION
+   - Display: Inter Tight / Helvetica Now heavy (font-weight 800, tracking -0.03em)
+   - Italic display for logo + sublines
+   - Body: Inter 400
+   - Stamps / mono: IBM Plex Mono uppercase tracking 0.12em 11px
+   -------------------------------------------------------------------------- */
+
+.font-editorial-display {
+  font-family: "Inter Tight", "Helvetica Now", "Helvetica Neue", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.font-editorial-display-italic {
+  font-family: "Inter Tight", "Helvetica Now", "Helvetica Neue", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: -0.03em;
+}
+
+.font-editorial-body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-weight: 400;
+}
+
+.font-editorial-stamp,
+.font-editorial-mono {
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.25;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* --------------------------------------------------------------------------
+   RADII LAW: 0px everywhere (sharp).
+   Only nav panel + icon squares may use 2px.
+   -------------------------------------------------------------------------- */
+.editorial-sharp {
+  border-radius: 0px !important;
+}
+
+.editorial-radius-2px {
+  border-radius: 2px !important;
+}
+
+/* --------------------------------------------------------------------------
+   HARD SHADOW & HOVER STATES
+   -------------------------------------------------------------------------- */
+.editorial-hard-shadow {
+  box-shadow: 3px 3px 0 var(--terra);
+}
+
+.editorial-hard-shadow-sm {
+  box-shadow: 2px 2px 0 var(--terra);
+}
+
+.editorial-cream-btn {
+  background-color: var(--ink);
+  color: var(--bg);
+  border-radius: 0px;
+  border: 1px solid var(--ink);
+  transition: transform 200ms ease, box-shadow 200ms ease;
+  will-change: transform;
+}
+
+.editorial-cream-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--terra);
+}
+
+.editorial-cream-btn:active {
+  transform: translate(0px, 0px);
+  box-shadow: 1px 1px 0 var(--terra);
+}
+
+/* --------------------------------------------------------------------------
+   STAMP BOX: -6deg rotated bordered stamp + settle
+   -------------------------------------------------------------------------- */
+.editorial-stamp-box {
+  transform: rotate(-6deg);
+  border: 1px solid var(--terra);
+  border-radius: 0px;
+  text-transform: uppercase;
+  font-family: "IBM Plex Mono", monospace;
+  letter-spacing: 0.12em;
+  font-size: 11px;
+}
+
+@keyframes editorial-stamp-enter {
+  0% {
+    opacity: 0;
+    transform: scale(1.4) rotate(0deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-6deg);
+  }
+}
+
+.editorial-stamp-enter {
+  animation: editorial-stamp-enter 350ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* --------------------------------------------------------------------------
+   ANIMATED TICK LINE (METABAR)
+   -------------------------------------------------------------------------- */
+@keyframes editorial-tick-pulse {
+  0% {
+    opacity: 0.35;
+    transform: scaleX(0.2) translate3d(-30%, 0, 0);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleX(1) translate3d(0, 0, 0);
+  }
+  100% {
+    opacity: 0.35;
+    transform: scaleX(0.2) translate3d(30%, 0, 0);
+  }
+}
+
+.editorial-tick-animated {
+  animation: editorial-tick-pulse 450ms ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+/* --------------------------------------------------------------------------
+   PARTICLES FIELD DRIFT (30-60s)
+   Transform keyframes only; pointer-events none
+   -------------------------------------------------------------------------- */
+@keyframes editorial-drift-1 {
+  0% {
+    transform: translate3d(0px, 0px, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate3d(24px, -32px, 0) rotate(90deg);
+  }
+  50% {
+    transform: translate3d(-16px, -56px, 0) rotate(180deg);
+  }
+  75% {
+    transform: translate3d(30px, -24px, 0) rotate(270deg);
+  }
+  100% {
+    transform: translate3d(0px, 0px, 0) rotate(360deg);
+  }
+}
+
+@keyframes editorial-drift-2 {
+  0% {
+    transform: translate3d(0px, 0px, 0) rotate(0deg);
+  }
+  33% {
+    transform: translate3d(-28px, 34px, 0) rotate(-120deg);
+  }
+  66% {
+    transform: translate3d(22px, 48px, 0) rotate(-240deg);
+  }
+  100% {
+    transform: translate3d(0px, 0px, 0) rotate(-360deg);
+  }
+}
+
+@keyframes editorial-drift-3 {
+  0% {
+    transform: translate3d(0px, 0px, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(18px, -42px, 0) rotate(180deg);
+  }
+  100% {
+    transform: translate3d(0px, 0px, 0) rotate(360deg);
+  }
+}
+
+@keyframes editorial-drift-4 {
+  0% {
+    transform: translate3d(0px, 0px, 0) rotate(0deg);
+  }
+  40% {
+    transform: translate3d(-22px, -28px, 0) rotate(140deg);
+  }
+  75% {
+    transform: translate3d(16px, 32px, 0) rotate(260deg);
+  }
+  100% {
+    transform: translate3d(0px, 0px, 0) rotate(360deg);
+  }
+}
+
+.editorial-drift-30 {
+  animation: editorial-drift-1 30s linear infinite;
+  will-change: transform;
+}
+
+.editorial-drift-38 {
+  animation: editorial-drift-2 38s linear infinite;
+  will-change: transform;
+}
+
+.editorial-drift-45 {
+  animation: editorial-drift-3 45s linear infinite;
+  will-change: transform;
+}
+
+.editorial-drift-52 {
+  animation: editorial-drift-4 52s linear infinite;
+  will-change: transform;
+}
+
+.editorial-drift-60 {
+  animation: editorial-drift-1 60s linear infinite reverse;
+  will-change: transform;
+}
+
+/* --------------------------------------------------------------------------
+   ANIMATION LAW:
+   - transform and opacity only
+   - 200-450ms
+   - prefers-reduced-motion = instant
+   -------------------------------------------------------------------------- */
+.editorial-motion {
+  transition-property: transform, opacity;
+  transition-duration: 250ms;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .editorial-drift-30,
+  .editorial-drift-38,
+  .editorial-drift-45,
+  .editorial-drift-52,
+  .editorial-drift-60,
+  .editorial-tick-animated,
+  .editorial-stamp-enter {
+    animation: none !important;
+    transform: none !important;
+  }
+}

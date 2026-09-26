@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -65,10 +65,9 @@ export interface ThemeToggleProps {
 
 export function ThemeToggle({ className, showLabel = false }: ThemeToggleProps) {
   const currentTheme = useSyncExternalStore(subscribeTheme, getThemeSnapshot, getServerSnapshot);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(subscribeTheme, () => true, () => false);
 
   useEffect(() => {
-    setMounted(true);
     // Ensure documentElement has proper class on mount
     const active = getThemeSnapshot();
     if (active === "light") {

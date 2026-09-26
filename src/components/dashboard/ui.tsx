@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useId, useState, type ReactNode } from "react";
+import { memo, useEffect, useId, useState, useSyncExternalStore, type ReactNode } from "react";
 import { animate, motion, useMotionValue, useReducedMotion } from "framer-motion";
 import { Area, ComposedChart, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
@@ -175,10 +175,7 @@ export function AnimatedNumber({
   const [display, setDisplay] = useState(value);
 
   useEffect(() => {
-    if (shouldReduceMotion) {
-      setDisplay(value);
-      return;
-    }
+    if (shouldReduceMotion) return;
     const controls = animate(mv, value, {
       duration: 0.6,
       ease: "easeOut",
@@ -187,6 +184,8 @@ export function AnimatedNumber({
     return () => controls.stop();
   }, [value, mv, shouldReduceMotion]);
 
+  const activeDisplay = shouldReduceMotion ? value : display;
+
   return (
     <span
       className={cn(
@@ -194,7 +193,7 @@ export function AnimatedNumber({
         className,
       )}
     >
-      {display.toFixed(decimals)}
+      {activeDisplay.toFixed(decimals)}
     </span>
   );
 }
@@ -361,13 +360,12 @@ export function healthColor(score: number): {
 /* useMounted — gate locale/date strings to client-only rendering       */
 /* ------------------------------------------------------------------ */
 
+const emptySubscribe = () => () => {};
+
 export function useMounted(): boolean {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-  return mounted;
+  return useSyncExternalStore(emptySubscribe, () => true, () => false);
 }
+
 
 /* ------------------------------------------------------------------ */
 /* Relative time — "just now", "2 min ago", ...                         */
