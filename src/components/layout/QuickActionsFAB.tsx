@@ -52,7 +52,7 @@ export default function QuickActionsFAB() {
   const handlePumpOn = () => {
     setPumpManual(true);
     withMqtt((m) => m.cmdPumpOn());
-    toast.success("Pump Dispatched (ON)", {
+    toast.success("PUMP DISPATCHED (ON)", {
       description: "Manual 30s cycle started via Quick Actions.",
     });
     setOpen(false);
@@ -61,7 +61,7 @@ export default function QuickActionsFAB() {
   const handlePumpOff = () => {
     setPumpManual(false);
     withMqtt((m) => m.cmdPumpOff());
-    toast.success("Pump Stopped (OFF)", {
+    toast.success("PUMP STOPPED (OFF)", {
       description: "Pump turned off by operator.",
     });
     setOpen(false);
@@ -69,7 +69,6 @@ export default function QuickActionsFAB() {
 
   const handleTestBuzzer = () => {
     withMqtt((m) => m.cmdBuzzPattern(2, 150));
-    // Web Audio beep feedback
     try {
       const AudioCtx =
         window.AudioContext ||
@@ -89,7 +88,7 @@ export default function QuickActionsFAB() {
     } catch {
       /* ignore audio error */
     }
-    toast.info("Buzzer Fired", {
+    toast.info("BUZZER FIRED", {
       description: "Sent BUZZ:2:150 to edge node.",
     });
     setOpen(false);
@@ -100,14 +99,14 @@ export default function QuickActionsFAB() {
     useFarmStore.setState((s) => ({
       snapshot: { ...s.snapshot, servo: 90 },
     }));
-    toast.success("Camera Centered", {
+    toast.success("CAMERA CENTERED", {
       description: "Servo gimbal repositioned to 90°.",
     });
     setOpen(false);
   };
 
   const handleRefresh = () => {
-    toast.success("Telemetry Refreshed", {
+    toast.success("TELEMETRY REFRESHED", {
       description: "Store synchronized with latest snapshot.",
     });
     setOpen(false);
@@ -138,129 +137,102 @@ export default function QuickActionsFAB() {
   const ACTIONS = [
     {
       id: "pump-on",
-      label: "Pump ON",
+      label: "PUMP ON",
       icon: Droplets,
       onClick: handlePumpOn,
-      color: "bg-[var(--accent-soft)] text-[var(--text)] border-[var(--accent)]/40 hover:bg-[var(--accent-soft)]/80",
+      color: "border-[var(--moss)] bg-[var(--moss-soft)] text-[var(--moss)] hover:bg-[var(--moss-soft)]/80",
     },
     {
       id: "pump-off",
-      label: "Pump OFF",
+      label: "PUMP OFF",
       icon: Square,
       onClick: handlePumpOff,
-      color: "bg-[var(--surface-2)] text-[var(--text-2)] border-[var(--border)] hover:bg-[var(--surface)]",
+      color: "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink-2)] hover:text-[var(--ink)]",
     },
     {
       id: "buzzer",
-      label: "Test Buzzer",
+      label: "TEST BUZZER",
       icon: Bell,
       onClick: handleTestBuzzer,
-      color: "bg-[var(--surface-2)] text-[var(--text)] border-[var(--border)] hover:bg-[var(--surface)]",
+      color: "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink)] hover:bg-[var(--panel)]",
     },
     {
       id: "camera",
-      label: "Center Camera",
+      label: "CENTER CAM (90°)",
       icon: Camera,
       onClick: handleCenterCamera,
-      color: "bg-[var(--surface-2)] text-[var(--text)] border-[var(--border)] hover:bg-[var(--surface)]",
+      color: "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink)] hover:bg-[var(--panel)]",
     },
     {
       id: "refresh",
-      label: "Refresh Data",
+      label: "REFRESH DATA",
       icon: RefreshCw,
       onClick: handleRefresh,
-      color: "bg-[var(--surface-2)] text-[var(--text)] border-[var(--border)] hover:bg-[var(--surface)]",
+      color: "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink)] hover:bg-[var(--panel)]",
     },
     {
       id: "estop",
       label: "EMERGENCY STOP",
       icon: OctagonX,
       onClick: handleEmergencyStop,
-      color: "bg-[#FF453A]/15 text-[#FF453A] border-[#FF453A]/40 hover:bg-[#FF453A]/25 shadow-[0_0_20px_rgba(255,69,58,0.35)] font-bold",
+      color: "border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)] font-bold shadow-[0_0_12px_var(--terra)]",
     },
   ];
 
   return (
     <div
       ref={containerRef}
-      className="fixed bottom-24 right-5 sm:bottom-8 sm:right-8 z-40 flex flex-col items-end"
+      className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end font-editorial-mono"
     >
-      {/* Expandable circular action menu */}
+      {/* Expandable square action menu */}
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 12 }}
+            initial={{ opacity: 0, scale: 0.95, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 12 }}
-            transition={{ type: "spring", stiffness: 300, damping: 28 }}
-            className="mb-3 flex flex-col items-end gap-2.5 p-3 rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl backdrop-blur-xl"
+            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            transition={{ duration: 0.15 }}
+            className="mb-2 flex flex-col items-end gap-1.5 p-2 rounded-none border border-[var(--line)] bg-[var(--panel)] shadow-2xl"
           >
-            <p className="text-[10px] font-mono uppercase tracking-wider text-[var(--text-2)] px-2 pb-1 border-b border-[var(--border)] w-full text-right">
-              Quick Dispatch
+            <p className="text-[10px] uppercase tracking-wider text-[var(--ink-3)] px-1 pb-1 border-b border-[var(--line)] w-full text-right">
+              QUICK DISPATCH // ACTIONS
             </p>
 
-            <div className="flex flex-col gap-2">
-              {ACTIONS.map((item, idx) => (
-                <motion.button
+            <div className="flex flex-col gap-1 w-full">
+              {ACTIONS.map((item) => (
+                <button
                   key={item.id}
-                  initial={{ opacity: 0, x: 16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 28, delay: idx * 0.04 }}
                   onClick={item.onClick}
                   className={cn(
-                    "flex items-center gap-2.5 px-3.5 py-2 rounded-2xl border text-xs font-semibold transition-all active:scale-95 shadow-lg cursor-pointer",
+                    "flex items-center gap-2 px-3 py-1.5 rounded-none border text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer text-left w-full",
                     item.color,
                   )}
                 >
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  <span>{item.label}</span>
-                </motion.button>
+                  <item.icon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{item.label}</span>
+                </button>
               ))}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Main floating trigger button */}
-      <motion.button
+      {/* Main square floating trigger button */}
+      <button
         type="button"
-        whileHover={{ scale: 1.06 }}
-        whileTap={{ scale: 0.94 }}
         onClick={() => setOpen((prev) => !prev)}
         aria-label="Quick Actions Floating Menu"
         className={cn(
-          "flex h-13 w-13 sm:h-14 sm:w-14 items-center justify-center rounded-full border shadow-2xl transition-all duration-300 cursor-pointer",
+          "flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-none border shadow-lg transition-all cursor-pointer select-none",
           open
-            ? "bg-[#FF453A]/25 border-[#FF453A] text-[#FF453A] shadow-[0_0_24px_rgba(255,69,58,0.4)]"
+            ? "bg-[var(--terra-soft)] border-[var(--terra)] text-[var(--terra)]"
             : pump.running
-              ? "bg-[var(--accent)] border-[var(--accent-2)] text-white shadow-[0_0_24px_var(--accent-glow)] animate-pulse"
-              : "btn-primary border-none text-white shadow-[0_0_24px_var(--accent-glow)]",
+              ? "bg-[var(--terra)] border-[var(--terra)] text-white animate-pulse"
+              : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink)] hover:border-[var(--ink-2)] hover:shadow-[3px_3px_0_var(--terra)]",
         )}
       >
-        <AnimatePresence mode="wait">
-          {open ? (
-            <motion.div
-              key="close"
-              initial={{ rotate: -90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: 90, opacity: 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              <X className="h-6 w-6" />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="open"
-              initial={{ rotate: 90, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: -90, opacity: 0 }}
-              transition={{ duration: 0.15 }}
-            >
-              <Plus className="h-6 w-6" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.button>
+        {open ? <X className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+      </button>
     </div>
   );
 }

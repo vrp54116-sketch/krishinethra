@@ -111,14 +111,14 @@ function diseaseColor(name: string, idx: number): string {
 }
 
 const tooltipStyle = {
-  background: "rgba(18,26,22,0.85)",
-  border: "1px solid rgba(255,255,255,0.15)",
-  borderRadius: 999,
-  fontSize: 12,
-  color: "#F3F4F6",
-  padding: "6px 14px",
-  backdropFilter: "blur(12px)",
-  boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+  background: "var(--panel)",
+  border: "1px solid var(--line)",
+  borderRadius: 0,
+  fontSize: 11,
+  fontFamily: "var(--font-editorial-mono), monospace",
+  color: "var(--ink)",
+  padding: "4px 8px",
+  boxShadow: "none",
 } as const;
 
 export default function ReportsPage() {
@@ -547,16 +547,16 @@ export default function ReportsPage() {
               <div className="h-60 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={healthData} margin={{ top: 8, right: 12, bottom: 0, left: -18 }}>
-                    <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+                    <CartesianGrid stroke="var(--line)" vertical={false} />
                     <XAxis
                       dataKey="date"
-                      tick={{ fill: "#9CA3AF", fontSize: 10 }}
+                      tick={{ fill: "var(--ink-2)", fontSize: 10, fontFamily: "var(--font-editorial-mono), monospace" }}
                       axisLine={false}
                       tickLine={false}
                       interval={range === "30d" ? 4 : 0}
                     />
                     <YAxis
-                      tick={{ fill: "#9CA3AF", fontSize: 10 }}
+                      tick={{ fill: "var(--ink-2)", fontSize: 10, fontFamily: "var(--font-editorial-mono), monospace" }}
                       axisLine={false}
                       tickLine={false}
                       width={40}
@@ -573,17 +573,17 @@ export default function ReportsPage() {
                     <Line
                       type="monotone"
                       dataKey="score"
-                      stroke="#818CF8"
-                      strokeWidth={2.5}
-                      dot={period.length <= 8 ? { r: 3.5, fill: "#818CF8", strokeWidth: 0 } : false}
-                      activeDot={{ r: 5, fill: "#818CF8" }}
+                      stroke="var(--moss)"
+                      strokeWidth={2}
+                      dot={false}
+                      activeDot={{ r: 4, fill: "var(--moss)" }}
                       isAnimationActive={false}
                     />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-              <p className="mt-2 text-[11px] text-[#9CA3AF]">
-                Best {period.length > 0 ? shortLabel([...period].sort((a, b) => b.healthScore - a.healthScore)[0].date) : "—"} · Worst{" "}
+              <p className="mt-2 font-editorial-mono text-[11px] text-[var(--ink-3)]">
+                BEST: {period.length > 0 ? shortLabel([...period].sort((a, b) => b.healthScore - a.healthScore)[0].date) : "—"} · WORST:{" "}
                 {period.length > 0 ? shortLabel([...period].sort((a, b) => a.healthScore - b.healthScore)[0].date) : "—"}
               </p>
             </Card>
@@ -593,21 +593,21 @@ export default function ReportsPage() {
             <Card>
               <CardHeader
                 title="Daily water vs 6 L baseline"
-                subtitle="Stacked green = litres saved that day"
+                subtitle="Stacked moss = litres saved that day"
               />
               <div className="h-60 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={waterData} margin={{ top: 8, right: 12, bottom: 0, left: -14 }}>
-                    <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+                    <CartesianGrid stroke="var(--line)" vertical={false} />
                     <XAxis
                       dataKey="date"
-                      tick={{ fill: "#9CA3AF", fontSize: 10 }}
+                      tick={{ fill: "var(--ink-2)", fontSize: 10, fontFamily: "var(--font-editorial-mono), monospace" }}
                       axisLine={false}
                       tickLine={false}
                       interval={range === "30d" ? 4 : 0}
                     />
                     <YAxis
-                      tick={{ fill: "#9CA3AF", fontSize: 10 }}
+                      tick={{ fill: "var(--ink-2)", fontSize: 10, fontFamily: "var(--font-editorial-mono), monospace" }}
                       axisLine={false}
                       tickLine={false}
                       width={36}
@@ -623,15 +623,15 @@ export default function ReportsPage() {
                         name === "actual" ? "Smart use" : name === "saved" ? "Saved" : "Manual baseline",
                       ]}
                     />
-                    <Legend wrapperStyle={{ fontSize: 11, color: "#9CA3AF" }} />
-                    <Bar dataKey="actual" stackId="w" fill="#34D399" radius={[0, 0, 0, 0]} name="Smart use" isAnimationActive={false} />
-                    <Bar dataKey="saved" stackId="w" fill="rgba(52,211,153,0.22)" radius={[5, 5, 0, 0]} name="Saved" isAnimationActive={false} />
-                    <Line type="monotone" dataKey="baseline" stroke="#FBBF24" strokeWidth={1.8} strokeDasharray="6 4" dot={false} name="Manual 6 L" />
+                    <Legend wrapperStyle={{ fontSize: 11, fontFamily: "var(--font-editorial-mono), monospace", color: "var(--ink-2)" }} />
+                    <Bar dataKey="actual" stackId="w" fill="var(--moss)" radius={[0, 0, 0, 0]} name="Smart use" isAnimationActive={false} />
+                    <Bar dataKey="saved" stackId="w" fill="var(--moss-soft)" radius={[0, 0, 0, 0]} name="Saved" isAnimationActive={false} />
+                    <Line type="monotone" dataKey="baseline" stroke="var(--gold)" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Manual 6 L" />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
-              <p className="mt-2 text-[11px] text-[#9CA3AF]">
-                Green cap above each bar is water NOT pumped — the gap to the dashed manual habit.
+              <p className="mt-2 font-editorial-mono text-[11px] text-[var(--ink-3)]">
+                Moss bar stack reflects water pumped vs conserved volume.
               </p>
             </Card>
           </Rise>
@@ -647,25 +647,25 @@ export default function ReportsPage() {
                   <AreaChart data={climateData} margin={{ top: 8, right: 8, bottom: 0, left: -14 }}>
                     <defs>
                       <linearGradient id="rep-temp" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#fb9235" stopOpacity={0.5} />
-                        <stop offset="100%" stopColor="#fb9235" stopOpacity={0.03} />
+                        <stop offset="0%" stopColor="var(--terra)" stopOpacity={0.4} />
+                        <stop offset="100%" stopColor="var(--terra)" stopOpacity={0.02} />
                       </linearGradient>
                       <linearGradient id="rep-hum" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.45} />
-                        <stop offset="100%" stopColor="#38bdf8" stopOpacity={0.03} />
+                        <stop offset="0%" stopColor="var(--moss)" stopOpacity={0.4} />
+                        <stop offset="100%" stopColor="var(--moss)" stopOpacity={0.02} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+                    <CartesianGrid stroke="var(--line)" vertical={false} />
                     <XAxis
                       dataKey="date"
-                      tick={{ fill: "#9CA3AF", fontSize: 10 }}
+                      tick={{ fill: "var(--ink-2)", fontSize: 10, fontFamily: "var(--font-editorial-mono), monospace" }}
                       axisLine={false}
                       tickLine={false}
                       interval={range === "30d" ? 4 : 0}
                     />
                     <YAxis
                       yAxisId="t"
-                      tick={{ fill: "#9CA3AF", fontSize: 10 }}
+                      tick={{ fill: "var(--ink-2)", fontSize: 10, fontFamily: "var(--font-editorial-mono), monospace" }}
                       axisLine={false}
                       tickLine={false}
                       width={36}
@@ -674,7 +674,7 @@ export default function ReportsPage() {
                     <YAxis
                       yAxisId="h"
                       orientation="right"
-                      tick={{ fill: "#9CA3AF", fontSize: 10 }}
+                      tick={{ fill: "var(--ink-2)", fontSize: 10, fontFamily: "var(--font-editorial-mono), monospace" }}
                       axisLine={false}
                       tickLine={false}
                       width={36}
@@ -691,9 +691,9 @@ export default function ReportsPage() {
                         name === "temp" ? "Temp" : "Humidity",
                       ]}
                     />
-                    <Legend wrapperStyle={{ fontSize: 11, color: "#9CA3AF" }} />
-                    <Area yAxisId="t" type="monotone" dataKey="temp" stroke="#fb9235" strokeWidth={2.2} fill="url(#rep-temp)" dot={false} name="Temp °C" isAnimationActive={false} />
-                    <Area yAxisId="h" type="monotone" dataKey="humidity" stroke="#38bdf8" strokeWidth={2.2} fill="url(#rep-hum)" dot={false} name="Humidity %" isAnimationActive={false} />
+                    <Legend wrapperStyle={{ fontSize: 11, fontFamily: "var(--font-editorial-mono), monospace", color: "var(--ink-2)" }} />
+                    <Area yAxisId="t" type="monotone" dataKey="temp" stroke="var(--terra)" strokeWidth={2} fill="url(#rep-temp)" dot={false} name="Temp °C" isAnimationActive={false} />
+                    <Area yAxisId="h" type="monotone" dataKey="humidity" stroke="var(--moss)" strokeWidth={2} fill="url(#rep-hum)" dot={false} name="Humidity %" isAnimationActive={false} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -725,17 +725,17 @@ export default function ReportsPage() {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <ul className="w-full min-w-0 space-y-1.5">
+                <ul className="w-full min-w-0 space-y-1.5 font-editorial-mono">
                   {diseaseData.map((d) => (
-                    <li key={d.name} className="flex items-center gap-2 text-xs font-semibold text-[#F3F4F6]">
-                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: d.hex, boxShadow: `0 0 8px ${d.hex}` }} />
-                      <span className="min-w-0 flex-1 truncate">{d.name}</span>
-                      <span className="font-mono tabular-nums text-[#9CA3AF]">{d.value}</span>
+                    <li key={d.name} className="flex items-center gap-2 text-xs font-semibold text-[var(--ink)]">
+                      <span className="h-2 w-2 shrink-0 rounded-none" style={{ background: d.hex }} />
+                      <span className="min-w-0 flex-1 truncate uppercase">{d.name}</span>
+                      <span className="tabular-nums text-[var(--ink-2)]">{d.value}</span>
                     </li>
                   ))}
-                  <li className="pt-1 text-[11px] text-[#9CA3AF]">
+                  <li className="pt-1 text-[10px] text-[var(--ink-3)] uppercase tracking-wider">
                     {kpis.resolutionPct == null
-                      ? "Log a leaf scan from /camera to populate this donut."
+                      ? "Log a leaf scan from /camera to populate this breakdown."
                       : `${kpis.resolutionPct.toFixed(0)}% of findings marked resolved.`}
                   </li>
                 </ul>
@@ -746,38 +746,38 @@ export default function ReportsPage() {
 
         {/* AI summary */}
         <Rise delay={0.24}>
-          <Card className="border-emerald-500/30">
+          <Card>
             <CardHeader
               title="AI Period Summary"
               subtitle="Auto-written from this period's data"
               action={
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300">
-                  <Sparkles className="h-4 w-4" />
+                <span className="flex h-7 w-7 items-center justify-center rounded-none border border-[var(--line)] bg-[var(--panel-2)] text-[var(--terra)]">
+                  <Sparkles className="h-3.5 w-3.5" />
                 </span>
               }
             />
-            <p className="text-[13px] leading-relaxed text-zinc-100">{aiSummary}</p>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <p className="text-[13px] leading-relaxed text-[var(--ink)] font-editorial-body">{aiSummary}</p>
+            <div className="mt-4 flex flex-wrap gap-2 font-editorial-mono">
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="btn-primary-aurora flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-black"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-none text-xs font-bold uppercase tracking-wider text-[var(--bg)] bg-[var(--ink)] hover:shadow-[3px_3px_0_var(--terra)] transition-all cursor-pointer"
               >
-                <Download className="h-3.5 w-3.5" strokeWidth={2.75} /> Download Report
+                <Download className="h-3.5 w-3.5" /> DOWNLOAD REPORT
               </button>
               <button
                 type="button"
                 onClick={() => exportDailyCSV(period, range)}
-                className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2.5 text-xs font-bold text-[#F3F4F6] backdrop-blur-md transition-all hover:bg-white/[0.1] hover:border-[#818CF8]/40 active:scale-[0.98]"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-none text-xs font-bold uppercase tracking-wider text-[var(--ink)] bg-[var(--panel-2)] border border-[var(--line)] hover:border-[var(--ink-2)] transition-all cursor-pointer"
               >
-                <FileSpreadsheet className="h-3.5 w-3.5 text-[#818CF8]" /> Export CSV
+                <FileSpreadsheet className="h-3.5 w-3.5 text-[var(--terra)]" /> EXPORT CSV
               </button>
               <button
                 type="button"
                 onClick={exportFarmBackup}
-                className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2.5 text-xs font-bold text-[#F3F4F6] backdrop-blur-md transition-all hover:bg-white/[0.1] hover:border-[#818CF8]/40 active:scale-[0.98]"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-none text-xs font-bold uppercase tracking-wider text-[var(--ink)] bg-[var(--panel-2)] border border-[var(--line)] hover:border-[var(--ink-2)] transition-all cursor-pointer"
               >
-                <DatabaseBackup className="h-3.5 w-3.5 text-[#818CF8]" /> Backup JSON
+                <DatabaseBackup className="h-3.5 w-3.5 text-[var(--moss)]" /> BACKUP JSON
               </button>
             </div>
           </Card>

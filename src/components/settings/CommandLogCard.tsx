@@ -40,100 +40,99 @@ export default function CommandLogCard({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "liquid-glass-card rounded-[20px] p-5 md:p-6 transition-all duration-300 space-y-4",
+        "rounded-none border border-[var(--line)] bg-[var(--panel)] p-4 md:p-5 space-y-4 font-editorial-mono",
         className,
       )}
     >
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+      {/* Header row = mono uppercase label left + status stamp right */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--line)]">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-500/15 border border-purple-400/25">
-            <Terminal className="h-4 w-4 text-purple-400" />
+          <div className="flex h-7 w-7 items-center justify-center rounded-none border border-[var(--line)] bg-[var(--panel-2)] text-[var(--terra)]">
+            <Terminal className="h-3.5 w-3.5" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold tracking-wide text-white/90">
-              ESP32 Command History
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+              ESP32 COMMAND LOG
             </h3>
-            <p className="text-[11px] text-zinc-400">
-              Audit log of MQTT instructions sent to edge firmware
+            <p className="text-[10px] text-[var(--ink-3)] uppercase tracking-wide">
+              AUDIT TRAIL OF MQTT INSTRUCTIONS TO EDGE
             </p>
           </div>
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Buttons: Editorial Ghost Chips */}
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={handleExport}
             disabled={logs.length === 0}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white/90 bg-white/10 hover:bg-white/15 border border-white/15 transition-all disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-none text-xs font-bold uppercase tracking-wider text-[var(--ink)] bg-[var(--panel-2)] hover:bg-[var(--panel)] border border-[var(--line)] hover:border-[var(--ink-2)] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <ArrowDownToLine className="h-3.5 w-3.5" />
-            <span>Export CSV</span>
+            <ArrowDownToLine className="h-3 w-3" />
+            <span>EXPORT CSV</span>
           </button>
           <button
             type="button"
             onClick={handleClear}
             disabled={logs.length === 0}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-400/20 transition-all disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-none text-xs font-bold uppercase tracking-wider text-[var(--terra)] bg-[var(--terra-soft)] hover:bg-[var(--terra-soft)]/80 border border-[var(--terra)] transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <Trash2 className="h-3.5 w-3.5" />
-            <span>Clear</span>
+            <Trash2 className="h-3 w-3" />
+            <span>CLEAR</span>
           </button>
         </div>
       </div>
 
-      {/* Table of commands */}
+      {/* Table: mono 12px rows, hairline separators, header uppercase ink-3 */}
       {logs.length === 0 ? (
-        <div className="py-8 text-center text-xs text-zinc-500 font-mono">
-          No commands dispatched in this session yet.
+        <div className="py-8 text-center text-xs text-[var(--ink-3)] font-editorial-mono uppercase tracking-wider">
+          NO COMMANDS DISPATCHED IN THIS SESSION YET.
         </div>
       ) : (
         <div className="overflow-x-auto max-h-[300px] overflow-y-auto scrollbar-hide">
-          <table className="w-full text-left text-xs">
-            <thead className="sticky top-0 bg-[#0d1218] z-10">
-              <tr className="border-b border-white/10 text-[11px] font-semibold text-zinc-400">
-                <th className="pb-2.5 pr-3">Time</th>
-                <th className="pb-2.5 px-3">Command</th>
-                <th className="pb-2.5 px-3">Status</th>
-                <th className="pb-2.5 pl-3 text-right">Response Time</th>
+          <table className="w-full text-left font-editorial-mono text-[12px]">
+            <thead className="sticky top-0 bg-[var(--panel)] z-10">
+              <tr className="border-b border-[var(--line)] text-[10px] font-bold uppercase tracking-wider text-[var(--ink-3)]">
+                <th className="pb-2.5 pr-3">TIME</th>
+                <th className="pb-2.5 px-3">COMMAND</th>
+                <th className="pb-2.5 px-3">STATUS</th>
+                <th className="pb-2.5 pl-3 text-right">LATENCY</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5 font-mono">
+            <tbody className="divide-y divide-[var(--line)]">
               {visibleLogs.map((e) => {
                 const timeStr = new Date(e.timestamp).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
                   second: "2-digit",
+                  hour12: false,
                 });
                 return (
-                  <tr key={e.id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="py-2 pr-3 text-zinc-400 text-[11px] flex items-center gap-1.5">
-                      <Clock className="h-3 w-3 text-zinc-500 shrink-0" />
+                  <tr key={e.id} className="hover:bg-[var(--panel-2)] transition-colors">
+                    <td className="py-2 pr-3 text-[var(--ink-2)] text-[11px] tabular-nums whitespace-nowrap">
                       {timeStr}
                     </td>
                     <td className="py-2 px-3">
-                      <span className="px-2 py-0.5 rounded-md bg-white/10 text-white font-bold text-[11px] border border-white/10">
+                      <span className="px-1.5 py-0.5 rounded-none bg-[var(--panel-2)] text-[var(--ink)] font-bold text-[11px] border border-[var(--line)]">
                         {e.command}
                       </span>
                     </td>
                     <td className="py-2 px-3">
                       <span
                         className={cn(
-                          "inline-flex items-center gap-1 text-[11px] font-semibold",
+                          "inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 border rounded-none",
                           e.status === "Success"
-                            ? "text-emerald-400"
+                            ? "border-[var(--moss)] bg-[var(--moss-soft)] text-[var(--moss)]"
                             : e.status === "Pending"
-                              ? "text-amber-400"
-                              : "text-rose-400",
+                              ? "border-[var(--gold)] bg-[var(--gold)]/10 text-[var(--gold)]"
+                              : "border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)]",
                         )}
                       >
-                        <CheckCircle2 className="h-3 w-3" />
                         {e.status}
                       </span>
                     </td>
-                    <td className="py-2 pl-3 text-right text-zinc-400 text-[11px]">
-                      {e.responseTimeMs} ms
+                    <td className="py-2 pl-3 text-right text-[var(--ink-2)] text-[11px] tabular-nums">
+                      {e.responseTimeMs}ms
                     </td>
                   </tr>
                 );
@@ -141,13 +140,13 @@ export default function CommandLogCard({ className }: { className?: string }) {
             </tbody>
           </table>
           {logs.length > 20 && (
-            <div className="pt-2 text-center">
+            <div className="pt-2 text-center border-t border-[var(--line)]">
               <button
                 type="button"
                 onClick={() => setShowAll((prev) => !prev)}
-                className="text-xs text-zinc-400 hover:text-white transition-colors"
+                className="text-[10px] font-bold uppercase tracking-wider text-[var(--ink-2)] hover:text-[var(--terra)] transition-colors cursor-pointer"
               >
-                {showAll ? "Show less" : `Show more (${logs.length - 20} remaining)`}
+                {showAll ? "SHOW LESS" : `SHOW MORE (${logs.length - 20} REMAINING)`}
               </button>
             </div>
           )}

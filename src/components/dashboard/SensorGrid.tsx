@@ -82,32 +82,32 @@ export default function SensorGrid() {
       key: "soil",
       label: t("dashboard.soilMoisture"),
       icon: Droplets,
-      iconTint: "bg-sky-500/15 text-sky-300",
+      iconTint: "text-[var(--moss)] bg-[var(--moss-soft)] border border-[var(--moss)]",
       value: soilVal,
       decimals: 1,
       unit: "%",
       pill: { tone: moistureTone(soilVal), label: moistureLabel(soilVal) },
       series: soilSeries,
-      sparkColor: "#38bdf8",
+      sparkColor: "var(--moss)",
       alertPulse: soilVal < thresholds.moistureLow,
     },
     {
       key: "temp",
       label: t("dashboard.temperature"),
       icon: Thermometer,
-      iconTint: "bg-red-500/15 text-red-300",
+      iconTint: "text-[var(--terra)] bg-[var(--terra-soft)] border border-[var(--terra)]",
       value: tempVal,
       decimals: 1,
       unit: "°C",
       pill: { tone: tempTone, label: tempVal > thresholds.tempHigh ? "High" : "Normal" },
       series: tempSeries,
-      sparkColor: "#ef4444",
+      sparkColor: "var(--terra)",
     },
     {
       key: "hum",
       label: t("dashboard.humidity"),
       icon: Waves,
-      iconTint: "bg-cyan-500/15 text-cyan-300",
+      iconTint: "text-[var(--moss)] bg-[var(--moss-soft)] border border-[var(--moss)]",
       value: humVal,
       decimals: 1,
       unit: "%",
@@ -116,49 +116,56 @@ export default function SensorGrid() {
         label: humVal < thresholds.humidityLow ? "Low" : humVal > 70 ? "High" : "Optimal",
       },
       series: humSeries,
-      sparkColor: "#22d3ee",
+      sparkColor: "var(--moss)",
     },
     {
       key: "aqi",
       label: "Air Quality (AQI)",
       icon: Wind,
-      iconTint: "bg-violet-500/15 text-violet-300",
+      iconTint: "text-[var(--terra)] bg-[var(--terra-soft)] border border-[var(--terra)]",
       value: aqiVal,
       decimals: 0,
-      unit: "",
+      unit: "AQI",
       pill: {
         tone: aqiTone,
         label: aqiVal > thresholds.aqiHigh ? "Poor" : aqiVal > 100 ? "Moderate" : "Good",
       },
       series: aqiSeries,
-      sparkColor: "#a78bfa",
+      sparkColor: "var(--terra)",
     },
   ];
 
   return (
     <div>
-      <div className="flex items-center justify-between pb-3">
-        <CardHeader title={t("dashboard.liveSensors")} subtitle={t("dashboard.liveSensorsSub")} />
+      <div className="flex items-center justify-between pb-3 border-b border-[var(--line)] mb-3">
+        <div>
+          <h2 className="font-editorial-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-2)]">
+            {t("dashboard.liveSensors")}
+          </h2>
+          <p className="mt-0.5 text-[11px] text-[var(--ink-3)] font-editorial-mono">
+            {t("dashboard.liveSensorsSub")}
+          </p>
+        </div>
         <div
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all shadow-sm",
+            "flex items-center gap-1.5 px-2.5 py-1 rounded-none text-[11px] font-editorial-mono uppercase tracking-[0.1em] border transition-all",
             isRaining
-              ? "bg-blue-500/20 border-blue-400/40 text-blue-300 shadow-[0_0_12px_rgba(59,130,246,0.4)] animate-pulse"
-              : "bg-white/[0.04] border-white/10 text-white/60"
+              ? "bg-[var(--moss-soft)] border-[var(--moss)] text-[var(--moss)] animate-pulse"
+              : "bg-[var(--panel-2)] border-[var(--line)] text-[var(--ink-2)]"
           )}
         >
-          <CloudRain className={cn("w-3.5 h-3.5", isRaining ? "text-blue-300" : "text-white/40")} />
-          <span>Rain: {isRaining ? "Yes" : "No"}</span>
+          <CloudRain className={cn("w-3.5 h-3.5", isRaining ? "text-[var(--moss)]" : "text-[var(--ink-3)]")} />
+          <span>RAIN: {isRaining ? "DETECTED" : "NONE"}</span>
         </div>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {sensors.map((s) => (
           <SensorCard
             key={s.key}
             def={s}
             rawText={
               showRaw && (s.key === "soil" || s.key === "aqi")
-                ? `(raw: ${s.key === "soil" ? soilRaw : mqRaw})`
+                ? `RAW ${s.key === "soil" ? soilRaw : mqRaw}`
                 : undefined
             }
           />
@@ -172,18 +179,24 @@ export const SensorCard = memo(function SensorCard({ def, rawText }: { def: Sens
   const Icon = def.icon;
   const body = (
     <>
-      <div className="flex items-start justify-between gap-2">
-        <span
-          className={cn(
-            "liquid-icon-circle flex h-11 w-11 shrink-0 items-center justify-center",
-            def.iconTint,
-          )}
-        >
-          <Icon className="h-5 w-5" />
-        </span>
-        <div className="flex items-center gap-1.5">
+      {/* Header row = mono uppercase label left + status stamp right */}
+      <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] pb-2 mb-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <span
+            className={cn(
+              "flex h-6 w-6 shrink-0 items-center justify-center rounded-[2px]",
+              def.iconTint,
+            )}
+          >
+            <Icon className="h-3.5 w-3.5" />
+          </span>
+          <p className="truncate font-editorial-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-2)]">
+            {def.label}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
           {rawText && (
-            <span className="font-mono text-[10px] text-amber-400 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-400/20">
+            <span className="font-editorial-mono text-[9px] text-[#E4C57E] font-bold bg-[#B98A3E]/10 px-1.5 py-0.5 border border-[#B98A3E]/30 rounded-none uppercase tracking-wider">
               {rawText}
             </span>
           )}
@@ -193,15 +206,18 @@ export const SensorCard = memo(function SensorCard({ def, rawText }: { def: Sens
         </div>
       </div>
 
-      <p className="mt-3 truncate text-xs font-medium text-[#9CA3AF]">{def.label}</p>
-      <p className="mt-0.5 flex items-baseline">
-        <span className="liquid-metric">
-          <AnimatedNumber value={def.value} decimals={def.decimals} />
-        </span>
-        <span className="ml-0.5 text-sm font-semibold text-[#9CA3AF]">{def.unit}</span>
-      </p>
+      {/* Metrics 40px 800 ink tabular */}
+      <div className="flex items-baseline gap-1.5">
+        <AnimatedNumber value={def.value} decimals={def.decimals} />
+        {def.unit && (
+          <span className="font-editorial-mono text-xs uppercase tracking-wider text-[var(--ink-3)] font-semibold">
+            {def.unit}
+          </span>
+        )}
+      </div>
 
-      <div className="mt-2">
+      {/* Sparkline terra or moss stroke, square dots */}
+      <div className="mt-3 pt-2 border-t border-[var(--line)]">
         <Sparkline data={def.series} color={def.sparkColor} />
       </div>
     </>
@@ -210,14 +226,14 @@ export const SensorCard = memo(function SensorCard({ def, rawText }: { def: Sens
   return (
     <section
       className={cn(
-        "relative overflow-hidden liquid-glass-card liquid-card-hover rounded-[20px] p-4 sm:p-5",
-        def.alertPulse && "ring-1 ring-amber-500/50"
+        "relative rounded-none p-4 bg-[var(--panel)] border border-[var(--line)] transition-all",
+        def.alertPulse && "border-[var(--terra)]"
       )}
     >
       {def.alertPulse && (
         <span
           aria-hidden
-          className="absolute inset-0 rounded-[20px] bg-amber-500/5 animate-pulse pointer-events-none"
+          className="absolute inset-0 bg-[var(--terra-soft)] pointer-events-none animate-pulse"
         />
       )}
       <div className="relative z-[1]">{body}</div>

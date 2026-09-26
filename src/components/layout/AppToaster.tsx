@@ -19,7 +19,7 @@ function getServerDesktop() {
 }
 
 /**
- * Global toaster — Apple-style liquid glass pill with vibrant colored circular icons.
+ * Global toaster — M1 Field Editorial square panel, terra/moss left bar, mono text.
  * Bottom-right on desktop (md+), top-center on mobile.
  */
 export default function AppToaster() {
@@ -27,35 +27,35 @@ export default function AppToaster() {
 
   return (
     <Toaster
-      theme="dark"
       position={isDesktop ? "bottom-right" : "top-center"}
       duration={5000}
       visibleToasts={6}
       className="z-[70]"
       icons={{
         success: (
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-400/30">
-            <CheckCircle2 className="h-3.5 w-3.5" />
+          <div className="flex h-5 w-5 items-center justify-center rounded-none bg-[var(--moss-soft)] text-[var(--moss)] border border-[var(--moss)]">
+            <CheckCircle2 className="h-3 w-3" />
           </div>
         ),
         error: (
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-500/20 text-rose-400 border border-rose-400/30">
-            <AlertCircle className="h-3.5 w-3.5" />
+          <div className="flex h-5 w-5 items-center justify-center rounded-none bg-[var(--terra-soft)] text-[var(--terra)] border border-[var(--terra)]">
+            <AlertCircle className="h-3 w-3" />
           </div>
         ),
         info: (
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-500/20 text-sky-400 border border-sky-400/30">
-            <Info className="h-3.5 w-3.5" />
+          <div className="flex h-5 w-5 items-center justify-center rounded-none bg-[var(--panel-2)] text-[var(--ink-2)] border border-[var(--line)]">
+            <Info className="h-3 w-3" />
           </div>
         ),
         warning: (
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500/20 text-amber-400 border border-amber-400/30">
-            <AlertTriangle className="h-3.5 w-3.5" />
+          <div className="flex h-5 w-5 items-center justify-center rounded-none bg-[#B98A3E]/15 text-[#E4C57E] border border-[#B98A3E]">
+            <AlertTriangle className="h-3 w-3" />
           </div>
         ),
       }}
       toastOptions={{
-        className: "liquid-glass-pill text-xs font-medium shadow-2xl",
+        className:
+          "rounded-none border border-[var(--line)] bg-[var(--panel)] text-[var(--ink)] font-editorial-mono text-[11px] shadow-2xl p-3 tracking-wide",
         duration: 5000,
       }}
     />

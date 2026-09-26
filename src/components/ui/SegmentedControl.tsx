@@ -21,8 +21,7 @@ export interface SegmentedControlProps<T extends string = string> {
 }
 
 /**
- * SegmentedControl — grid-cols-3 with sliding emerald indicator (framer-motion layoutId="seg")
- * behind the active option; guaranteed equal widths.
+ * SegmentedControl — bordered square tabs (active = ink bg, bg-color text)
  */
 export default function SegmentedControl<T extends string = string>({
   options,
@@ -37,7 +36,7 @@ export default function SegmentedControl<T extends string = string>({
       role="tablist"
       aria-label={ariaLabel}
       className={cn(
-        "grid w-full grid-cols-3 gap-1 rounded-xl border border-white/10 bg-black/40 p-1",
+        "grid w-full grid-cols-3 border border-[var(--line)] bg-[var(--panel)] p-0.5 rounded-none",
         className,
       )}
     >
@@ -52,19 +51,21 @@ export default function SegmentedControl<T extends string = string>({
             aria-selected={active}
             onClick={() => onChange(option.id)}
             className={cn(
-              "relative flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-extrabold transition-colors cursor-pointer select-none",
-              active ? "text-black" : "text-zinc-400 hover:text-zinc-200",
+              "relative flex items-center justify-center gap-1.5 px-2.5 py-2",
+              "font-editorial-mono text-[11px] font-bold uppercase tracking-[0.1em]",
+              "rounded-none transition-colors cursor-pointer select-none",
+              active ? "text-[var(--bg)]" : "text-[var(--ink-2)] hover:text-[var(--ink)]",
             )}
           >
             {active && (
               <motion.div
                 layoutId={layoutId}
-                className="absolute inset-0 rounded-lg bg-emerald-500 shadow-[0_0_16px_rgba(34,197,94,0.45)]"
+                className="absolute inset-0 rounded-none bg-[var(--ink)]"
                 transition={{ type: "spring", stiffness: 450, damping: 35 }}
               />
             )}
             <span className="relative z-10 flex items-center justify-center gap-1.5 truncate">
-              {Icon && <Icon className={cn("h-3.5 w-3.5 shrink-0", active ? "text-black" : "text-zinc-400")} />}
+              {Icon && <Icon className={cn("h-3.5 w-3.5 shrink-0", active ? "text-[var(--bg)]" : "text-[var(--ink-2)]")} />}
               <span className="truncate">{option.label}</span>
             </span>
           </button>

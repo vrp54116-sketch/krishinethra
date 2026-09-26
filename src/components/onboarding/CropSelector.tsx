@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Check, Search, X, CheckSquare, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -22,19 +21,19 @@ export interface CropSelectorProps {
 const SEASON_CONFIG: Record<CropSeason, { label: string; cls: string }> = {
   kharif: {
     label: "Kharif",
-    cls: "bg-amber-500/10 text-amber-300 border-amber-400/20",
+    cls: "text-[var(--gold)] border-[var(--gold)]/30 bg-[var(--gold)]/10",
   },
   rabi: {
     label: "Rabi",
-    cls: "bg-sky-500/10 text-sky-300 border-sky-400/20",
+    cls: "text-[var(--moss)] border-[var(--moss)]/30 bg-[var(--moss-soft)]",
   },
   zaid: {
     label: "Zaid",
-    cls: "bg-emerald-500/10 text-emerald-300 border-emerald-400/20",
+    cls: "text-[var(--moss)] border-[var(--moss)]/30 bg-[var(--moss-soft)]",
   },
   perennial: {
     label: "Perennial",
-    cls: "bg-purple-500/10 text-purple-300 border-purple-400/20",
+    cls: "text-[var(--ink-2)] border-[var(--line)] bg-[var(--panel-2)]",
   },
 };
 
@@ -110,42 +109,42 @@ export default function CropSelector({
   }, [selectedIds]);
 
   return (
-    <div className={cn("space-y-3", className)}>
-      {/* 1. Search Box */}
+    <div className={cn("space-y-3 font-editorial-mono", className)}>
+      {/* 1. Search Box (Editorial sharp border) */}
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-2)]" />
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--ink-3)]" />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search 120+ crops (e.g. Wheat, Tomato, गेहूं, चना)..."
-          className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] pl-10 pr-9 py-2.5 text-xs sm:text-sm font-semibold text-[var(--text)] placeholder:text-[var(--text-2)] placeholder:font-normal outline-none transition-all focus:border-[var(--accent)] focus:shadow-[0_0_16px_var(--accent-glow)]"
+          placeholder="SEARCH 120+ CROPS (e.g. Wheat, Tomato, गेहूं)..."
+          className="w-full rounded-none border border-[var(--line)] bg-[var(--panel)] pl-9 pr-8 py-2 text-xs uppercase font-medium text-[var(--ink)] placeholder:text-[var(--ink-3)] outline-none transition-colors focus:border-[var(--terra)]"
         />
         {search && (
           <button
             type="button"
             onClick={() => setSearch("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-[var(--text-2)] hover:text-[var(--text)]"
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-[var(--ink-3)] hover:text-[var(--ink)] cursor-pointer"
             aria-label="Clear search"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5" />
           </button>
         )}
       </div>
 
-      {/* 2. Category Chips Bar */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-hide text-xs">
+      {/* 2. Category Chips Bar (Bordered square chips) */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-hide text-xs">
         <button
           type="button"
           onClick={() => setSelectedCat("All")}
           className={cn(
-            "shrink-0 rounded-full px-3 py-1.5 font-bold transition-all cursor-pointer border text-[11px]",
+            "shrink-0 rounded-none px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer border",
             selectedCat === "All"
-              ? "bg-[var(--accent)] border-[var(--accent)] text-white shadow-[0_0_12px_var(--accent-glow)]"
-              : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]",
+              ? "bg-[var(--terra-soft)] border-[var(--terra)] text-[var(--terra)]"
+              : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-2)] hover:text-[var(--ink)]",
           )}
         >
-          All ({CROPS.length})
+          ALL ({CROPS.length})
         </button>
         {CROP_CATEGORIES.map((cat) => {
           const count = CROPS.filter((c) => c.cat === cat).length;
@@ -156,49 +155,49 @@ export default function CropSelector({
               type="button"
               onClick={() => setSelectedCat(cat)}
               className={cn(
-                "shrink-0 rounded-full px-3 py-1.5 font-bold transition-all cursor-pointer border text-[11px]",
+                "shrink-0 rounded-none px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer border",
                 active
-                  ? "bg-[var(--accent)] border-[var(--accent)] text-white shadow-[0_0_12px_var(--accent-glow)]"
-                  : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]",
+                  ? "bg-[var(--terra-soft)] border-[var(--terra)] text-[var(--terra)]"
+                  : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-2)] hover:text-[var(--ink)]",
               )}
             >
-              {cat} ({count})
+              {cat.toUpperCase()} ({count})
             </button>
           );
         })}
       </div>
 
       {/* 3. Sub-header with count and Select All in Category */}
-      <div className="flex items-center justify-between px-1 text-[11px]">
-        <span className="font-semibold uppercase tracking-wider text-[var(--text-2)]">
-          {filteredCrops.length} {filteredCrops.length === 1 ? "crop" : "crops"} found
+      <div className="flex items-center justify-between px-0.5 text-[11px] text-[var(--ink-3)] uppercase tracking-wider">
+        <span>
+          {filteredCrops.length} {filteredCrops.length === 1 ? "CROP" : "CROPS"} FOUND
         </span>
         {filteredCrops.length > 0 && (
           <button
             type="button"
             onClick={toggleSelectAllCategory}
-            className="flex items-center gap-1 font-bold text-[var(--accent-2)] hover:text-[var(--accent)] cursor-pointer transition-colors"
+            className="flex items-center gap-1 font-bold text-[var(--terra)] hover:underline cursor-pointer transition-colors"
           >
             {allVisibleSelected ? (
               <>
-                <CheckSquare className="h-3.5 w-3.5" />
-                <span>Deselect all visible</span>
+                <CheckSquare className="h-3 w-3" />
+                <span>DESELECT ALL</span>
               </>
             ) : (
               <>
-                <Square className="h-3.5 w-3.5" />
-                <span>Select all in category</span>
+                <Square className="h-3 w-3" />
+                <span>SELECT ALL</span>
               </>
             )}
           </button>
         )}
       </div>
 
-      {/* 4. List Rows */}
-      <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-2">
+      {/* 4. Crop Multi-Select as Bordered Chip Grid */}
+      <div className="max-h-72 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-1.5 p-1.5 rounded-none border border-[var(--line)] bg-[var(--panel)]">
         {filteredCrops.length === 0 ? (
-          <div className="py-8 text-center text-xs text-[var(--text-2)]">
-            No crops matched &quot;{search}&quot;. Try a different term or category.
+          <div className="col-span-full py-8 text-center text-xs text-[var(--ink-3)]">
+            NO CROPS MATCHED &quot;{search}&quot;.
           </div>
         ) : (
           filteredCrops.map((crop) => {
@@ -212,75 +211,45 @@ export default function CropSelector({
                 type="button"
                 onClick={() => toggleCrop(crop.id)}
                 className={cn(
-                  "group flex w-full items-center justify-between gap-2.5 rounded-xl border p-2.5 text-left transition-all cursor-pointer",
+                  "group flex items-center justify-between gap-2 rounded-none border p-2 text-left transition-colors cursor-pointer select-none",
                   isSelected
-                    ? "border-[var(--accent)] bg-[var(--accent-soft)] shadow-[0_0_12px_var(--accent-glow)]"
-                    : "border-[var(--border)] bg-[var(--surface-2)]/40 hover:border-[var(--accent)]/40 hover:bg-[var(--surface-2)]",
+                    ? "border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--ink)]"
+                    : "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink-2)] hover:border-[var(--ink-3)] hover:text-[var(--ink)]",
                 )}
               >
                 {/* Left: Name and details */}
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2">
-                    <span
-                      className={cn(
-                        "text-sm font-bold truncate transition-colors",
-                        isSelected ? "text-[var(--text)]" : "text-[var(--text)]/90 group-hover:text-[var(--text)]",
-                      )}
-                    >
+                  <div className="flex items-baseline gap-1.5 truncate">
+                    <span className="text-xs font-bold uppercase truncate text-[var(--ink)]">
                       {crop.en}
                     </span>
-                    <span className="text-xs font-medium text-[var(--text-2)] truncate">
+                    <span className="text-[10px] text-[var(--ink-3)] truncate">
                       {crop.hi}
                     </span>
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px]">
-                    <span
-                      className={cn(
-                        "rounded-full border px-2 py-0.5 font-semibold",
-                        season.cls,
-                      )}
-                    >
+                  <div className="mt-1 flex flex-wrap items-center gap-1 text-[9px]">
+                    <span className={cn("border px-1 py-0.2 rounded-none uppercase font-semibold", season.cls)}>
                       {season.label}
                     </span>
-                    <span
-                      className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 font-medium text-[var(--text-2)]"
-                      title={`Water requirement: ${water.label}`}
-                    >
+                    <span className="border border-[var(--line)] px-1 py-0.2 rounded-none text-[var(--ink-3)]">
                       {water.icon} {water.label}
                     </span>
-                    <span className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-2 py-0.5 font-mono text-[var(--text-2)]">
+                    <span className="text-[var(--ink-3)] tabular-nums">
                       {crop.days}d
-                    </span>
-                    <span className="text-[10px] text-[var(--text-2)] hidden sm:inline">
-                      • {crop.cat}
                     </span>
                   </div>
                 </div>
 
-                {/* Right: Orange check animation toggle */}
-                <div className="shrink-0 flex items-center justify-center">
-                  <div
-                    className={cn(
-                      "flex h-6 w-6 items-center justify-center rounded-lg border transition-all",
-                      isSelected
-                        ? "border-[var(--accent)] bg-[var(--accent)] shadow-[0_0_10px_var(--accent-glow)]"
-                        : "border-[var(--border)] bg-[var(--surface-2)] group-hover:border-[var(--accent)]/50",
-                    )}
-                  >
-                    <AnimatePresence>
-                      {isSelected && (
-                        <motion.div
-                          key="check"
-                          initial={{ scale: 0, rotate: -30 }}
-                          animate={{ scale: 1, rotate: 0 }}
-                          exit={{ scale: 0, rotate: 30 }}
-                          transition={{ type: "spring", stiffness: 450, damping: 25 }}
-                        >
-                          <Check className="h-4 w-4 text-white stroke-[3]" />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                {/* Right: Square checkbox */}
+                <div
+                  className={cn(
+                    "shrink-0 flex h-4 w-4 items-center justify-center rounded-none border transition-colors",
+                    isSelected
+                      ? "border-[var(--terra)] bg-[var(--terra)] text-white"
+                      : "border-[var(--line)] bg-[var(--panel)] group-hover:border-[var(--ink-3)]",
+                  )}
+                >
+                  {isSelected && <Check className="h-3 w-3 stroke-[3]" />}
                 </div>
               </button>
             );
@@ -288,40 +257,39 @@ export default function CropSelector({
         )}
       </div>
 
-      {/* 5. Bottom Selected Counter + Chips Tray */}
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 space-y-2">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-bold text-[var(--text)]">
-            Selected:{" "}
-            <span className="font-mono text-[var(--accent-2)]">
-              {selectedIds.length} {selectedIds.length === 1 ? "crop" : "crops"}
+      {/* 5. Bottom Selected Counter + Bordered Chips Tray */}
+      <div className="rounded-none border border-[var(--line)] bg-[var(--panel-2)] p-2.5 space-y-2">
+        <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider">
+          <span className="text-[var(--ink)]">
+            SELECTED:{" "}
+            <span className="text-[var(--terra)] tabular-nums">
+              {selectedIds.length} {selectedIds.length === 1 ? "CROP" : "CROPS"}
             </span>
           </span>
           {selectedIds.length > 0 && (
             <button
               type="button"
               onClick={clearAll}
-              className="text-[11px] font-semibold text-[var(--text-2)] hover:text-rose-400 cursor-pointer transition-colors"
+              className="text-[10px] font-semibold text-[var(--terra)] hover:underline cursor-pointer transition-colors"
             >
-              Clear all
+              CLEAR ALL
             </button>
           )}
         </div>
 
         {selectedCropsList.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+          <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
             {selectedCropsList.map((crop) => (
               <span
                 key={crop.id}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[var(--accent)]/40 bg-[var(--accent-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--text)] shadow-[0_0_8px_var(--accent-glow)]"
+                className="inline-flex items-center gap-1.5 rounded-none border border-[var(--terra)] bg-[var(--terra-soft)] px-2 py-0.5 text-[10px] font-bold uppercase text-[var(--ink)]"
               >
                 <span>{crop.en}</span>
-                <span className="text-[10px] text-[var(--text-2)]">({crop.hi})</span>
                 <button
                   type="button"
                   onClick={() => removeCrop(crop.id)}
                   aria-label={`Remove ${crop.en}`}
-                  className="rounded-full p-0.5 text-[var(--text-2)] hover:bg-[var(--accent)] hover:text-white cursor-pointer transition-colors"
+                  className="text-[var(--ink-3)] hover:text-[var(--terra)] cursor-pointer transition-colors"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -329,8 +297,8 @@ export default function CropSelector({
             ))}
           </div>
         ) : (
-          <p className="text-[11px] text-[var(--text-2)] italic">
-            No crops selected yet. Tap any crop above to select.
+          <p className="text-[10px] text-[var(--ink-3)] uppercase tracking-wider">
+            NO CROPS SELECTED YET. SELECT AT LEAST ONE CROP ABOVE.
           </p>
         )}
       </div>

@@ -34,6 +34,7 @@ import { mandiById } from "@/lib/market-data";
 import { useMounted } from "@/components/dashboard/ui";
 import CropSelector from "@/components/onboarding/CropSelector";
 import { getCrop } from "@/lib/crops";
+import { CreamButton } from "@/components/editorial/CreamButton";
 
 const AVATARS = ["🧑‍🌾", "👩‍🌾", "🧔", "👳‍♀️", "🧕", "👨‍🌾"];
 const ROLES = ["Farmer", "Farm Manager", "Student Researcher"];
@@ -42,61 +43,51 @@ const SOIL_TYPES = ["Sandy", "Loamy", "Clay", "Black cotton"];
 const WATER_SOURCES = ["Borewell", "Canal", "Rain-fed", "Tank"];
 const IRRIGATION_METHODS = ["Flood", "Drip", "Sprinkler", "None"];
 const POWER_SOURCES = ["Electricity", "Solar", "Diesel", "None"];
-const DEFAULT_CROP = "Tomato";
 const HARDWARE_NOTE =
   "Hardware: 1 soil sensor, 1 air quality sensor, 1 temp/humidity sensor, 1 rain sensor, 1 pump";
 
-const inputCls =
-  "w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 pl-11 text-sm font-semibold text-[var(--text)] outline-none transition-all placeholder:font-normal placeholder:text-[var(--text-2)] focus:border-[var(--accent)] focus:shadow-[0_0_20px_var(--accent-glow)]";
+// Editorial Form Inputs: Underline-only inputs with 0 border-radius
+const underlineInputCls =
+  "w-full rounded-none border-0 border-b border-[var(--line)] bg-transparent px-0 py-2.5 text-sm font-semibold text-[var(--ink)] placeholder:text-[var(--ink-3)] placeholder:font-normal focus:border-[var(--terra)] focus:ring-0 outline-none transition-colors";
 
-const selectCls =
-  "w-full appearance-none rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-sm font-semibold text-[var(--text)] outline-none transition-all focus:border-[var(--accent)] focus:shadow-[0_0_20px_var(--accent-glow)] [&>option]:bg-black [&>option]:text-white";
+const underlineSelectCls =
+  "w-full rounded-none appearance-none border-0 border-b border-[var(--line)] bg-transparent px-0 py-2.5 text-sm font-semibold text-[var(--ink)] focus:border-[var(--terra)] focus:ring-0 outline-none transition-colors cursor-pointer [&>option]:bg-[var(--panel)] [&>option]:text-[var(--ink)]";
 
-const labelCls =
-  "mb-1.5 block text-[11px] font-bold uppercase tracking-widest text-[var(--text-2)]";
+const monoLabelCls =
+  "mb-1 block font-editorial-mono text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--ink-2)]";
 
-function FieldIcon({ children }: { children: React.ReactNode }) {
+/* ---------------- Editorial Step Stamp Header ---------------- */
+function StepStampHeader({
+  stepNumber,
+  totalSteps = 4,
+  title,
+  subtitle,
+}: {
+  stepNumber: number;
+  totalSteps?: number;
+  title: string;
+  subtitle?: string;
+}) {
+  const stepStr = `STEP ${String(stepNumber).padStart(2, "0")}/${String(totalSteps).padStart(2, "0")}`;
+
   return (
-    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--accent)]">
-      {children}
-    </span>
-  );
-}
-
-/* ---------------- Animated farm background ---------------- */
-function FarmBackground() {
-  const particles = useMemo(
-    () =>
-      Array.from({ length: 14 }).map((_, i) => ({
-        id: i,
-        size: 8 + ((i * 37) % 26),
-        left: (i * 71) % 100,
-        top: (i * 53) % 100,
-        dur: 9 + ((i * 29) % 12),
-        delay: (i % 7) * 0.9,
-        warm: i % 3 === 0,
-      })),
-    [],
-  );
-  return (
-    <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,rgba(255,107,26,0.18),transparent_70%)]" />
-      <div className="animate-drift-slow absolute -left-32 top-1/4 h-96 w-96 rounded-full bg-[var(--accent-glow)]/15 blur-[130px]" />
-      <div className="animate-drift-slow-reverse absolute -right-32 bottom-1/4 h-[28rem] w-[28rem] rounded-full bg-[var(--accent-soft)]/20 blur-[130px]" />
-      {particles.map((p) => (
-        <motion.span
-          key={p.id}
-          className={cn(
-            "absolute rounded-full blur-[1px]",
-            p.warm ? "bg-amber-400/25" : "bg-[var(--accent)]/20",
-          )}
-          style={{ width: p.size, height: p.size, left: `${p.left}%`, top: `${p.top}%` }}
-          animate={{ y: [0, -46, 0], x: [0, 18, 0], opacity: [0.15, 0.7, 0.15] }}
-          transition={{ duration: p.dur, repeat: Infinity, delay: p.delay, ease: "easeInOut" }}
-        />
-      ))}
-      <div className="farm-grid absolute inset-0 opacity-40" />
-      <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg)] via-transparent to-[var(--bg)]/70" />
+    <div className="mb-6 border-b border-[var(--line)] pb-4 font-editorial-mono">
+      <div className="flex items-center justify-between gap-3">
+        <span className="inline-block border border-[var(--terra)] bg-[var(--terra-soft)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--terra)]">
+          {stepStr}
+        </span>
+        <span className="text-[10px] font-semibold text-[var(--ink-3)] uppercase tracking-widest">
+          FIELD REGISTRATION
+        </span>
+      </div>
+      <h2 className="mt-2 text-lg sm:text-xl font-bold uppercase tracking-tight text-[var(--ink)]">
+        {title}
+      </h2>
+      {subtitle && (
+        <p className="mt-0.5 text-xs text-[var(--ink-2)] font-sans">
+          {subtitle}
+        </p>
+      )}
     </div>
   );
 }
@@ -130,22 +121,18 @@ function PinUnlock() {
   };
 
   return (
-    <main className="relative flex h-full overflow-y-auto flex-col items-center justify-center overflow-x-hidden bg-transparent px-4 py-12">
-      <FarmBackground />
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 w-full max-w-md"
-      >
-        <div className="glass-strong rounded-[24px] p-8 text-center sm:p-10 border border-[var(--border)] bg-[var(--surface)] shadow-2xl">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-4xl border border-[var(--accent)]/30">
+    <main className="relative flex h-full overflow-y-auto flex-col items-center justify-center bg-[var(--bg)] px-4 py-12">
+      <div className="relative z-10 w-full max-w-md font-editorial-mono">
+        <div className="rounded-none border border-[var(--line)] bg-[var(--panel)] p-8 text-center sm:p-10 shadow-xl">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-none border border-[var(--line)] bg-[var(--panel-2)] text-3xl">
             {avatar || "🧑‍🌾"}
           </div>
-          <h1 className="mt-4 text-2xl font-extrabold text-[var(--text)]">
+          <h1 className="mt-4 text-xl font-bold uppercase tracking-wide text-[var(--ink)]">
             {t("onboarding.pinUnlockTitle")}
-            {farmerName ? `, ${farmerName.split(" ")[0]}` : ""} 🌾
+            {farmerName ? `, ${farmerName.split(" ")[0]}` : ""}
           </h1>
-          <p className="mt-1.5 text-sm text-[var(--text-2)]">{t("onboarding.pinUnlockSub")}</p>
+          <p className="mt-1 text-xs text-[var(--ink-2)]">{t("onboarding.pinUnlockSub")}</p>
+
           <div className="mt-6 flex items-center justify-center gap-3">
             {pin.map((d, i) => (
               <input
@@ -173,42 +160,44 @@ function PinUnlock() {
                 }}
                 aria-label={`PIN digit ${i + 1}`}
                 className={cn(
-                  "h-14 w-14 rounded-2xl border bg-[var(--surface-2)] text-center text-2xl font-bold text-[var(--text)] outline-none transition-all placeholder:text-[var(--text-2)]",
+                  "h-12 w-12 rounded-none border bg-[var(--panel-2)] text-center text-xl font-bold text-[var(--ink)] outline-none transition-all placeholder:text-[var(--ink-3)]",
                   error
-                    ? "animate-pulse border-red-400/70"
-                    : "border-[var(--border)] focus:border-[var(--accent)] focus:shadow-[0_0_20px_var(--accent-glow)]",
+                    ? "border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)]"
+                    : "border-[var(--line)] focus:border-[var(--terra)]",
                 )}
                 placeholder="•"
               />
             ))}
           </div>
           {error && (
-            <p className="mt-3 text-xs font-bold text-rose-300">{t("onboarding.wrongPin")}</p>
+            <p className="mt-3 text-xs font-bold text-[var(--terra)]">{t("onboarding.wrongPin")}</p>
           )}
-          <button
-            type="button"
-            onClick={submit}
-            className="btn-primary mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold text-white cursor-pointer transition-all"
-          >
-            <LockKeyhole className="h-5 w-5" /> {t("onboarding.unlockButton")}
-          </button>
+
+          <div className="mt-6">
+            <CreamButton onClick={submit} className="w-full py-3">
+              <span className="flex items-center gap-2">
+                <LockKeyhole className="h-4 w-4" /> {t("onboarding.unlockButton")}
+              </span>
+            </CreamButton>
+          </div>
+
           <button
             type="button"
             onClick={() => {
               resetOnboarding();
               toast.info(t("onboarding.editLater"));
             }}
-            className="mt-3 text-xs text-[var(--text-2)] underline-offset-2 hover:text-[var(--accent)] hover:underline cursor-pointer"
+            className="mt-4 text-xs uppercase tracking-wider text-[var(--ink-3)] hover:text-[var(--terra)] hover:underline cursor-pointer"
           >
-            {t("common.edit")} registration
+            {t("common.edit")} REGISTRATION
           </button>
         </div>
-      </motion.div>
+      </div>
     </main>
   );
 }
 
-/* ---------------- Wizard ---------------- */
+/* ---------------- Wizard (STEP 01/04 through STEP 04/04) ---------------- */
 function Wizard() {
   const t = useT();
   const router = useRouter();
@@ -237,22 +226,22 @@ function Wizard() {
     window.scrollTo({ top: 0 });
   };
 
-  // ---- Step 2 validation ----
+  // ---- Step 1 validation: Name & Phone & Language ----
   const name = profile.farmerName ?? "";
   const phone = profile.phone ?? "";
   const nameValid = name.trim().length >= 3;
   const phoneValid = /^[6-9]\d{9}$/.test(phone.trim());
-  const step2Valid = nameValid && phoneValid;
+  const step1Valid = nameValid && phoneValid;
 
-  // ---- Step 3 ----
+  // ---- Step 2 validation: Location ----
   const districts = districtsForState(profile.state);
-  const step3Valid = Boolean(profile.state?.trim() && profile.district?.trim());
+  const step2Valid = Boolean(profile.state?.trim() && profile.district?.trim());
 
-  // ---- Step 4 ----
+  // ---- Step 3 validation: Farm Specs & Crops ----
   const farmNameEffective =
     profile.farmName?.trim() ||
     (name.trim() ? `${name.trim().split(" ")[0]}'s Farm` : "My Farm");
-  const step4Valid =
+  const step3Valid =
     farmNameEffective.trim().length > 0 &&
     Number(profile.size) > 0 &&
     (profile.crops?.length ?? 0) > 0;
@@ -314,9 +303,9 @@ function Wizard() {
     );
   };
 
-  // Step 4: initialize with default crops if none exist
+  // Step 3: initialize with default crops if none exist
   useEffect(() => {
-    if (step !== 4) return;
+    if (step !== 3) return;
     if (!profile.crops || profile.crops.length === 0) {
       updateSettings({ farmProfile: { crops: ["tomato", "wheat"] } });
     }
@@ -367,190 +356,128 @@ function Wizard() {
   };
 
   return (
-    <main className="relative flex h-full overflow-y-auto flex-col items-center overflow-x-hidden bg-transparent px-4 pb-10 pt-6 sm:pt-10">
-      <FarmBackground />
+    <main className="relative flex h-full overflow-y-auto flex-col items-center bg-[var(--bg)] px-4 pb-12 pt-6 sm:pt-10">
       <div className="relative z-10 w-full max-w-xl">
-        {/* Progress — Carbon & Ember progress bar */}
-        <div className="mb-2 flex items-center justify-between text-xs font-bold">
-          <span className="text-[var(--text-2)]">
-            {t("onboarding.stepOf").replace("{step}", String(step))}
-          </span>
-          <span className="font-mono text-[var(--accent)]">{step}/5</span>
-        </div>
-        <div
-          className="liquid-glass-pill h-2.5 overflow-hidden rounded-full border border-[var(--border)] bg-[var(--surface)]"
-          role="progressbar"
-          aria-valuemin={1}
-          aria-valuemax={5}
-          aria-valuenow={step}
-          aria-label="Onboarding progress"
-        >
-          <motion.div
-            key={step}
-            className="h-full rounded-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-2)] shadow-[0_0_16px_var(--accent-glow)]"
-            initial={{ width: `${((step - 1) / 5) * 100}%` }}
-            animate={{ width: `${(step / 5) * 100}%` }}
-            transition={{ type: "spring", stiffness: 120, damping: 20 }}
-          />
-        </div>
-        <div className="mb-5 mt-3 flex items-center justify-center gap-2">
-          {[1, 2, 3, 4, 5].map((d) => (
-            <button
-              key={d}
-              type="button"
-              aria-label={`Go to step ${d}`}
-              onClick={() => {
-                if (d < step) go(d);
-              }}
-              className={cn(
-                "relative h-6 w-6 rounded-full transition-all cursor-pointer",
-              )}
-            >
-              <span
-                aria-hidden="true"
+        {/* Step stamps progress bar: 4 steps */}
+        <div className="mb-4 flex items-center justify-between border-b border-[var(--line)] pb-2 font-editorial-mono text-xs">
+          <div className="flex items-center gap-2">
+            {[1, 2, 3, 4].map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => {
+                  if (d < step) go(d);
+                }}
                 className={cn(
-                  "absolute left-1/2 top-1/2 block h-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition-all",
+                  "px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase transition-colors rounded-none cursor-pointer border",
                   d === step
-                    ? "w-8 bg-[var(--accent)] shadow-[0_0_12px_var(--accent-glow)]"
+                    ? "border-[var(--terra)] bg-[var(--terra)] text-white"
                     : d < step
-                      ? "w-2.5 bg-[var(--accent)]/70"
-                      : "w-2.5 bg-white/15",
+                      ? "border-[var(--line)] bg-[var(--panel-2)] text-[var(--moss)] hover:border-[var(--ink-2)]"
+                      : "border-[var(--line)] bg-transparent text-[var(--ink-3)] cursor-not-allowed",
                 )}
-              />
-            </button>
-          ))}
+              >
+                0{d}
+              </button>
+            ))}
+          </div>
+          <span className="font-bold uppercase tracking-wider text-[var(--ink-2)]">
+            STEP {String(step).padStart(2, "0")}/04
+          </span>
         </div>
 
         <AnimatePresence mode="wait" custom={dir}>
           <motion.div
             key={step}
             custom={dir}
-            initial={{ opacity: 0, x: 64 * dir }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -64 * dir }}
-            transition={{ duration: 0.28, ease: "easeOut" }}
-            className="liquid-glass-card rounded-[24px] border border-[var(--border)] bg-[var(--surface)] shadow-2xl p-6 sm:p-8"
+            initial={{ opacity: 0, y: 8 * dir }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 * dir }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="rounded-none border border-[var(--line)] bg-[var(--panel)] p-6 sm:p-8 shadow-xl"
           >
             {step > 1 && (
               <button
                 type="button"
                 onClick={() => go(step - 1)}
-                className="mb-4 inline-flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-xs font-bold text-[var(--text-2)] transition-colors hover:border-[var(--accent)]/40 hover:text-[var(--text)] cursor-pointer"
+                className="mb-4 inline-flex items-center gap-1.5 font-editorial-mono text-[10px] font-bold uppercase tracking-wider text-[var(--ink-2)] hover:text-[var(--terra)] cursor-pointer"
               >
-                <ArrowLeft className="h-3.5 w-3.5" /> {t("onboarding.back")}
+                <ArrowLeft className="h-3 w-3" /> BACK TO STEP 0{step - 1}
               </button>
             )}
 
-            {/* ============ STEP 1 ============ */}
+            {/* ============ STEP 01/04: FARMER PROFILE & LANGUAGE ============ */}
             {step === 1 && (
-              <div className="text-center">
-                <motion.div
-                  initial={{ scale: 0.7, opacity: 0, rotate: -8 }}
-                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                  transition={{ type: "spring", stiffness: 160, damping: 14 }}
-                  className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30 shadow-[0_0_24px_var(--accent-glow)]"
-                >
-                  <motion.span
-                    animate={{ rotate: [0, 8, -8, 0] }}
-                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                    className="flex"
-                  >
-                    <Sprout className="h-10 w-10 text-[var(--accent)]" />
-                  </motion.span>
-                </motion.div>
-                <h1 className="glow-text mt-5 text-4xl font-extrabold tracking-tight text-[var(--text)]">
-                  {t("onboarding.welcomeTitle").includes("Krishi")
-                    ? (
-                      <>
-                        KrishiNethra{" "}
-                        <span className="bg-gradient-to-r from-[var(--accent)] to-[var(--accent-2)] bg-clip-text text-transparent">
-                          AI
-                        </span>
-                      </>
-                    )
-                    : t("onboarding.welcomeTitle")}
-                </h1>
-                <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-[var(--text-2)]">
-                  {t("onboarding.welcomeSub")}
-                </p>
-                <p className="mb-3 mt-7 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest text-[var(--text-2)]">
-                  <Languages className="h-3.5 w-3.5 text-[var(--accent)]" /> {t("onboarding.chooseLanguage")}
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  {LANGUAGES.map((l) => {
-                    const active = settings.language === l.code;
-                    return (
-                      <button
-                        key={l.code}
-                        type="button"
-                        onClick={() => setLanguage(l.code)}
-                        aria-pressed={active}
-                        className={cn(
-                          "rounded-2xl border p-4 transition-all active:scale-[0.97] cursor-pointer",
-                          active
-                            ? "border-[var(--accent)] bg-[var(--accent-soft)] shadow-[0_0_24px_var(--accent-glow)]"
-                            : "border-[var(--border)] bg-[var(--surface-2)]/50 hover:border-[var(--accent)]/40",
-                        )}
-                      >
-                        <span className="block text-xl font-extrabold text-[var(--text)]">{l.nativeLabel}</span>
-                        <span className="mt-0.5 block text-xs text-[var(--text-2)]">{l.label}</span>
-                        {active && (
-                          <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-[var(--accent)] px-2.5 py-0.5 text-[10px] font-extrabold text-white">
-                            <Check className="h-3 w-3" strokeWidth={3} /> ✓
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-                <motion.button
-                  type="button"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => go(2)}
-                  className="btn-primary mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold text-white transition-colors cursor-pointer"
-                >
-                  {t("onboarding.getStarted")} <ArrowRight className="h-5 w-5" />
-                </motion.button>
-              </div>
-            )}
-
-            {/* ============ STEP 2 ============ */}
-            {step === 2 && (
               <div>
-                <h2 className="text-xl font-extrabold text-[var(--text)]">{t("onboarding.farmerTitle")}</h2>
-                <p className="mt-1 text-sm text-[var(--text-2)]">{t("onboarding.farmerSub")}</p>
-                <div className="mt-5 space-y-4">
+                <StepStampHeader
+                  stepNumber={1}
+                  totalSteps={4}
+                  title="FARMER PROFILE & LANGUAGE"
+                  subtitle="Select your preferred language and enter your farm manager details."
+                />
+
+                <div className="space-y-5">
+                  {/* Language selection */}
                   <div>
-                    <label className={labelCls} htmlFor="ob-name">{t("onboarding.fullName")}</label>
-                    <div className="relative">
-                      <FieldIcon>
-                        <User className="h-4 w-4" />
-                      </FieldIcon>
-                      <input
-                        id="ob-name"
-                        value={name}
-                        onChange={(e) =>
-                          updateSettings({ farmProfile: { farmerName: e.target.value.slice(0, 40) } })
-                        }
-                        placeholder={t("onboarding.fullNamePh")}
-                        autoComplete="name"
-                        className={cn(inputCls, name && !nameValid && "border-red-400/60")}
-                      />
+                    <span className={monoLabelCls}>PREFERRED LANGUAGE // भाषा</span>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 font-editorial-mono">
+                      {LANGUAGES.map((l) => {
+                        const active = settings.language === l.code;
+                        return (
+                          <button
+                            key={l.code}
+                            type="button"
+                            onClick={() => setLanguage(l.code)}
+                            className={cn(
+                              "border p-2.5 text-left transition-colors cursor-pointer rounded-none select-none",
+                              active
+                                ? "border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--ink)]"
+                                : "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink-2)] hover:border-[var(--ink-3)]",
+                            )}
+                          >
+                            <span className="block text-sm font-bold text-[var(--ink)]">
+                              {l.nativeLabel}
+                            </span>
+                            <span className="text-[10px] text-[var(--ink-3)] uppercase">
+                              {l.label}
+                            </span>
+                          </button>
+                        );
+                      })}
                     </div>
+                  </div>
+
+                  {/* Full Name */}
+                  <div>
+                    <label className={monoLabelCls} htmlFor="ob-name">
+                      FULL NAME // किसान का नाम
+                    </label>
+                    <input
+                      id="ob-name"
+                      value={name}
+                      onChange={(e) =>
+                        updateSettings({ farmProfile: { farmerName: e.target.value.slice(0, 40) } })
+                      }
+                      placeholder="e.g. Ramesh Patel"
+                      autoComplete="name"
+                      className={cn(underlineInputCls, name && !nameValid && "border-[var(--terra)]")}
+                    />
                     {name && !nameValid && (
-                      <p className="mt-1.5 text-xs font-semibold text-red-300">{t("onboarding.nameError")}</p>
+                      <p className="mt-1 font-editorial-mono text-[10px] text-[var(--terra)]">
+                        Minimum 3 characters required.
+                      </p>
                     )}
                   </div>
+
+                  {/* Phone */}
                   <div>
-                    <label className={labelCls} htmlFor="ob-phone">{t("onboarding.mobile")}</label>
-                    <div className="relative">
-                      <FieldIcon>
-                        <Phone className="h-4 w-4" />
-                      </FieldIcon>
-                      <div className="pointer-events-none absolute left-10 top-1/2 -translate-y-1/2 border-r border-[var(--border)] pr-2 text-sm font-bold text-[var(--text-2)]">
+                    <label className={monoLabelCls} htmlFor="ob-phone">
+                      MOBILE NUMBER // संपर्क सूत्र (+91)
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="border-b border-[var(--line)] py-2.5 font-editorial-mono text-xs font-bold text-[var(--ink-3)]">
                         +91
-                      </div>
+                      </span>
                       <input
                         id="ob-phone"
                         value={phone}
@@ -562,57 +489,59 @@ function Wizard() {
                         placeholder="98765 43210"
                         inputMode="numeric"
                         autoComplete="tel"
-                        className={cn(inputCls, "!pl-24 font-mono tracking-widest", phone && !phoneValid && "border-red-400/60")}
+                        className={cn(
+                          underlineInputCls,
+                          "font-editorial-mono tracking-widest",
+                          phone && !phoneValid && "border-[var(--terra)]",
+                        )}
                       />
                     </div>
                     {phone && !phoneValid && (
-                      <p className="mt-1.5 text-xs font-semibold text-red-300">{t("onboarding.mobileError")}</p>
+                      <p className="mt-1 font-editorial-mono text-[10px] text-[var(--terra)]">
+                        Enter a valid 10-digit mobile number.
+                      </p>
                     )}
                   </div>
+
+                  {/* Role */}
                   <div>
-                    <span className={labelCls}>{t("onboarding.role")}</span>
-                    <div className="grid grid-cols-3 gap-2">
+                    <span className={monoLabelCls}>OPERATING ROLE</span>
+                    <div className="grid grid-cols-3 gap-2 font-editorial-mono">
                       {ROLES.map((r) => {
                         const active = (profile.role || "Farmer") === r;
-                        const label =
-                          r === "Farmer"
-                            ? t("onboarding.roleFarmer")
-                            : r === "Farm Manager"
-                              ? t("onboarding.roleManager")
-                              : t("onboarding.roleStudent");
                         return (
                           <button
                             key={r}
                             type="button"
                             onClick={() => updateSettings({ farmProfile: { role: r } })}
-                            aria-pressed={active}
                             className={cn(
-                              "rounded-2xl border px-2 py-3 text-xs font-bold transition-all active:scale-[0.97] cursor-pointer",
+                              "border py-2 text-center text-[10px] font-bold uppercase tracking-wider transition-colors rounded-none cursor-pointer",
                               active
-                                ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--text)] shadow-[0_0_16px_var(--accent-glow)]"
-                                : "border-[var(--border)] bg-[var(--surface-2)]/50 text-[var(--text-2)] hover:border-[var(--accent)]/40 hover:text-[var(--text)]",
+                                ? "border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)]"
+                                : "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink-2)] hover:border-[var(--ink-3)]",
                             )}
                           >
-                            {label}
+                            {r}
                           </button>
                         );
                       })}
                     </div>
                   </div>
+
+                  {/* Avatar */}
                   <div>
-                    <span className={labelCls}>{t("onboarding.avatar")}</span>
+                    <span className={monoLabelCls}>AVATAR ICON</span>
                     <div className="flex flex-wrap gap-2">
                       {AVATARS.map((a) => (
                         <button
                           key={a}
                           type="button"
                           onClick={() => updateSettings({ farmProfile: { avatar: a } })}
-                          aria-pressed={(profile.avatar || AVATARS[0]) === a}
                           className={cn(
-                            "flex h-12 w-12 items-center justify-center rounded-2xl border text-2xl transition-all active:scale-95 cursor-pointer",
+                            "flex h-10 w-10 items-center justify-center border text-xl transition-colors rounded-none cursor-pointer",
                             (profile.avatar || AVATARS[0]) === a
-                              ? "border-[var(--accent)] bg-[var(--accent-soft)] shadow-[0_0_16px_var(--accent-glow)]"
-                              : "border-[var(--border)] bg-[var(--surface-2)]/50 hover:border-[var(--accent)]/40",
+                              ? "border-[var(--terra)] bg-[var(--terra-soft)]"
+                              : "border-[var(--line)] bg-[var(--panel-2)] hover:border-[var(--ink-3)]",
                           )}
                         >
                           {a}
@@ -621,69 +550,69 @@ function Wizard() {
                     </div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  disabled={!step2Valid}
-                  onClick={() => go(3)}
-                  className={cn(
-                    "mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold transition-all cursor-pointer",
-                    step2Valid
-                      ? "btn-primary text-white"
-                      : "cursor-not-allowed bg-white/10 text-zinc-500",
-                  )}
-                >
-                  {t("onboarding.continue")} <ArrowRight className="h-5 w-5" />
-                </button>
+
+                <div className="mt-8 border-t border-[var(--line)] pt-4">
+                  <CreamButton
+                    disabled={!step1Valid}
+                    onClick={() => go(2)}
+                    className="w-full py-3"
+                  >
+                    CONTINUE TO LOCATION
+                  </CreamButton>
+                </div>
               </div>
             )}
 
-            {/* ============ STEP 3 ============ */}
-            {step === 3 && (
+            {/* ============ STEP 02/04: FARM LOCATION & GEOGRAPHY ============ */}
+            {step === 2 && (
               <div>
-                <h2 className="flex items-center gap-2 text-xl font-extrabold text-[var(--text)]">
-                  <MapPin className="h-5 w-5 text-[var(--accent)]" /> {t("onboarding.locationTitle")}
-                </h2>
-                <p className="mt-1 text-sm text-[var(--text-2)]">{t("onboarding.locationSub")}</p>
-                <button
-                  type="button"
-                  onClick={detectLocation}
-                  disabled={locating}
-                  className={cn(
-                    "mt-5 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold transition-all active:scale-[0.99] cursor-pointer",
-                    locating
-                      ? "cursor-wait bg-white/10 text-zinc-400"
-                      : "btn-primary text-white",
-                  )}
-                >
-                  <LocateFixed className={cn("h-5 w-5", locating && "animate-spin")} />
-                  {locating ? t("onboarding.detecting") : t("onboarding.detectLocation")}
-                </button>
-                {geoLabel && (
-                  <p className="mt-3 flex items-center gap-1.5 rounded-2xl border border-[var(--accent)]/40 bg-[var(--accent-soft)] px-4 py-3 text-sm font-bold text-[var(--text)]">
-                    <Check className="h-4 w-4 shrink-0 text-[var(--accent)]" /> {t("onboarding.detectedOk")}: {geoLabel}
-                  </p>
-                )}
-                {geoDenied && (
-                  <p className="mt-3 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-xs leading-relaxed text-amber-200">
-                    {t("onboarding.permissionDenied")}
-                  </p>
-                )}
-                <p className="mb-2 mt-5 text-[11px] font-bold uppercase tracking-widest text-[var(--text-2)]">
-                  {t("onboarding.manualTitle")}
-                </p>
-                <div className="space-y-4">
+                <StepStampHeader
+                  stepNumber={2}
+                  totalSteps={4}
+                  title="FARM LOCATION & GEOGRAPHY"
+                  subtitle="Specify the district and coordinates for localized ag-weather and market prices."
+                />
+
+                <div className="space-y-5">
+                  {/* Auto-detect button */}
                   <div>
-                    <label className={labelCls} htmlFor="ob-state">{t("onboarding.stateLabel")}</label>
+                    <CreamButton
+                      onClick={detectLocation}
+                      disabled={locating}
+                      className="w-full py-2.5"
+                    >
+                      <span className="flex items-center gap-2">
+                        <LocateFixed className={cn("h-4 w-4", locating && "animate-spin")} />
+                        {locating ? "DETECTING SATELLITE GPS..." : "AUTO-DETECT GPS COORDINATES"}
+                      </span>
+                    </CreamButton>
+                    {geoLabel && (
+                      <p className="mt-2 font-editorial-mono text-[10px] text-[var(--moss)] uppercase tracking-wider">
+                        [OK] DETECTED: {geoLabel}
+                      </p>
+                    )}
+                    {geoDenied && (
+                      <p className="mt-2 font-editorial-mono text-[10px] text-[var(--terra)] uppercase tracking-wider">
+                        [!] PERMISSION DENIED. PLEASE SELECT MANUALLY BELOW.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* State Select */}
+                  <div>
+                    <label className={monoLabelCls} htmlFor="ob-state">
+                      STATE // राज्य
+                    </label>
                     <select
                       id="ob-state"
                       value={profile.state || ""}
                       onChange={(e) =>
                         updateSettings({ farmProfile: { state: e.target.value, district: "" } })
                       }
-                      className={selectCls}
+                      className={underlineSelectCls}
                     >
                       <option value="" disabled>
-                        — {t("onboarding.stateLabel")} —
+                        — SELECT STATE —
                       </option>
                       {INDIAN_STATES.map((s) => (
                         <option key={s} value={s}>
@@ -692,17 +621,21 @@ function Wizard() {
                       ))}
                     </select>
                   </div>
+
+                  {/* District Select */}
                   <div>
-                    <label className={labelCls} htmlFor="ob-district">{t("onboarding.districtLabel")}</label>
+                    <label className={monoLabelCls} htmlFor="ob-district">
+                      DISTRICT // जिला
+                    </label>
                     {districts ? (
                       <select
                         id="ob-district"
                         value={profile.district || ""}
                         onChange={(e) => updateSettings({ farmProfile: { district: e.target.value } })}
-                        className={selectCls}
+                        className={underlineSelectCls}
                       >
                         <option value="" disabled>
-                          — {t("onboarding.districtLabel")} —
+                          — SELECT DISTRICT —
                         </option>
                         {districts.map((d) => (
                           <option key={d} value={d}>
@@ -717,30 +650,36 @@ function Wizard() {
                         onChange={(e) =>
                           updateSettings({ farmProfile: { district: e.target.value.slice(0, 40) } })
                         }
-                        placeholder={t("onboarding.districtPh")}
-                        className={inputCls}
+                        placeholder="District name"
+                        className={underlineInputCls}
                       />
                     )}
                   </div>
+
+                  {/* Village Input */}
                   <div>
-                    <label className={labelCls} htmlFor="ob-village">{t("onboarding.villageLabel")}</label>
+                    <label className={monoLabelCls} htmlFor="ob-village">
+                      VILLAGE / TALUKA // गाँव
+                    </label>
                     <input
                       id="ob-village"
                       value={profile.village || ""}
                       onChange={(e) =>
                         updateSettings({ farmProfile: { village: e.target.value.slice(0, 60) } })
                       }
-                      placeholder={t("onboarding.villagePh")}
-                      className={inputCls}
+                      placeholder="Village or locality name"
+                      className={underlineInputCls}
                     />
                   </div>
-                  <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]/50 p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-[11px] uppercase tracking-widest text-[var(--text-2)]">
-                        {t("onboarding.gpsLabel")}:{" "}
+
+                  {/* GPS Coordinates Box */}
+                  <div className="border border-[var(--line)] bg-[var(--panel-2)] p-3 font-editorial-mono rounded-none">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-[var(--ink-2)] uppercase tracking-wider">
+                        GPS:{" "}
                         {profile.location
                           ? `${profile.location.lat.toFixed(4)}, ${profile.location.lng.toFixed(4)}`
-                          : "—"}
+                          : "NOT SET"}
                       </span>
                       <button
                         type="button"
@@ -749,26 +688,27 @@ function Wizard() {
                           setLatText(profile.location ? String(profile.location.lat) : "");
                           setLonText(profile.location ? String(profile.location.lng) : "");
                         }}
-                        className="text-[11px] font-bold text-[var(--accent)] hover:underline cursor-pointer"
+                        className="text-[10px] font-bold text-[var(--terra)] hover:underline uppercase tracking-wider cursor-pointer"
                       >
-                        {t("common.edit")}
+                        {editingCoords ? "CANCEL" : "EDIT MANUAL"}
                       </button>
                     </div>
+
                     {editingCoords && (
-                      <div className="mt-2 flex gap-2">
+                      <div className="mt-2.5 flex items-center gap-2">
                         <input
                           value={latText}
                           onChange={(e) => setLatText(e.target.value)}
-                          placeholder="23.0225"
+                          placeholder="Latitude (e.g. 23.0225)"
                           inputMode="decimal"
-                          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 font-mono text-xs text-[var(--text)] outline-none focus:border-[var(--accent)]"
+                          className={cn(underlineInputCls, "font-editorial-mono text-xs")}
                         />
                         <input
                           value={lonText}
                           onChange={(e) => setLonText(e.target.value)}
-                          placeholder="72.5714"
+                          placeholder="Longitude (e.g. 72.5714)"
                           inputMode="decimal"
-                          className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-2 font-mono text-xs text-[var(--text)] outline-none focus:border-[var(--accent)]"
+                          className={cn(underlineInputCls, "font-editorial-mono text-xs")}
                         />
                         <button
                           type="button"
@@ -782,68 +722,70 @@ function Wizard() {
                             });
                             setEditingCoords(false);
                           }}
-                          className="shrink-0 rounded-xl bg-[var(--accent)] px-3 py-2 text-xs font-extrabold text-white cursor-pointer"
+                          className="shrink-0 border border-[var(--terra)] bg-[var(--terra)] px-3 py-1.5 font-editorial-mono text-[10px] font-bold text-white uppercase tracking-wider"
                         >
-                          OK
+                          SET
                         </button>
                       </div>
                     )}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  disabled={!step3Valid}
-                  onClick={() => go(4)}
-                  className={cn(
-                    "mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold transition-all cursor-pointer",
-                    step3Valid
-                      ? "btn-primary text-white"
-                      : "cursor-not-allowed bg-white/10 text-zinc-500",
-                  )}
-                >
-                  {t("onboarding.continue")} <ArrowRight className="h-5 w-5" />
-                </button>
+
+                <div className="mt-8 border-t border-[var(--line)] pt-4">
+                  <CreamButton
+                    disabled={!step2Valid}
+                    onClick={() => go(3)}
+                    className="w-full py-3"
+                  >
+                    CONTINUE TO CROPS & SPECS
+                  </CreamButton>
+                </div>
               </div>
             )}
 
-            {/* ============ STEP 4 ============ */}
-            {step === 4 && (
+            {/* ============ STEP 03/04: FARM SPECIFICATIONS & CROPS ============ */}
+            {step === 3 && (
               <div>
-                <h2 className="flex items-center gap-2 text-xl font-extrabold text-[var(--text)]">
-                  <Tractor className="h-5 w-5 text-[var(--accent)]" /> {t("onboarding.farmTitle")}
-                </h2>
-                <p className="mt-1 text-sm text-[var(--text-2)]">{t("onboarding.farmSub")}</p>
-                <div className="mt-5 space-y-4">
+                <StepStampHeader
+                  stepNumber={3}
+                  totalSteps={4}
+                  title="FARM SPECIFICATIONS & CROPS"
+                  subtitle="Configure your farm size, irrigation hardware, and choose your active crops."
+                />
+
+                <div className="space-y-5">
+                  {/* Farm Name */}
                   <div>
-                    <label className={labelCls} htmlFor="ob-farm">{t("onboarding.farmName")}</label>
+                    <label className={monoLabelCls} htmlFor="ob-farm">
+                      FARM NAME // खेत का नाम
+                    </label>
                     <input
                       id="ob-farm"
                       value={farmNameEffective}
                       onChange={(e) =>
                         updateSettings({ farmProfile: { farmName: e.target.value.slice(0, 40) } })
                       }
-                      className={inputCls}
+                      className={underlineInputCls}
                     />
                   </div>
+
+                  {/* Farm Size & Unit */}
                   <div>
-                    <label className={labelCls} htmlFor="ob-size">{t("onboarding.farmSize")}</label>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <FieldIcon>
-                          <Ruler className="h-4 w-4" />
-                        </FieldIcon>
-                        <input
-                          id="ob-size"
-                          value={String(profile.size ?? 1)}
-                          onChange={(e) => {
-                            const n = Number(e.target.value.replace(/[^0-9.]/g, ""));
-                            if (Number.isFinite(n))
-                              updateSettings({ farmProfile: { size: Math.min(10000, Math.max(0, n)) } });
-                          }}
-                          inputMode="decimal"
-                          className={cn(inputCls, "font-mono")}
-                        />
-                      </div>
+                    <label className={monoLabelCls} htmlFor="ob-size">
+                      TOTAL FARM AREA // कुल क्षेत्रफल
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        id="ob-size"
+                        value={String(profile.size ?? 1)}
+                        onChange={(e) => {
+                          const n = Number(e.target.value.replace(/[^0-9.]/g, ""));
+                          if (Number.isFinite(n))
+                            updateSettings({ farmProfile: { size: Math.min(10000, Math.max(0, n)) } });
+                        }}
+                        inputMode="decimal"
+                        className={cn(underlineInputCls, "font-editorial-mono flex-1")}
+                      />
                       <select
                         value={profile.sizeUnit || "Acres"}
                         onChange={(e) =>
@@ -854,7 +796,7 @@ function Wizard() {
                           })
                         }
                         aria-label="Size unit"
-                        className="w-32 shrink-0 rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-3 py-3 text-sm font-bold text-[var(--text)] outline-none focus:border-[var(--accent)] focus:shadow-[0_0_20px_var(--accent-glow)] [&>option]:bg-black [&>option]:text-white"
+                        className={cn(underlineSelectCls, "w-28 shrink-0 font-editorial-mono")}
                       >
                         {SIZE_UNITS.map((u) => (
                           <option key={u} value={u}>
@@ -864,38 +806,95 @@ function Wizard() {
                       </select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {(
-                      [
-                        { key: "soilType", label: t("onboarding.soilType"), opts: SOIL_TYPES, icon: <Mountain className="h-4 w-4" /> },
-                        { key: "waterSource", label: t("onboarding.waterSource"), opts: WATER_SOURCES, icon: <Droplets className="h-4 w-4" /> },
-                        { key: "irrigationMethod", label: t("onboarding.irrigationMethod"), opts: IRRIGATION_METHODS, icon: <Droplets className="h-4 w-4" /> },
-                        { key: "powerSource", label: t("onboarding.powerSource"), opts: POWER_SOURCES, icon: <Zap className="h-4 w-4" /> },
-                      ] as const
-                    ).map((f) => (
-                      <div key={f.key}>
-                        <label className={labelCls} htmlFor={`ob-${f.key}`}>
-                          {f.label}
-                        </label>
-                        <select
-                          id={`ob-${f.key}`}
-                          value={(profile[f.key] as string) || f.opts[0]}
-                          onChange={(e) =>
-                            updateSettings({ farmProfile: { [f.key]: e.target.value } })
-                          }
-                          className={selectCls}
-                        >
-                          {f.opts.map((o) => (
-                            <option key={o} value={o}>
-                              {o}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    ))}
+
+                  {/* Soil, Water, Irrigation, Power in 2 columns */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className={monoLabelCls} htmlFor="ob-soilType">
+                        SOIL TYPE // मिट्टी का प्रकार
+                      </label>
+                      <select
+                        id="ob-soilType"
+                        value={profile.soilType || SOIL_TYPES[0]}
+                        onChange={(e) =>
+                          updateSettings({ farmProfile: { soilType: e.target.value } })
+                        }
+                        className={underlineSelectCls}
+                      >
+                        {SOIL_TYPES.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className={monoLabelCls} htmlFor="ob-waterSource">
+                        WATER SOURCE // जल स्रोत
+                      </label>
+                      <select
+                        id="ob-waterSource"
+                        value={profile.waterSource || WATER_SOURCES[0]}
+                        onChange={(e) =>
+                          updateSettings({ farmProfile: { waterSource: e.target.value } })
+                        }
+                        className={underlineSelectCls}
+                      >
+                        {WATER_SOURCES.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className={monoLabelCls} htmlFor="ob-irrigationMethod">
+                        IRRIGATION METHOD // सिंचाई विधि
+                      </label>
+                      <select
+                        id="ob-irrigationMethod"
+                        value={profile.irrigationMethod || IRRIGATION_METHODS[0]}
+                        onChange={(e) =>
+                          updateSettings({ farmProfile: { irrigationMethod: e.target.value } })
+                        }
+                        className={underlineSelectCls}
+                      >
+                        {IRRIGATION_METHODS.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className={monoLabelCls} htmlFor="ob-powerSource">
+                        POWER SOURCE // बिजली स्रोत
+                      </label>
+                      <select
+                        id="ob-powerSource"
+                        value={profile.powerSource || POWER_SOURCES[0]}
+                        onChange={(e) =>
+                          updateSettings({ farmProfile: { powerSource: e.target.value } })
+                        }
+                        className={underlineSelectCls}
+                      >
+                        {POWER_SOURCES.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <span className={labelCls}>{t("onboarding.crops")} (120+ Database)</span>
+
+                  {/* 120+ Crops Database Selector */}
+                  <div className="pt-2">
+                    <span className={monoLabelCls}>
+                      ACTIVE CROPS // फसल चयन (120+ DATABASE)
+                    </span>
                     <CropSelector
                       selectedIds={profile.crops || ["tomato"]}
                       onChange={(crops) => {
@@ -909,152 +908,157 @@ function Wizard() {
                         }
                       }}
                     />
-                    <p className="mt-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/60 px-3 py-2 text-[11px] font-bold text-[var(--accent)]">
-                      Zone: <span className="text-[var(--text)]">Your Farm</span> — automated multi-crop zoning & schedule
-                    </p>
-                    <p className="mt-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/30 px-3 py-2 text-[11px] leading-relaxed text-[var(--text-2)]">
+                    <div className="mt-3 border border-[var(--line)] bg-[var(--panel-2)] p-2 font-editorial-mono text-[10px] text-[var(--ink-2)] rounded-none">
                       {HARDWARE_NOTE}
-                    </p>
+                    </div>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  disabled={!step4Valid}
-                  onClick={() => go(5)}
-                  className={cn(
-                    "mt-6 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold transition-all cursor-pointer",
-                    step4Valid
-                      ? "btn-primary text-white"
-                      : "cursor-not-allowed bg-white/10 text-zinc-500",
-                  )}
-                >
-                  {t("onboarding.continue")} <ArrowRight className="h-5 w-5" />
-                </button>
+
+                <div className="mt-8 border-t border-[var(--line)] pt-4">
+                  <CreamButton
+                    disabled={!step3Valid}
+                    onClick={() => go(4)}
+                    className="w-full py-3"
+                  >
+                    CONTINUE TO REVIEW & PIN
+                  </CreamButton>
+                </div>
               </div>
             )}
 
-            {/* ============ STEP 5 ============ */}
-            {step === 5 && (
+            {/* ============ STEP 04/04: REVIEW & SECURITY PIN ============ */}
+            {step === 4 && (
               <div>
-                <h2 className="text-xl font-extrabold text-[var(--text)]">{t("onboarding.confirmTitle")}</h2>
-                <p className="mt-1 text-sm text-[var(--text-2)]">{t("onboarding.confirmSub")}</p>
-                <div className="mt-5 overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]/40 p-5">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-3xl border border-[var(--accent)]/30 text-[var(--accent)]">
-                      {profile.avatar || "🧑‍🌾"}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-lg font-extrabold text-[var(--text)]">{name || "—"}</p>
-                      <p className="truncate text-xs text-[var(--text-2)]">
-                        {profile.role || "Farmer"} · +91 {phone || "—"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-4 space-y-2 text-sm">
-                    <p className="flex items-start gap-2 text-[var(--text)]">
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]" />
-                      {[profile.village, profile.district, profile.state].filter(Boolean).join(", ") || "—"}
-                    </p>
-                    <p className="flex items-start gap-2 text-[var(--text)]">
-                      <Tractor className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]" />
-                      {farmNameEffective} · {profile.size} {profile.sizeUnit} · {profile.soilType}
-                    </p>
-                    <p className="flex items-start gap-2 text-[var(--text)]">
-                      <Droplets className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]" />
-                      {profile.waterSource} · {profile.irrigationMethod} · {profile.powerSource}
-                    </p>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {(profile.crops ?? []).map((c) => {
-                      const cropObj = getCrop(c);
-                      const label = cropObj ? `${cropObj.en} (${cropObj.hi})` : (mandiById(c)?.crop ?? c);
-                      return (
-                        <span
-                          key={c}
-                          className="rounded-full border border-[var(--accent)]/40 bg-[var(--accent-soft)] px-2.5 py-1 text-[11px] font-bold text-[var(--text)] shadow-[0_0_8px_var(--accent-glow)]"
-                        >
-                          🌱 {label}
-                        </span>
-                      );
-                    })}
-                  </div>
-                  {profile.location && (
-                    <p className="mt-3 font-mono text-[11px] text-[var(--text-2)]">
-                      {profile.location.lat.toFixed(4)}, {profile.location.lng.toFixed(4)}
-                    </p>
-                  )}
-                </div>
+                <StepStampHeader
+                  stepNumber={4}
+                  totalSteps={4}
+                  title="REVIEW & SECURITY PIN"
+                  subtitle="Verify your agricultural profile and optionally lock configuration with a 4-digit PIN."
+                />
 
-                <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)]/50 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="flex items-center gap-1.5 text-sm font-bold text-[var(--text)]">
-                        <LockKeyhole className="h-4 w-4 text-[var(--accent)]" /> {t("onboarding.pinToggle")}
-                      </p>
-                      <p className="mt-0.5 text-[11px] text-[var(--text-2)]">{t("onboarding.pinToggleSub")}</p>
-                    </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={pinEnabled}
-                      aria-label={t("onboarding.pinToggle")}
-                      onClick={() => setPinEnabled((v) => !v)}
-                      className={cn(
-                        "relative h-7 w-12 shrink-0 rounded-full transition-colors cursor-pointer",
-                        pinEnabled ? "bg-[var(--accent)] shadow-[0_0_12px_var(--accent-glow)]" : "bg-white/10",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "absolute top-1 h-5 w-5 rounded-full bg-white transition-all",
-                          pinEnabled ? "left-6" : "left-1",
-                        )}
-                      />
-                    </button>
-                  </div>
-                  {pinEnabled && (
-                    <div className="mt-3">
-                      <p className={labelCls}>{t("onboarding.setPin")}</p>
-                      <div className="flex gap-2.5">
-                        {pin.map((d, i) => (
-                          <input
-                            key={i}
-                            ref={(el) => {
-                              pinRefs.current[i] = el;
-                            }}
-                            type="password"
-                            inputMode="numeric"
-                            maxLength={1}
-                            value={d}
-                            onChange={(e) => {
-                              const digit = e.target.value.replace(/\D/g, "").slice(-1);
-                              const next = [...pin];
-                              next[i] = digit;
-                              setPin(next);
-                              if (digit && i < 3) pinRefs.current[i + 1]?.focus();
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Backspace" && !pin[i] && i > 0)
-                                pinRefs.current[i - 1]?.focus();
-                            }}
-                            aria-label={`PIN digit ${i + 1}`}
-                            className="h-12 w-12 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-center text-xl font-bold text-[var(--text)] outline-none focus:border-[var(--accent)] focus:shadow-[0_0_16px_var(--accent-glow)]"
-                            placeholder="•"
-                          />
-                        ))}
+                <div className="space-y-4 font-editorial-mono">
+                  {/* Summary Box */}
+                  <div className="border border-[var(--line)] bg-[var(--panel-2)] p-4 rounded-none space-y-3">
+                    <div className="flex items-center gap-3 border-b border-[var(--line)] pb-3">
+                      <span className="flex h-10 w-10 items-center justify-center border border-[var(--line)] bg-[var(--panel)] text-2xl">
+                        {profile.avatar || "🧑‍🌾"}
+                      </span>
+                      <div>
+                        <p className="text-sm font-bold uppercase text-[var(--ink)]">{name || "—"}</p>
+                        <p className="text-[10px] text-[var(--ink-3)] uppercase tracking-wider">
+                          {profile.role || "Farmer"} · +91 {phone || "—"}
+                        </p>
                       </div>
                     </div>
-                  )}
+
+                    <div className="space-y-1.5 text-xs text-[var(--ink-2)]">
+                      <p className="flex items-center gap-2">
+                        <MapPin className="h-3.5 w-3.5 text-[var(--terra)] shrink-0" />
+                        <span className="uppercase">
+                          {[profile.village, profile.district, profile.state].filter(Boolean).join(", ") || "—"}
+                        </span>
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <Tractor className="h-3.5 w-3.5 text-[var(--terra)] shrink-0" />
+                        <span className="uppercase">
+                          {farmNameEffective} · {profile.size} {profile.sizeUnit} · {profile.soilType}
+                        </span>
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <Droplets className="h-3.5 w-3.5 text-[var(--moss)] shrink-0" />
+                        <span className="uppercase">
+                          {profile.waterSource} · {profile.irrigationMethod} · {profile.powerSource}
+                        </span>
+                      </p>
+                    </div>
+
+                    {/* Crops Badges */}
+                    <div className="flex flex-wrap gap-1 border-t border-[var(--line)] pt-2.5">
+                      {(profile.crops ?? []).map((c) => {
+                        const cropObj = getCrop(c);
+                        const label = cropObj ? `${cropObj.en} (${cropObj.hi})` : (mandiById(c)?.crop ?? c);
+                        return (
+                          <span
+                            key={c}
+                            className="border border-[var(--terra)] bg-[var(--terra-soft)] px-2 py-0.5 text-[10px] font-bold uppercase text-[var(--ink)]"
+                          >
+                            {label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Security PIN Option */}
+                  <div className="border border-[var(--line)] bg-[var(--panel-2)] p-4 rounded-none">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="flex items-center gap-1.5 text-xs font-bold uppercase text-[var(--ink)]">
+                          <LockKeyhole className="h-3.5 w-3.5 text-[var(--terra)]" /> REQUIRE 4-DIGIT SECURITY PIN
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-[var(--ink-3)]">
+                          Locks field configuration and pump controls behind an access code.
+                        </p>
+                      </div>
+
+                      {/* Square Checkbox Toggle */}
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={pinEnabled}
+                        onClick={() => setPinEnabled((v) => !v)}
+                        className={cn(
+                          "flex h-6 w-6 items-center justify-center border transition-colors cursor-pointer rounded-none",
+                          pinEnabled
+                            ? "border-[var(--terra)] bg-[var(--terra)] text-white"
+                            : "border-[var(--line)] bg-[var(--panel)]",
+                        )}
+                      >
+                        {pinEnabled && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                      </button>
+                    </div>
+
+                    {pinEnabled && (
+                      <div className="mt-4 border-t border-[var(--line)] pt-3">
+                        <span className={monoLabelCls}>ENTER 4-DIGIT PIN</span>
+                        <div className="flex gap-2">
+                          {pin.map((d, i) => (
+                            <input
+                              key={i}
+                              ref={(el) => {
+                                pinRefs.current[i] = el;
+                              }}
+                              type="password"
+                              inputMode="numeric"
+                              maxLength={1}
+                              value={d}
+                              onChange={(e) => {
+                                const digit = e.target.value.replace(/\D/g, "").slice(-1);
+                                const next = [...pin];
+                                next[i] = digit;
+                                setPin(next);
+                                if (digit && i < 3) pinRefs.current[i + 1]?.focus();
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Backspace" && !pin[i] && i > 0)
+                                  pinRefs.current[i - 1]?.focus();
+                              }}
+                              aria-label={`PIN digit ${i + 1}`}
+                              className="h-10 w-10 border border-[var(--line)] bg-[var(--panel)] text-center text-lg font-bold text-[var(--ink)] outline-none rounded-none focus:border-[var(--terra)]"
+                              placeholder="•"
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={finish}
-                  className="btn-primary mt-5 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold text-white transition-all active:scale-[0.99] cursor-pointer"
-                >
-                  {t("onboarding.startFarming")}
-                </button>
-                <p className="mt-3 text-center text-[11px] text-[var(--text-2)]">{t("onboarding.editLater")}</p>
+                <div className="mt-8 border-t border-[var(--line)] pt-4">
+                  <CreamButton onClick={finish} className="w-full py-3.5">
+                    START MONITORING FARM
+                  </CreamButton>
+                </div>
               </div>
             )}
           </motion.div>
@@ -1081,7 +1085,7 @@ export default function LandingPage() {
   if (!mounted) {
     return (
       <main className="relative flex h-full items-center justify-center bg-[var(--bg)]">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--accent)]/30 border-t-[var(--accent)]" />
+        <div className="h-8 w-8 animate-spin rounded-none border border-[var(--terra)] border-t-transparent" />
       </main>
     );
   }
@@ -1095,7 +1099,7 @@ export default function LandingPage() {
       );
     return (
       <main className="relative flex h-full items-center justify-center bg-[var(--bg)]">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--accent)]/30 border-t-[var(--accent)]" />
+        <div className="h-8 w-8 animate-spin rounded-none border border-[var(--terra)] border-t-transparent" />
       </main>
     );
   }
@@ -1106,4 +1110,3 @@ export default function LandingPage() {
     </MotionConfig>
   );
 }
-

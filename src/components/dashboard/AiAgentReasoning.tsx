@@ -174,96 +174,73 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
 
   const tone = getToneDetails(currentReasoning.type);
 
+  const isLocked = currentReasoning.type === "rain_lock" || currentReasoning.type === "stale_lock";
+  const nowStamp = new Date().toLocaleTimeString("en-GB", { hour12: false });
+
   return (
     <div
       className={cn(
-        "liquid-glass-card relative overflow-hidden rounded-3xl transition-all duration-300",
-        tone.border,
-        tone.glow,
+        "relative rounded-none border border-[var(--line)] bg-[var(--panel)] p-4 font-editorial-mono transition-all",
         className,
       )}
     >
-      {/* Subtle background ambient pulse */}
-      <div
-        className={cn(
-          "pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full blur-3xl opacity-25 transition-all duration-700",
-          currentReasoning.type === "on"
-            ? "bg-emerald-500"
-            : currentReasoning.type === "rain_lock" || currentReasoning.type === "stale_lock"
-              ? "bg-rose-500"
-              : currentReasoning.type === "manual_hold"
-                ? "bg-amber-500"
-                : "bg-sky-500",
-        )}
-      />
-
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 border border-white/15 shadow-inner">
-            <Brain className="h-4 w-4 text-sky-400 animate-pulse" />
+      {/* Header row = mono uppercase label left + status stamp right */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-[var(--line)]">
+        <div className="flex items-center gap-2">
+          <div className="flex h-6 w-6 items-center justify-center rounded-none bg-[var(--panel-2)] border border-[var(--line)]">
+            <Brain className="h-3.5 w-3.5 text-[var(--ink-2)]" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold tracking-wide text-white/90 flex items-center gap-2">
-              🧠 AI Agent Reasoning
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+              AI AGENT REASONING // JAL-SUPERVISOR
             </h3>
-            <p className="text-[11px] text-zinc-400">
-              Edge decision engine • Real-time rule evaluation
-            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border",
-              tone.badge,
-            )}
-          >
-            {tone.icon}
-            {pump.mode === "auto" ? "Autonomous Logic" : "Manual Mode"}
-          </span>
-          <span className="text-[11px] text-zinc-400 font-mono">
-            {formatElapsed(elapsedSec)}
+          {isLocked ? (
+            <span className="px-1.5 py-0.5 border border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)] font-bold text-[10px] uppercase tracking-wider">
+              LOCKED
+            </span>
+          ) : (
+            <span className="px-1.5 py-0.5 border border-[var(--moss)] bg-[var(--moss-soft)] text-[var(--moss)] font-bold text-[10px] uppercase tracking-wider">
+              {pump.mode === "auto" ? "AUTONOMOUS" : "MANUAL"}
+            </span>
+          )}
+          <span className="text-[10px] text-[var(--ink-3)] font-mono">
+            [{nowStamp}]
           </span>
         </div>
       </div>
 
-      {/* Reasoning Display with Spring Animation */}
-      <div className="mt-4 relative min-h-[76px] flex flex-col justify-center">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentReasoning.id + currentReasoning.headline}
-            initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, y: -12, filter: "blur(4px)" }}
-            transition={{
-              type: "spring",
-              stiffness: 400,
-              damping: 28,
-            }}
-            className="flex flex-col gap-1.5"
-          >
-            <p className={cn("text-base md:text-lg font-semibold tracking-tight", tone.textColor)}>
-              {currentReasoning.headline}
-            </p>
-            <div className="flex items-center gap-2 text-xs text-zinc-400 font-mono">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-white/40" />
-              <span>{currentReasoning.rule}</span>
-            </div>
-          </motion.div>
-        </AnimatePresence>
+      {/* Reasoning Display as Mono Log Lines with Timestamps */}
+      <div className="mt-3 space-y-1.5 min-h-[56px] flex flex-col justify-center text-xs">
+        <div className="flex items-start gap-2">
+          <span className="text-[var(--ink-3)] shrink-0 font-mono">[{nowStamp}]</span>
+          {isLocked && (
+            <span className="shrink-0 px-1 py-0.2 border border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)] font-bold text-[9px] uppercase">
+              LOCKED
+            </span>
+          )}
+          <span className={cn("font-medium", isLocked ? "text-[var(--terra)]" : "text-[var(--ink)]")}>
+            {currentReasoning.headline}
+          </span>
+        </div>
+        <div className="flex items-start gap-2 text-[11px] text-[var(--ink-2)] pl-6">
+          <span className="text-[var(--ink-3)]">↳</span>
+          <span>{currentReasoning.rule}</span>
+        </div>
       </div>
 
       {/* Footer live status bar */}
-      <div className="mt-4 pt-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-400 font-mono">
+      <div className="mt-3 pt-2 border-t border-[var(--line)] flex flex-wrap items-center justify-between gap-2 text-[10px] text-[var(--ink-3)]">
         <div className="flex items-center gap-3">
-          <span>Soil: <strong className="text-white">{Math.round(snapshot.soil ?? 45)}%</strong></span>
-          <span>Rain: <strong className={snapshot.rain ? "text-rose-400" : "text-emerald-400"}>{snapshot.rain ? "DETECTED" : "CLEAR"}</strong></span>
-          <span>Link: <strong className={snapshot.stale ? "text-rose-400" : "text-emerald-400"}>{snapshot.stale ? "STALE" : "HEALTHY"}</strong></span>
+          <span>SOIL: <strong className="text-[var(--ink)]">{Math.round(snapshot.soil ?? 45)}%</strong></span>
+          <span>RAIN: <strong className={snapshot.rain ? "text-[var(--terra)]" : "text-[var(--moss)]"}>{snapshot.rain ? "DETECTED" : "NONE"}</strong></span>
+          <span>LINK: <strong className={snapshot.stale ? "text-[var(--terra)]" : "text-[var(--moss)]"}>{snapshot.stale ? "STALE" : "LIVE"}</strong></span>
         </div>
-        <div className="text-zinc-500">
-          Thresholds: {thresholds.moistureLow}% / {thresholds.moistureHigh}%
+        <div>
+          THRESHOLDS: {thresholds.moistureLow}% / {thresholds.moistureHigh}%
         </div>
       </div>
     </div>

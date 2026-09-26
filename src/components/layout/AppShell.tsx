@@ -42,17 +42,16 @@ import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import AppToaster from "@/components/layout/AppToaster";
 import QuickActionsFAB from "@/components/layout/QuickActionsFAB";
 import LiveAnnouncer from "@/components/layout/LiveAnnouncer";
-import { AmbientBackground, LiquidButton, ThemeToggle } from "@/components/ui/glass";
+import { AmbientBackground, LiquidButton } from "@/components/ui/glass";
+import { ThemeToggleBox, SquareToggle } from "@/components/editorial";
 import { useFocusTrap } from "@/components/ui/glass/useFocusTrap";
 import { useMounted } from "@/components/dashboard/ui";
 import { getSectionAccent } from "@/lib/theme";
 
-/** Carbon & Ember: active nav item always uses the ember tint + left glow bar. */
-const ACTIVE_EMBER = {
-  color: "#FF6B1A",
-  borderActive: "rgba(255, 107, 26, 0.40)",
-  bgLight: "rgba(255, 107, 26, 0.14)",
-  glowSubtle: "rgba(255, 107, 26, 0.35)",
+/** M1 Field Editorial active nav tokens */
+const ACTIVE_EDITORIAL = {
+  terra: "#C4503A",
+  terraSoft: "rgba(196, 80, 58, 0.14)",
 };
 
 /**
@@ -123,6 +122,25 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/app/settings", labelKey: "nav.settings", titleKey: "titles.settings", icon: Settings },
 ];
 
+const PAGE_STAMPS: Record<string, string> = {
+  "/app/dashboard": "DASHBOARD // LIVE MONITORING",
+  "/app/camera": "CAMERA // LEAF SCANNER",
+  "/app/irrigation": "IRRIGATION // FLOW CONTROL",
+  "/app/climate": "CLIMATE // AGRI-WEATHER",
+  "/app/sensors": "SENSORS // TELEMETRY & HEALTH",
+  "/app/spray": "SPRAY // SPRAY ADVISORY",
+  "/app/fertilizer": "FERTILIZER // NPK NUTRIENT PLAN",
+  "/app/market": "MARKET // APMC MANDI RATES",
+  "/app/schemes": "SCHEMES // GOVT SUBSIDIES",
+  "/app/diary": "DIARY // CROP LOG",
+  "/app/tasks": "TASKS // FARM ACTIVITIES",
+  "/app/assistant": "ASSISTANT // KRISHIGPT AI",
+  "/app/reports": "REPORTS // DATA EXPORTS",
+  "/app/alerts": "ALERTS // NOTIFICATIONS",
+  "/app/voice": "VOICE // VOICE COPILOT",
+  "/app/settings": "SETTINGS // SYSTEM PREFERENCES",
+};
+
 const MOBILE_TABS: Array<NavItem | { key: "more" }> = [
   NAV_ITEMS[0],
   NAV_ITEMS[1],
@@ -185,18 +203,14 @@ function LivePill() {
 }
 
 function LogoBlock({ className }: { className?: string }) {
-  const t = useT();
   return (
-    <div className={cn("flex items-center gap-3", className)}>
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[rgba(255,107,26,0.14)] text-[#FF6B1A] border border-[rgba(255,107,26,0.25)] shadow-[0_0_14px_rgba(255,107,26,0.25)]">
-        <Leaf className="h-[18px] w-[18px] text-[#FF6B1A]" />
-      </div>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-extrabold tracking-tight text-[var(--text)]">KrishiNethra AI</p>
-        <p className="truncate text-[11px] font-medium text-[var(--text-2)]">
-          {t("tagline").split("—")[0].trim() || "Har Khet Ka AI Doctor"}
-        </p>
-      </div>
+    <div className={cn("flex items-center justify-between px-4 py-3.5 border-b border-[var(--line)]", className)}>
+      <span className="font-editorial-display-italic text-lg font-extrabold text-[var(--ink)] tracking-tight">
+        KrishiNethra
+      </span>
+      <span className="font-editorial-mono text-[10px] font-bold text-[var(--ink-3)] uppercase tracking-[0.12em]">
+        VER 4.0.0
+      </span>
     </div>
   );
 }
@@ -237,64 +251,31 @@ function HealthCardInner({
     ? edgeChipState({ mode, liveSource, mqttStatus, mqttLastSeen })
     : "sim";
   void t;
+  const isLive = chip === "live";
+
   return (
     <div
       className={cn(
-        "liquid-glass flex flex-col justify-between rounded-2xl p-3 border border-white/10 overflow-visible",
+        "flex flex-col gap-2 p-3 border-t border-[var(--line)] bg-[var(--panel-2)] rounded-none font-editorial-mono",
         className,
       )}
     >
-      {/* Row 1: Farm Health ring in a liquid glass circle + score + LIVE badge */}
-      <div className="flex items-center gap-3">
-        <div className="liquid-glass-pill liquid-glass-strong shrink-0 flex h-[52px] w-[52px] items-center justify-center rounded-full border border-emerald-500/30 shadow-[0_0_16px_rgba(52,211,153,0.3)]">
-          {mounted ? (
-            <HealthRing score={score} size={44} />
-          ) : (
-            <div
-              aria-hidden
-              className="h-[44px] w-[44px] animate-pulse rounded-full bg-white/10"
-            />
-          )}
-        </div>
-        <div className="flex min-w-0 flex-col justify-center">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[18px] font-bold leading-tight text-white tracking-tight">
-              {mounted ? `${Math.round(score)}/100` : "–/100"}
-            </span>
-            {mounted && chip === "live" && (
-              <span className="liquid-glass-pill inline-flex items-center gap-1 rounded-full border border-emerald-400/50 bg-emerald-500/15 px-1.5 py-px text-[9px] font-extrabold tracking-widest text-emerald-300 shadow-[0_0_8px_rgba(34,197,94,0.35)]">
-                <span className="h-1 w-1 animate-pulse rounded-full bg-emerald-400" />
-                LIVE
-              </span>
-            )}
-          </div>
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-            FARM HEALTH
-          </span>
-        </div>
+      {/* Mono row: HEALTH 63/100 */}
+      <div className="flex items-center justify-between text-xs font-bold uppercase tracking-[0.1em] text-[var(--ink)]">
+        <span>HEALTH</span>
+        <span className="tabular-nums">{mounted ? `${Math.round(score)}/100` : "--/100"}</span>
       </div>
 
-      {/* Row 2: full-width mode badge (SIMULATION / EDGE-LIVE / EDGE-LIVE·STALE) */}
-      <div className="mt-2.5 w-full">
-        <span
-          className={cn(
-            "flex w-full items-center justify-center gap-1.5 rounded-xl py-1 text-[11px] font-bold tracking-wider uppercase border",
-            chip === "live"
-              ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-300 shadow-[0_0_12px_rgba(34,197,94,0.3)]"
-              : chip === "stale"
-                ? "border-rose-400/50 bg-rose-500/10 text-rose-300"
-                : "border-amber-400/40 bg-amber-500/10 text-amber-300",
-          )}
-        >
-          {chip === "live" && (
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-          )}
-          {chip === "live"
-            ? "EDGE-LIVE"
-            : chip === "stale"
-              ? "EDGE-LIVE·STALE"
-              : t("common.simulation")}
-        </span>
+      {/* Connection stamp (SIMULATION terra / EDGE-LIVE moss) */}
+      <div
+        className={cn(
+          "w-full text-center py-1 text-[10px] font-bold uppercase tracking-[0.12em] border rounded-none select-none transition-all",
+          isLive
+            ? "border-[var(--moss)] bg-[var(--moss-soft)] text-[var(--moss)]"
+            : "border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)]",
+        )}
+      >
+        {isLive ? "EDGE-LIVE" : chip === "stale" ? "EDGE-LIVE · STALE" : "SIMULATION"}
       </div>
     </div>
   );
@@ -391,11 +372,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         Skip to content
       </a>
 
-      {/* ============ DESKTOP SIDEBAR (liquid glass panel, 16px margins) ============ */}
-      <aside className="relative z-30 hidden md:flex w-64 shrink-0 h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] flex-col liquid-glass-strong m-4 mr-0 rounded-3xl">
-        <LogoBlock className="shrink-0 px-4 pt-4 pb-2" />
+      {/* ============ DESKTOP SIDEBAR (Editorial Left Rail) ============ */}
+      <aside className="relative z-30 hidden md:flex w-64 shrink-0 h-dvh flex-col border-r border-[var(--line)] bg-[var(--panel)] rounded-none m-0">
+        <LogoBlock className="shrink-0" />
 
-        <nav aria-label="Primary" className="flex-1 overflow-y-auto scrollbar-hide px-3 space-y-1">
+        <nav aria-label="Primary" className="flex-1 overflow-y-auto scrollbar-hide py-2 space-y-0.5">
           {NAV_ITEMS.map(({ href, label, labelKey, icon: Icon }) => {
             const active = pathname === href || pathname?.startsWith(href + "/");
             const showBadge = href === "/app/alerts" && unread > 0;
@@ -405,52 +386,23 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 href={href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "liquid-glass-pill relative flex items-center gap-3 rounded-full px-3 py-2.5 text-[13px] font-medium transition-colors",
+                  "relative flex items-center gap-3 px-4 py-2 font-editorial-mono text-[12px] uppercase tracking-[0.08em] transition-colors rounded-none select-none",
                   active
-                    ? "pl-4"
-                    : "border border-transparent text-zinc-400 hover:bg-white/5 hover:text-white",
+                    ? "text-[var(--ink)] bg-[var(--terra-soft)] border-l-2 border-l-[var(--terra)] font-bold"
+                    : "text-[var(--ink-2)] border-l-2 border-l-transparent hover:text-[var(--ink)] hover:bg-[var(--panel-2)]",
                 )}
-                style={active ? { color: ACTIVE_EMBER.color } : undefined}
               >
-                {active && (
-                  <motion.div
-                    layoutId="sidebar-active-pill"
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    aria-hidden
-                    className="absolute inset-0 rounded-full border"
-                    style={{
-                      borderColor: ACTIVE_EMBER.borderActive,
-                      backgroundColor: ACTIVE_EMBER.bgLight,
-                    }}
-                  />
-                )}
-                {active && (
-                  <motion.span
-                    layoutId="sidebar-active-bar"
-                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    aria-hidden
-                    className="absolute left-1.5 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full z-10"
-                    style={{
-                      backgroundColor: ACTIVE_EMBER.color,
-                      boxShadow: `0 0 8px ${ACTIVE_EMBER.color}`,
-                    }}
-                  />
-                )}
                 <Icon
-                  className="relative z-10 h-[18px] w-[18px] shrink-0 transition-colors"
-                  style={{ color: active ? ACTIVE_EMBER.color : "#9CA3AF" }}
+                  className={cn(
+                    "h-4 w-4 shrink-0 transition-colors",
+                    active ? "text-[var(--terra)]" : "text-[var(--ink-3)]",
+                  )}
                 />
-                <span className="relative z-10 truncate">{label ?? t(labelKey)}</span>
+                <span className="truncate">{label ?? t(labelKey)}</span>
                 {mounted && showBadge && (
-                  <motion.span
-                    key={unread}
-                    initial={{ scale: 0.5, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: "spring", stiffness: 450, damping: 25 }}
-                    className="relative z-10 ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(251,113,133,0.7)]"
-                  >
+                  <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-none bg-[var(--terra)] px-1 font-editorial-mono text-[9px] font-bold text-white">
                     {unread > 99 ? "99+" : unread}
-                  </motion.span>
+                  </span>
                 )}
               </Link>
             );
@@ -462,183 +414,159 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           mounted={mounted}
           isLive={isLive}
           t={t}
-          className="shrink-0 m-3"
+          className="shrink-0"
         />
       </aside>
 
       {/* ============ MAIN COLUMN ============ */}
       <div className="relative z-10 flex h-full min-w-0 flex-1 flex-col">
-        {/* Header: shrink-0 z-40 mx-3 mt-3 rounded-2xl glass */}
-        <header className="shrink-0 z-40 mx-3 mt-3 rounded-2xl liquid-glass px-3.5 py-2.5 flex items-center gap-2 sm:gap-3">
-          {/* Mobile logo */}
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[rgba(255,107,26,0.14)] text-[#FF6B1A] border border-[rgba(255,107,26,0.25)] md:hidden">
-            <Leaf className="h-4 w-4 text-[#FF6B1A]" />
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-lg sm:text-[22px] font-semibold text-[var(--text)] tracking-tight leading-tight">
-              {pageTitle}
-            </h1>
-            {mounted && (farmProfile?.farmerName || farmProfile?.farmName) && (
-              <p className="truncate text-[11px] font-medium text-emerald-200/60">
-                {farmProfile?.farmerName ? `Namaste, ${farmProfile.farmerName.split(" ")[0]} 🌾` : ""}
-                {farmProfile?.farmerName && farmProfile?.farmName ? " · " : ""}
-                {farmProfile?.farmName || ""}
-              </p>
-            )}
-          </div>
-
-          {/* Live clock */}
-          <span               className="liquid-glass-pill hidden items-center px-3 py-1.5 font-mono text-xs text-zinc-300 sm:inline-flex border border-white/10">
-            {clock}
-          </span>
-
-          {/* LIVE gateway reachability (only in live mode) */}
-          <LivePill />
-
-          {/* WiFi RSSI Signal Indicator */}
-          {mounted && (
-            <div
-              className="liquid-glass-pill hidden xs:inline-flex sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs border border-white/10"
-              title={`WiFi RSSI: ${snapshot.rssi ?? -55} dBm (${(snapshot.rssi ?? -55) >= -60 ? "Strong" : (snapshot.rssi ?? -55) >= -80 ? "Medium" : "Weak"})`}
-            >
-              <Wifi
-                className={cn(
-                  "h-3.5 w-3.5",
-                  (snapshot.rssi ?? -55) >= -60
-                    ? "text-emerald-400"
-                    : (snapshot.rssi ?? -55) >= -80
-                      ? "text-amber-400"
-                      : "text-rose-400",
-                )}
-              />
-              <span className="font-mono text-[11px] text-zinc-300">
-                {snapshot.rssi ?? -55} dBm
-              </span>
+        {/* Top Header: Editorial bordered panel, 0 radius */}
+        <header className="shrink-0 z-40 w-full border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5 flex items-center justify-between gap-3 rounded-none m-0">
+          {/* Left: ChapterLabel-style page stamp */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center border border-[var(--line)] bg-[var(--panel-2)] md:hidden">
+              <Leaf className="h-3.5 w-3.5 text-[var(--terra)]" />
             </div>
-          )}
-
-          {/* PWA install (mobile only, appears when installable) */}
-          <InstallAppButton />
-
-          {/* Theme mode toggle */}
-          <ThemeToggle />
-
-          {/* Language switcher */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                setAlertsOpen(false);
-                setLangOpen((v) => !v);
-              }}
-              className="liquid-glass-pill flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-all hover:border-emerald-500/40 hover:text-white cursor-pointer"
-              aria-label={t("common.language")}
-            >
-              <span>{activeLang?.nativeLabel ?? "English"}</span>
-              <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
-            </button>
-            {langOpen && (
-              <>
-                <button aria-label="close" className="fixed inset-0 z-40 cursor-default" onClick={closeOverlays} />
-                <div className="liquid-glass-strong absolute right-0 top-full z-50 mt-2 w-40 overflow-hidden rounded-2xl border border-emerald-500/25 p-1">
-                  {LANGUAGES.map((l) => (
-                    <button
-                      key={l.code}
-                      type="button"
-                      onClick={() => {
-                        setLanguage(l.code);
-                        setLangOpen(false);
-                      }}
-                      className={cn(
-                        "flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition-colors",
-                        language === l.code
-                          ? "bg-emerald-500/20 font-bold text-white shadow-[inset_0_0_8px_rgba(34,197,94,0.2)]"
-                          : "text-zinc-300 hover:bg-white/10 hover:text-white",
-                      )}
-                    >
-                      <span>{l.nativeLabel}</span>
-                      <span className="text-[10px] text-zinc-400">{l.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
+            <div className="inline-flex items-center gap-2.5 font-editorial-mono text-[11px] sm:text-[12px] uppercase tracking-[0.14em] font-semibold text-[var(--terra)] select-none truncate">
+              <span className="truncate">
+                {PAGE_STAMPS[pathname] || `${(activeItem?.label ?? t(activeItem?.labelKey || "nav.dashboard")).toUpperCase()} // LIVE MONITORING`}
+              </span>
+              <span className="hidden sm:inline-block w-8 sm:w-12 h-[1px] bg-[var(--line)] shrink-0 self-center" aria-hidden="true" />
+            </div>
           </div>
 
-          {/* Alerts bell */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                setLangOpen(false);
-                if (!alertsOpen) markAlertsRead();
-                setAlertsOpen((v) => !v);
-              }}
-              className={cn(
-                "liquid-glass-pill relative flex h-9 w-9 items-center justify-center rounded-full text-zinc-200 transition-all hover:border-emerald-500/40 hover:text-white cursor-pointer",
-                mounted && unread > 0 && "border-red-500/40 shadow-[0_0_12px_rgba(239,68,68,0.35)]",
-              )}
-              aria-label={t("nav.alerts")}
-            >
-              <Bell className={cn("h-4 w-4", mounted && unread > 0 && "text-red-400 bell-pulse-red")} />
-              {mounted && unread > 0 && (
-                <motion.span
-                  key={unread}
-                  initial={{ scale: 0.4, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 22 }}
-                  className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-extrabold text-white shadow-[0_0_8px_rgba(239,68,68,0.9)] ring-2 ring-[#070B09]"
-                >
-                  {unread > 99 ? "99+" : unread}
-                </motion.span>
-              )}
-            </button>
-            {alertsOpen && (
-              <>
-                <button aria-label="close" className="fixed inset-0 z-40 cursor-default" onClick={closeOverlays} />
-                <div className="liquid-glass-strong absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-emerald-500/25 p-1">
-                  <div className="flex items-center justify-between border-b border-white/5 px-3 py-2.5">
-                    <span className="text-xs font-bold text-white">{t("common.recentAlerts")}</span>
-                    <Link href="/app/alerts" onClick={closeOverlays} className="text-[11px] font-medium text-emerald-300 hover:text-emerald-200">
-                      {t("common.viewAll")}
-                    </Link>
-                  </div>
-                  {lastFive.length === 0 ? (
-                    <p className="px-3 py-6 text-center text-xs text-zinc-500">{t("common.noAlerts")}</p>
-                  ) : (
-                    lastFive.map((a) => (
-                      <div key={a.id} className="border-b border-white/5 px-3 py-2.5 last:border-0 hover:bg-white/[0.03] rounded-xl transition-colors">
-                        <p className="truncate text-xs font-semibold text-white">{a.title}</p>
-                        <p className="mt-0.5 line-clamp-2 text-[11px] text-zinc-400">{a.message}</p>
-                      </div>
-                    ))
+          {/* Right Header items: clock mono, language, ThemeToggleBox, bell SquareToggle with terra dot */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Live clock mono */}
+            <span className="hidden lg:inline-flex items-center px-2 py-1 font-editorial-mono text-xs text-[var(--ink-2)] tabular-nums border border-[var(--line)] bg-[var(--panel-2)] rounded-none">
+              {clock}
+            </span>
+
+            {/* Live gateway chip */}
+            <div className="hidden xs:inline-flex">
+              <LivePill />
+            </div>
+
+            {/* WiFi RSSI Signal Indicator */}
+            {mounted && (
+              <div
+                className="hidden xl:inline-flex items-center gap-1.5 px-2 py-1 font-editorial-mono text-[11px] border border-[var(--line)] bg-[var(--panel-2)] rounded-none text-[var(--ink-2)]"
+                title={`WiFi RSSI: ${snapshot.rssi ?? -55} dBm`}
+              >
+                <Wifi
+                  className={cn(
+                    "h-3 w-3",
+                    (snapshot.rssi ?? -55) >= -60
+                      ? "text-[var(--moss)]"
+                      : (snapshot.rssi ?? -55) >= -80
+                        ? "text-[var(--gold)]"
+                        : "text-[var(--terra)]",
                   )}
-                </div>
-              </>
+                />
+                <span className="tabular-nums">{snapshot.rssi ?? -55} dBm</span>
+              </div>
             )}
-          </div>
 
-          {/* Health score chip */}
-          <Link
-            href="/app/dashboard"
-            className="liquid-glass-pill hidden items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-200 border border-emerald-500/30 shadow-[0_0_12px_rgba(34,197,94,0.2)] transition-all hover:border-emerald-400/50 xs:flex sm:flex"
-            title={t("common.farmHealthScore")}
-          >
-            <span
-              className={cn(
-                "h-2 w-2 rounded-full",
-                !mounted
-                  ? "bg-zinc-600"
-                  : farmHealthScore >= 70
-                    ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]"
-                    : farmHealthScore >= 40
-                      ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.9)]"
-                      : "bg-red-400 shadow-[0_0_8px_rgba(239,68,68,0.9)]",
+            {/* PWA install (mobile only) */}
+            <InstallAppButton />
+
+            {/* Language dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setAlertsOpen(false);
+                  setLangOpen((v) => !v);
+                }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 font-editorial-mono text-xs border border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink)] hover:bg-[var(--panel)] transition-colors rounded-none cursor-pointer"
+                aria-label={t("common.language")}
+              >
+                <span>{activeLang?.nativeLabel ?? "English"}</span>
+                <ChevronDown className="h-3 w-3 text-[var(--ink-3)]" />
+              </button>
+              {langOpen && (
+                <>
+                  <button aria-label="close" className="fixed inset-0 z-40 cursor-default" onClick={closeOverlays} />
+                  <div className="absolute right-0 top-full z-50 mt-1 w-44 border border-[var(--line)] bg-[var(--panel)] p-1 rounded-none shadow-xl font-editorial-mono">
+                    {LANGUAGES.map((l) => (
+                      <button
+                        key={l.code}
+                        type="button"
+                        onClick={() => {
+                          setLanguage(l.code);
+                          setLangOpen(false);
+                        }}
+                        className={cn(
+                          "flex w-full items-center justify-between px-3 py-2 text-left text-xs transition-colors rounded-none cursor-pointer",
+                          language === l.code
+                            ? "bg-[var(--terra-soft)] font-bold text-[var(--terra)]"
+                            : "text-[var(--ink-2)] hover:bg-[var(--panel-2)] hover:text-[var(--ink)]",
+                        )}
+                      >
+                        <span>{l.nativeLabel}</span>
+                        <span className="text-[10px] text-[var(--ink-3)]">{l.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
-            />
-            <span>{mounted ? Math.round(farmHealthScore) : "–"}</span>
-          </Link>
+            </div>
+
+            {/* Theme mode toggle box */}
+            <ThemeToggleBox />
+
+            {/* Alerts bell SquareToggle with terra dot */}
+            <div className="relative">
+              <SquareToggle
+                onClick={() => {
+                  setLangOpen(false);
+                  if (!alertsOpen) markAlertsRead();
+                  setAlertsOpen((v) => !v);
+                }}
+                active={alertsOpen}
+                title={t("nav.alerts")}
+                ariaLabel={t("nav.alerts")}
+                className="relative w-8 h-8 rounded-none border-[var(--line)] bg-[var(--panel-2)]"
+              >
+                <Bell className="h-3.5 w-3.5" />
+                {mounted && unread > 0 && (
+                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-[var(--terra)] ring-2 ring-[var(--panel)]" />
+                )}
+              </SquareToggle>
+              {alertsOpen && (
+                <>
+                  <button aria-label="close" className="fixed inset-0 z-40 cursor-default" onClick={closeOverlays} />
+                  <div className="absolute right-0 top-full z-50 mt-1 w-80 max-w-[calc(100vw-2rem)] border border-[var(--line)] bg-[var(--panel)] p-2 rounded-none shadow-2xl font-editorial-mono">
+                    <div className="flex items-center justify-between border-b border-[var(--line)] px-2 py-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+                        {t("common.recentAlerts")}
+                      </span>
+                      <Link
+                        href="/app/alerts"
+                        onClick={closeOverlays}
+                        className="text-[10px] font-bold text-[var(--terra)] hover:underline"
+                      >
+                        {t("common.viewAll")}
+                      </Link>
+                    </div>
+                    {lastFive.length === 0 ? (
+                      <p className="px-3 py-6 text-center text-xs text-[var(--ink-3)]">{t("common.noAlerts")}</p>
+                    ) : (
+                      lastFive.map((a) => (
+                        <div
+                          key={a.id}
+                          className="border-b border-[var(--line)] px-2.5 py-2 last:border-0 hover:bg-[var(--panel-2)] transition-colors"
+                        >
+                          <p className="truncate text-xs font-bold text-[var(--ink)]">{a.title}</p>
+                          <p className="mt-0.5 line-clamp-2 text-[11px] text-[var(--ink-2)]">{a.message}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </header>
 
         {/* main id="main-scroll" is the ONLY scrollable container */}
@@ -660,87 +588,58 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      {/* ============ MOBILE BOTTOM NAV (liquid glass, mx-4 mb-4, rounded-full) ============ */}
-      <nav aria-label="Primary" className="md:hidden fixed bottom-0 inset-x-0 z-50 pointer-events-none">
-        <div className="liquid-glass-strong pointer-events-auto mx-4 mb-4 max-w-lg ml-auto mr-auto rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.65)] border border-white/12">
-          <div className="grid grid-cols-5 px-2 py-1.5">
-            {MOBILE_TABS.map((tab) => {
-              if ("key" in tab) {
-                return (
-                  <button
-                    key="more"
-                    type="button"
-                    onClick={() => setMoreOpen(true)}
-                    className="flex flex-col items-center justify-center gap-0.5 rounded-2xl py-1 text-[10px] font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-emerald-200 cursor-pointer"
-                  >
-                    <div className="relative flex flex-col items-center">
-                      <MoreHorizontal className="h-5 w-5 text-gray-400" />
-                      <span className="mt-0.5 h-1 w-1 rounded-full bg-transparent" />
-                    </div>
-                    <span className="text-[10px] font-medium text-gray-400 leading-tight">
-                      {t("nav.more")}
-                    </span>
-                  </button>
-                );
-              }
-              const Icon = tab.icon;
-              const active = pathname === tab.href || pathname?.startsWith(tab.href + "/");
-              const showBadge = tab.href === "/app/alerts" && unread > 0;
-              const tabAccent = getSectionAccent(tab.href);
+      {/* ============ MOBILE BOTTOM NAV (Editorial Bordered Rail) ============ */}
+      <nav aria-label="Primary" className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-[var(--line)] bg-[var(--panel)]">
+        <div className="grid grid-cols-5 px-1 py-1 max-w-lg mx-auto">
+          {MOBILE_TABS.map((tab) => {
+            if ("key" in tab) {
               return (
-                <Link
-                  key={tab.href}
-                  href={tab.href}
-                  className="relative flex flex-col items-center justify-center gap-0.5 rounded-2xl py-1 transition-colors"
+                <button
+                  key="more"
+                  type="button"
+                  onClick={() => setMoreOpen(true)}
+                  className="flex flex-col items-center justify-center gap-1 py-1.5 font-editorial-mono text-[10px] uppercase tracking-wider text-[var(--ink-2)] hover:text-[var(--ink)] transition-colors rounded-none cursor-pointer"
                 >
-                  <div className="relative flex flex-col items-center">
-                    <Icon
-                      className="h-5 w-5 transition-transform"
-                      style={
-                        active
-                          ? {
-                              color: tabAccent.color,
-                              filter: `drop-shadow(0 0 8px ${tabAccent.color})`,
-                            }
-                          : { color: "#9CA3AF" }
-                      }
-                    />
-                    <span
-                      className="mt-0.5 h-1 w-1 rounded-full transition-all"
-                      style={
-                        active
-                          ? {
-                              backgroundColor: tabAccent.color,
-                              boxShadow: `0 0 8px ${tabAccent.color}`,
-                            }
-                          : { backgroundColor: "transparent" }
-                      }
-                    />
-                    {mounted && showBadge && (
-                      <span className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(251,113,133,0.8)]">
-                        {unread > 99 ? "99+" : unread}
-                      </span>
-                    )}
-                  </div>
-                  <span
-                    className="text-[10px] leading-tight font-medium transition-colors"
-                    style={
-                      active
-                        ? { color: tabAccent.color, fontWeight: 700 }
-                        : { color: "#9CA3AF" }
-                    }
-                  >
-                    {"label" in tab && tab.label ? tab.label : t(tab.labelKey)}
-                  </span>
-                </Link>
+                  <MoreHorizontal className="h-4 w-4 text-[var(--ink-3)]" />
+                  <span className="truncate">{t("nav.more")}</span>
+                </button>
               );
-            })}
-          </div>
+            }
+            const Icon = tab.icon;
+            const active = pathname === tab.href || pathname?.startsWith(tab.href + "/");
+            const showBadge = tab.href === "/app/alerts" && unread > 0;
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                className={cn(
+                  "relative flex flex-col items-center justify-center gap-1 py-1.5 font-editorial-mono text-[10px] uppercase tracking-wider transition-colors rounded-none select-none",
+                  active
+                    ? "text-[var(--terra)] font-bold bg-[var(--terra-soft)]"
+                    : "text-[var(--ink-2)] hover:text-[var(--ink)]",
+                )}
+              >
+                <div className="relative">
+                  <Icon
+                    className={cn("h-4 w-4", active ? "text-[var(--terra)]" : "text-[var(--ink-3)]")}
+                  />
+                  {mounted && showBadge && (
+                    <span className="absolute -right-2 -top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-none bg-[var(--terra)] px-1 font-editorial-mono text-[8px] font-bold text-white">
+                      {unread > 99 ? "99+" : unread}
+                    </span>
+                  )}
+                </div>
+                <span className="truncate">
+                  {"label" in tab && tab.label ? tab.label : t(tab.labelKey)}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </nav>
 
       {/* Floating live farm pill: fixed z-50 bottom-20 md:bottom-6 right-4 */}
-      <LiveFarmPill className="fixed z-50 bottom-20 md:bottom-6 right-4" />
+      <LiveFarmPill className="fixed z-50 bottom-16 md:bottom-6 right-4" />
 
       {/* Wireless edge supervisor: auto LIVE/SIM + LCD mirror (no UI) */}
       <MqttManager />
@@ -750,18 +649,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Floating mic trigger */}
       <FloatingMicButton />
-
-      {/* V2.1 mobile liquid FAB — Ask AI, left side clear of mic/pill/tabs */}
-      <div className="fixed bottom-24 left-4 z-50 md:hidden">
-        <LiquidButton
-          icon={MessageCircle}
-          iconOnly
-          href="/app/assistant"
-          variant="primary"
-          aria-label="Ask KrishiGPT"
-          title="Ask KrishiGPT"
-        />
-      </div>
 
       {/* Mobile More Sheet */}
       <AnimatePresence>
@@ -773,7 +660,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMoreOpen(false)}
-              className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-[60] bg-black/70 md:hidden"
             />
             <motion.div
               ref={moreSheetRef}
@@ -784,23 +671,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 300, damping: 28 }}
-              className="liquid-glass-strong fixed inset-x-0 bottom-0 z-[60] max-h-[80vh] overflow-y-auto rounded-t-3xl border-t border-emerald-500/25 p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:hidden"
+              className="fixed inset-x-0 bottom-0 z-[60] max-h-[80vh] overflow-y-auto rounded-none border-t border-[var(--line)] bg-[var(--panel)] p-4 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] md:hidden font-editorial-mono"
             >
-              <div className="mb-4 flex items-center justify-between">
-                <span className="text-sm font-bold text-white">{t("nav.more")}</span>
+              <div className="mb-4 flex items-center justify-between border-b border-[var(--line)] pb-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--terra)]">
+                  {t("nav.more")} // NAVIGATION
+                </span>
                 <button
                   type="button"
                   onClick={() => setMoreOpen(false)}
-                  className="liquid-glass-pill flex h-8 w-8 items-center justify-center rounded-full text-zinc-300 hover:text-white"
+                  className="flex h-7 w-7 items-center justify-center border border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink-2)] hover:text-[var(--ink)] rounded-none"
                   aria-label={t("common.close")}
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-3.5 w-3.5" />
                 </button>
               </div>
-              <div className="grid grid-cols-3 gap-2.5">
+              <div className="grid grid-cols-3 gap-2">
                 {NAV_ITEMS.filter((n) => !MOBILE_TABS.some((m) => "href" in m && m.href === n.href)).map(({ href, label, labelKey, icon: Icon }) => {
                   const showBadge = href === "/app/alerts" && unread > 0;
-                  const itemAccent = getSectionAccent(href);
                   const active = pathname === href || pathname?.startsWith(href + "/");
                   return (
                     <Link
@@ -808,27 +696,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       href={href}
                       onClick={() => setMoreOpen(false)}
                       className={cn(
-                        "glass-inset relative flex flex-col items-center gap-2 rounded-2xl p-3 text-center text-[11px] font-medium transition-all hover:bg-white/5",
-                        active ? "border" : "text-zinc-300",
-                      )}
-                      style={
+                        "relative flex flex-col items-center gap-2 border p-3 text-center text-[10px] font-bold uppercase tracking-wider transition-colors rounded-none",
                         active
-                          ? {
-                              borderColor: itemAccent.borderActive,
-                              backgroundColor: itemAccent.bgLight,
-                              color: itemAccent.color,
-                              boxShadow: `0 0 16px ${itemAccent.glowSubtle}`,
-                            }
-                          : undefined
-                      }
+                          ? "border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)]"
+                          : "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink-2)] hover:text-[var(--ink)] hover:bg-[var(--panel)]",
+                      )}
                     >
                       <Icon
-                        className="h-5 w-5"
-                        style={{ color: active ? itemAccent.color : "#9CA3AF" }}
+                        className={cn("h-4 w-4", active ? "text-[var(--terra)]" : "text-[var(--ink-3)]")}
                       />
                       <span className="truncate w-full">{label ?? t(labelKey)}</span>
                       {mounted && showBadge && (
-                        <span className="absolute right-2 top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow-[0_0_8px_rgba(251,113,133,0.8)]">
+                        <span className="absolute right-1.5 top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-none bg-[var(--terra)] px-1 text-[8px] font-bold text-white">
                           {unread > 99 ? "99+" : unread}
                         </span>
                       )}

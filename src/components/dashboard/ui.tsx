@@ -6,29 +6,33 @@ import { Area, ComposedChart, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */
-/* Carbon & Ember chart theme — strokes: accent + white/40 + white/20 */
+/* Field Editorial chart theme — hairline grids, mono axis labels,    */
+/* terra/moss strokes, square tooltips (panel bg, 1px border)         */
 /* ------------------------------------------------------------------ */
 
-export const CHART_GRID = "rgba(255,255,255,0.06)";
-export const CHART_TICK = "#A3A3A3";
+export const CHART_GRID = "var(--line, rgba(237, 234, 227, 0.12))";
+export const CHART_TICK = "var(--ink-3, #6B726B)";
 
 export const CHART_STROKES = {
-  accent: "#FF6B1A",
-  white40: "rgba(255,255,255,0.40)",
-  white20: "rgba(255,255,255,0.20)",
+  accent: "var(--terra, #C4503A)",
+  terra: "#C4503A",
+  moss: "#5F8B6A",
+  white40: "rgba(237, 234, 227, 0.40)",
+  white20: "rgba(237, 234, 227, 0.20)",
 } as const;
 
 export const chartTooltipStyle = {
-  background: "var(--bg, #000000)",
-  border: "1px solid var(--border, rgba(255,255,255,0.10))",
-  borderRadius: 9999,
-  fontSize: 12,
-  color: "var(--text, #FFFFFF)",
-  padding: "6px 14px",
-  boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+  background: "var(--panel, #0D120E)",
+  border: "1px solid var(--line, rgba(237, 234, 227, 0.12))",
+  borderRadius: 0,
+  fontSize: 11,
+  fontFamily: "IBM Plex Mono, monospace",
+  color: "var(--ink, #EDEAE3)",
+  padding: "6px 12px",
+  boxShadow: "2px 2px 0 rgba(0,0,0,0.4)",
 } as const;
 
-/** Custom glass-pill tooltip for Recharts */
+/** Custom square tooltip for Recharts */
 export const GlassChartTooltip = memo(function GlassChartTooltip({
   active,
   payload,
@@ -47,20 +51,20 @@ export const GlassChartTooltip = memo(function GlassChartTooltip({
     labelFormatter && label != null ? labelFormatter(String(label)) : String(label ?? "");
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.88, y: 6 }}
+      initial={{ opacity: 0, scale: 0.95, y: 4 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.88, y: 6 }}
-      transition={{ type: "spring", stiffness: 450, damping: 25 }}
+      exit={{ opacity: 0, scale: 0.95, y: 4 }}
+      transition={{ duration: 0.15 }}
       className="g3-chart-tooltip"
     >
-      {title ? <p className="font-bold text-white mb-0.5">{title}</p> : null}
+      {title ? <p className="font-bold text-[var(--ink)] mb-0.5 uppercase tracking-wider">{title}</p> : null}
       {payload.map((p, i) => {
         const v = Number(p.value ?? 0);
         const n = String(p.name ?? "");
         const [text, name] = formatter ? formatter(v, n) : [`${v}`, n];
         return (
-          <p key={i} className="tabular-nums text-zinc-200 text-xs">
-            {name ? <span className="mr-1 text-zinc-400">{name}:</span> : null}
+          <p key={i} className="tabular-nums text-[var(--ink)] text-xs">
+            {name ? <span className="mr-1 text-[var(--ink-2)]">{name}:</span> : null}
             {text}
           </p>
         );
@@ -70,7 +74,7 @@ export const GlassChartTooltip = memo(function GlassChartTooltip({
 });
 
 /* ------------------------------------------------------------------ */
-/* Card shell — Cards radius 20px, p-20px, gap 16px                   */
+/* Card shell — --panel bg, 1px --line border, 0 radius               */
 /* ------------------------------------------------------------------ */
 
 export function Card({
@@ -84,81 +88,52 @@ export function Card({
   variant?: "default" | "strong";
   interactive?: boolean;
 }) {
-  const [ripples, setRipples] = useState<Array<{ id: number; x: number; y: number; size: number }>>([]);
-
-  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!interactive) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    const reach = Math.hypot(
-      Math.max(x, rect.width - x),
-      Math.max(y, rect.height - y),
-    );
-    const id = Date.now() + Math.random();
-    setRipples((prev) => [...prev, { id, x, y, size: Math.ceil(reach * 2) }]);
-    window.setTimeout(() => {
-      setRipples((prev) => prev.filter((r) => r.id !== id));
-    }, 620);
-  };
-
   return (
     <div
-      onClick={handleClick}
       className={cn(
-        "relative overflow-hidden liquid-card-hover rounded-[20px] p-[20px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] transition-colors",
-        variant === "strong" && "bg-[var(--surface-2)] shadow-xl",
+        "relative rounded-none p-5 border border-[var(--line)] bg-[var(--panel)] text-[var(--ink)] transition-colors",
+        variant === "strong" && "bg-[var(--panel-2)]",
         className,
       )}
     >
       <div className="relative z-[1] flex flex-col gap-4">{children}</div>
-      {ripples.map((r) => (
-        <span
-          key={r.id}
-          aria-hidden
-          className="liquid-card-ripple"
-          style={{
-            left: r.x,
-            top: r.y,
-            width: r.size,
-            height: r.size,
-          }}
-        />
-      ))}
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* CardHeader — Labels 12px uppercase tracking-wide text-2            */
+/* CardHeader — mono uppercase label left + status stamp right        */
 /* ------------------------------------------------------------------ */
 
 export function CardHeader({
   title,
   subtitle,
   action,
+  statusStamp,
 }: {
   title: string;
   subtitle?: string;
   action?: ReactNode;
+  statusStamp?: ReactNode;
 }) {
+  const rightElement = statusStamp ?? action;
   return (
-    <div className="mb-1 flex items-start justify-between gap-2">
+    <div className="mb-2 flex items-start justify-between gap-2 border-b border-[var(--line)] pb-2">
       <div className="min-w-0">
-        <h2 className="truncate text-[12px] font-semibold uppercase tracking-wide text-[var(--text-2)]">
+        <h2 className="truncate font-editorial-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-2)]">
           {title}
         </h2>
         {subtitle && (
-          <p className="mt-0.5 truncate text-xs text-[var(--text-2)]/80">{subtitle}</p>
+          <p className="mt-0.5 truncate text-[11px] text-[var(--ink-3)] font-editorial-mono">{subtitle}</p>
         )}
       </div>
-      {action && <div className="shrink-0">{action}</div>}
+      {rightElement && <div className="shrink-0 flex items-center gap-1.5">{rightElement}</div>}
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* AnimatedNumber — 28px semibold tabular-nums white                  */
+/* AnimatedNumber — metrics 40px 800 ink tabular                      */
 /* ------------------------------------------------------------------ */
 
 export function AnimatedNumber({
@@ -189,7 +164,7 @@ export function AnimatedNumber({
   return (
     <span
       className={cn(
-        "text-[28px] font-semibold tabular-nums text-[var(--text)] leading-tight",
+        "font-editorial-display text-[40px] font-[800] tabular-nums text-[var(--ink)] leading-none tracking-tight",
         className,
       )}
     >
@@ -199,12 +174,12 @@ export function AnimatedNumber({
 }
 
 /* ------------------------------------------------------------------ */
-/* Sparkline — tiny 24-point recharts line with accent glow           */
+/* Sparkline — terra or moss strokes, square dots                     */
 /* ------------------------------------------------------------------ */
 
 export const Sparkline = memo(function Sparkline({
   data,
-  color = "#FF6B1A",
+  color = "var(--terra)",
 }: {
   data: number[];
   color?: string;
@@ -224,7 +199,7 @@ export const Sparkline = memo(function Sparkline({
         <ComposedChart data={pts} margin={{ top: 4, right: 2, bottom: 2, left: 2 }}>
           <defs>
             <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity={0.45} />
+              <stop offset="0%" stopColor={color} stopOpacity={0.35} />
               <stop offset="100%" stopColor={color} stopOpacity={0} />
             </linearGradient>
           </defs>
@@ -232,9 +207,23 @@ export const Sparkline = memo(function Sparkline({
             type="monotone"
             dataKey="v"
             stroke={color}
-            strokeWidth={2}
+            strokeWidth={1.5}
             fill={`url(#${gid})`}
-            dot={false}
+            dot={(props: any) => {
+              const { cx, cy, index } = props;
+              // Render square dot only on every 6th point or last point for a clean editorial sparkline
+              if (index % 6 !== 0 && index !== pts.length - 1) return null;
+              return (
+                <rect
+                  key={`dot-${index}`}
+                  x={cx - 1.5}
+                  y={cy - 1.5}
+                  width={3}
+                  height={3}
+                  fill={color}
+                />
+              );
+            }}
             isAnimationActive={!hasAnimated}
             animationDuration={500}
             animationEasing="ease-in-out"
@@ -266,7 +255,7 @@ export function resampleChartPoints<T>(data: T[], maxPoints: number = 60): T[] {
 }
 
 /* ------------------------------------------------------------------ */
-/* Status pill — Semantic dots ONLY (ok #22C55E, warn #FBBF24, crit #FF453A) */
+/* Status pill — bordered mono chips (OK moss / WARN gold / CRIT terra) */
 /* ------------------------------------------------------------------ */
 
 export type PillTone =
@@ -280,35 +269,35 @@ export type PillTone =
 
 const PILL_CONFIG: Record<
   PillTone,
-  { pillStyle: string; dotStyle: string }
+  { chipStyle: string; dotStyle: string }
 > = {
   optimal: {
-    pillStyle: "border-[var(--border)] bg-[var(--surface)] text-[var(--text)]",
-    dotStyle: "bg-[#22C55E] shadow-[0_0_6px_rgba(34,197,94,0.85)]",
+    chipStyle: "border-[var(--moss)] bg-[var(--moss-soft)] text-[var(--moss)]",
+    dotStyle: "bg-[var(--moss)]",
   },
   good: {
-    pillStyle: "border-[var(--border)] bg-[var(--surface)] text-[var(--text)]",
-    dotStyle: "bg-[#22C55E] shadow-[0_0_6px_rgba(34,197,94,0.85)]",
+    chipStyle: "border-[var(--moss)] bg-[var(--moss-soft)] text-[var(--moss)]",
+    dotStyle: "bg-[var(--moss)]",
   },
   warning: {
-    pillStyle: "border-[var(--border)] bg-[var(--surface)] text-[var(--text)]",
-    dotStyle: "bg-[#FBBF24] shadow-[0_0_6px_rgba(251,191,36,0.85)]",
+    chipStyle: "border-[#B98A3E] bg-[#B98A3E]/10 text-[#E4C57E]",
+    dotStyle: "bg-[#E4C57E]",
   },
   warn: {
-    pillStyle: "border-[var(--border)] bg-[var(--surface)] text-[var(--text)]",
-    dotStyle: "bg-[#FBBF24] shadow-[0_0_6px_rgba(251,191,36,0.85)]",
+    chipStyle: "border-[#B98A3E] bg-[#B98A3E]/10 text-[#E4C57E]",
+    dotStyle: "bg-[#E4C57E]",
   },
   critical: {
-    pillStyle: "border-[var(--border)] bg-[var(--surface)] text-[var(--text)]",
-    dotStyle: "bg-[#FF453A] shadow-[0_0_6px_rgba(255,69,58,0.85)]",
+    chipStyle: "border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)]",
+    dotStyle: "bg-[var(--terra)]",
   },
   bad: {
-    pillStyle: "border-[var(--border)] bg-[var(--surface)] text-[var(--text)]",
-    dotStyle: "bg-[#FF453A] shadow-[0_0_6px_rgba(255,69,58,0.85)]",
+    chipStyle: "border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)]",
+    dotStyle: "bg-[var(--terra)]",
   },
   info: {
-    pillStyle: "border-[var(--border)] bg-[var(--surface)] text-[var(--text)]",
-    dotStyle: "bg-[#FF8A4C] shadow-[0_0_6px_rgba(255,138,76,0.85)]",
+    chipStyle: "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink-2)]",
+    dotStyle: "bg-[var(--ink-2)]",
   },
 };
 
@@ -325,13 +314,13 @@ export function StatusPill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-        cfg.pillStyle,
+        "inline-flex items-center gap-1.5 rounded-none border px-2 py-0.5 font-editorial-mono text-[10px] font-bold uppercase tracking-[0.1em]",
+        cfg.chipStyle,
       )}
     >
       <span
         className={cn(
-          "h-1.5 w-1.5 rounded-full shrink-0",
+          "h-1.5 w-1.5 shrink-0 rounded-none",
           cfg.dotStyle,
           pulse && "animate-pulse",
         )}

@@ -3,25 +3,23 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Droplets, Power, ScanLine, Timer } from "lucide-react";
+import { Droplets, Power, ScanLine, Timer, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { useMounted } from "@/components/dashboard/ui";
-import { GlassSheet, LiquidToggle } from "@/components/ui/glass";
 
 const QUICK_DURATIONS = [
-  { label: "10s", sec: 10 },
-  { label: "30s", sec: 30 },
-  { label: "2m", sec: 120 },
-  { label: "5m", sec: 300 },
+  { label: "10S", sec: 10 },
+  { label: "30S", sec: 30 },
+  { label: "2M", sec: 120 },
+  { label: "5M", sec: 300 },
 ];
 
 /**
- * LiveFarmPill — signature floating "Now Playing" pill for the farm.
- * Frosted glass pill fixed above the mobile tab bar / bottom-right on
- * desktop: live droplet + "Zone B 22% • Pump OFF • 32°C" + pump toggle
- * and leaf-scan shortcut. Tapping the body opens quick controls.
+ * LiveFarmPill — signature floating pill for the farm.
+ * Reskinned to M1 Field Editorial: sharp 0-radius bordered panel,
+ * mono text, square toggles.
  */
 export default function LiveFarmPill({ className }: { className?: string } = {}) {
   const t = useT();
@@ -49,101 +47,76 @@ export default function LiveFarmPill({ className }: { className?: string } = {})
     : 45;
   const tempC = mounted ? Math.round(snapshot.temp ?? 30) : 30;
 
-  const liveText = `Soil ${soilMoisture}% • Pump ${running ? "ON" : "OFF"} • ${tempC}°C`;
+  const liveText = `SOIL ${soilMoisture}% // PUMP ${running ? "ON" : "OFF"} // ${tempC}°C`;
 
   const togglePump = () => {
     if (running) setPumpManual(false);
     else setPumpManual(true, defaultDuration);
   };
 
-  const edgeClass = running
-    ? "g3-pump-on"
-    : hasCritical
-      ? "g3-alert-critical"
-      : "";
-
-  const edgeStyle: React.CSSProperties = running
-    ? {}
-    : hasCritical
-      ? {
-          borderColor: "rgba(251,113,133,0.7)",
-          boxShadow:
-            "0 0 24px rgba(251,113,133,0.45), 0 8px 32px rgba(0,0,0,0.55)",
-        }
-      : {
-          borderColor: "rgba(255,255,255,0.12)",
-          boxShadow: "0 8px 32px rgba(0,0,0,0.55)",
-        };
-
   return (
     <>
-      <motion.div
-        initial={{ opacity: 0, y: 28, scale: 0.94 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 20, scale: 0.95 }}
-        transition={{ type: "spring", stiffness: 280, damping: 24 }}
+      <div
         className={cn(
-          "fixed inset-x-4 bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] z-50 md:inset-x-auto md:bottom-6 md:right-6 md:w-[390px]",
+          "fixed inset-x-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom,0px))] z-50 md:inset-x-auto md:bottom-6 md:right-6 md:w-[380px] font-editorial-mono",
           className,
         )}
       >
         <div
           className={cn(
-            "glass-strong flex items-center gap-2.5 py-2 pl-2.5 pr-2 rounded-full backdrop-blur-xl transition-all border",
-            edgeClass,
+            "flex items-center gap-2 py-1.5 pl-2.5 pr-2 rounded-none border transition-colors shadow-2xl select-none",
+            running
+              ? "border-[var(--terra)] bg-[var(--panel)] shadow-[0_0_16px_var(--terra-soft)]"
+              : hasCritical
+                ? "border-[var(--terra)] bg-[var(--panel)]"
+                : "border-[var(--line)] bg-[var(--panel)]",
           )}
-          style={edgeStyle}
         >
           {/* Pill body — tap to expand quick controls */}
           <button
             type="button"
             onClick={() => setSheetOpen(true)}
             aria-label="Open live farm controls"
-            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-full text-left cursor-pointer"
+            className="flex min-w-0 flex-1 items-center gap-2 rounded-none text-left cursor-pointer"
           >
             <span
               className={cn(
-                "glass-pill flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all",
+                "flex h-7 w-7 shrink-0 items-center justify-center rounded-none border transition-colors",
                 running
-                  ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-300 shadow-[0_0_14px_rgba(52,211,153,0.6)]"
+                  ? "border-[var(--terra)] bg-[var(--terra)] text-white"
                   : hasCritical
-                    ? "border-rose-400/60 bg-rose-500/20 text-rose-300 shadow-[0_0_14px_rgba(251,113,133,0.6)]"
-                    : "border-white/10 bg-white/[0.05] text-zinc-400",
+                    ? "border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)]"
+                    : "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink-3)]",
               )}
             >
               <Droplets
-                className={cn(
-                  "h-4 w-4",
-                  running && "animate-spin text-emerald-300",
-                  hasCritical && !running && "text-rose-300",
-                )}
-                style={running ? { animationDuration: "2.2s" } : undefined}
+                className={cn("h-3.5 w-3.5", running && "animate-pulse")}
               />
             </span>
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-xs font-semibold text-white">
+            <span className="min-w-0 flex-1 truncate">
+              <span className="block truncate text-[11px] font-bold uppercase tracking-wider text-[var(--ink)]">
                 {liveText}
               </span>
               <span
                 className={cn(
-                  "block text-[10px] font-medium tracking-wide",
+                  "block text-[9px] font-bold uppercase tracking-widest",
                   running
-                    ? "text-emerald-300"
+                    ? "text-[var(--terra)]"
                     : hasCritical
-                      ? "text-rose-300"
-                      : "text-zinc-400",
+                      ? "text-[var(--terra)]"
+                      : "text-[var(--ink-3)]",
                 )}
               >
                 {running
-                  ? t("dashboard.pumping")
+                  ? "PUMP ACTIVE"
                   : hasCritical
-                    ? "Critical Alert Active"
-                    : t("dashboard.pumpIdle")}
+                    ? "CRITICAL ALERT ACTIVE"
+                    : "PUMP IDLE"}
               </span>
             </span>
           </button>
 
-          {/* Round glass action buttons */}
+          {/* Square action buttons */}
           <button
             type="button"
             onClick={(e) => {
@@ -152,13 +125,13 @@ export default function LiveFarmPill({ className }: { className?: string } = {})
             }}
             aria-label={running ? "Turn pump off" : "Turn pump on"}
             className={cn(
-              "glass-pill flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all active:scale-90 cursor-pointer",
+              "flex h-7 w-7 shrink-0 items-center justify-center rounded-none border transition-colors cursor-pointer",
               running
-                ? "border-emerald-400/60 bg-emerald-500/25 text-emerald-200 shadow-[0_0_12px_rgba(52,211,153,0.6)]"
-                : "border-white/10 bg-white/[0.05] text-zinc-300 hover:border-emerald-500/40 hover:text-emerald-200",
+                ? "border-[var(--terra)] bg-[var(--terra)] text-white"
+                : "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink-2)] hover:text-[var(--ink)] hover:border-[var(--ink-3)]",
             )}
           >
-            <Power className="h-4 w-4" />
+            <Power className="h-3.5 w-3.5" />
           </button>
           <button
             type="button"
@@ -167,93 +140,117 @@ export default function LiveFarmPill({ className }: { className?: string } = {})
               router.push("/app/camera");
             }}
             aria-label={t("dashboard.scanLeaf")}
-            className="glass-pill flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-zinc-300 transition-all hover:border-rose-400/40 hover:text-rose-200 active:scale-90 cursor-pointer"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-none border border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink-2)] hover:text-[var(--ink)] hover:border-[var(--ink-3)] transition-colors cursor-pointer"
           >
-            <ScanLine className="h-4 w-4" />
+            <ScanLine className="h-3.5 w-3.5" />
           </button>
         </div>
-      </motion.div>
+      </div>
 
-      {/* Expanded quick controls */}
-      <GlassSheet open={sheetOpen} onClose={() => setSheetOpen(false)}>
-        <div className="pr-8">
-          <h2 className="text-base font-bold text-white">
-            Live Farm Control
-          </h2>
-          <p className="mt-0.5 text-xs text-zinc-400">{liveText}</p>
-        </div>
-
-        {/* Pump run / stop */}
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-full border",
-                running
-                  ? "border-emerald-400/50 bg-emerald-500/20 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.5)]"
-                  : "border-white/10 bg-white/[0.05] text-zinc-400",
-              )}
-            >
-              <Droplets
-                className={cn("h-4 w-4", running && "animate-spin")}
-                style={running ? { animationDuration: "2.5s" } : undefined}
-              />
-            </span>
-            <span className="text-sm font-semibold text-white">
-              {running
-                ? t("irrigation.running")
-                : t("irrigation.idle")}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={togglePump}
-            className={cn(
-              "rounded-full px-4 py-2 text-xs font-bold transition-all active:scale-95",
-              running
-                ? "bg-red-500/20 text-red-200 ring-1 ring-red-400/40"
-                : "bg-emerald-500 text-black shadow-[0_0_18px_rgba(16,185,129,0.45)] hover:bg-emerald-400",
-            )}
-          >
-            {running ? t("common.off") : t("common.on")}
-          </button>
-        </div>
-
-        {/* Pump duration quick buttons */}
-        <p className="mt-5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-          <Timer className="h-3.5 w-3.5" />
-          {t("irrigation.quickRun")}
-        </p>
-        <div className="mt-2 grid grid-cols-4 gap-2">
-          {QUICK_DURATIONS.map((d) => (
-            <button
-              key={d.sec}
-              type="button"
-              onClick={() => setPumpManual(true, d.sec)}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] py-2.5 text-xs font-bold text-zinc-200 transition-all hover:border-emerald-500/40 hover:text-emerald-200 active:scale-95"
-            >
-              {d.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Auto-mode toggle */}
-        <div className="mt-5 flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-3.5 py-3">
-          <div>
-            <p className="text-sm font-semibold text-white">
-              {t("irrigation.autoAI")}
-            </p>
-            <p className="text-[11px] text-zinc-500">
-              {t("irrigation.aiReasoning")}
-            </p>
-          </div>
-          <LiquidToggle
-            checked={autoMode}
-            onChange={(next) => setPumpMode(next ? "auto" : "manual")}
-            label={autoMode ? t("common.on") : t("common.off")}
+      {/* Expanded quick controls modal */}
+      {sheetOpen && (
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center font-editorial-mono">
+          <div
+            className="fixed inset-0 bg-black/70"
+            onClick={() => setSheetOpen(false)}
           />
+          <div className="relative z-10 w-full max-w-md rounded-none border border-[var(--line)] bg-[var(--panel)] p-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
+              <div>
+                <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+                  LIVE FARM CONTROL
+                </h2>
+                <p className="mt-0.5 text-[10px] text-[var(--ink-3)] uppercase tracking-wider">
+                  {liveText}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSheetOpen(false)}
+                className="flex h-6 w-6 items-center justify-center border border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink-2)] hover:text-[var(--ink)] rounded-none"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {/* Pump run / stop */}
+            <div className="mt-4 flex items-center justify-between gap-3 border border-[var(--line)] bg-[var(--panel-2)] p-3 rounded-none">
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    "flex h-7 w-7 items-center justify-center rounded-none border",
+                    running
+                      ? "border-[var(--terra)] bg-[var(--terra)] text-white"
+                      : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-3)]",
+                  )}
+                >
+                  <Droplets className={cn("h-3.5 w-3.5", running && "animate-pulse")} />
+                </span>
+                <span className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+                  {running ? "PUMP IS RUNNING" : "PUMP IS IDLE"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={togglePump}
+                className={cn(
+                  "px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-none border transition-colors cursor-pointer",
+                  running
+                    ? "border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)]"
+                    : "border-[var(--ink)] bg-[var(--ink)] text-[var(--bg)]",
+                )}
+              >
+                {running ? "STOP" : "START"}
+              </button>
+            </div>
+
+            {/* Pump duration quick buttons */}
+            <p className="mt-4 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--ink-3)]">
+              <Timer className="h-3 w-3 text-[var(--terra)]" />
+              QUICK RUN TIMERS
+            </p>
+            <div className="mt-1.5 grid grid-cols-4 gap-2">
+              {QUICK_DURATIONS.map((d) => (
+                <button
+                  key={d.sec}
+                  type="button"
+                  onClick={() => {
+                    setPumpManual(true, d.sec);
+                    setSheetOpen(false);
+                  }}
+                  className="rounded-none border border-[var(--line)] bg-[var(--panel-2)] py-2 text-xs font-bold text-[var(--ink)] hover:border-[var(--terra)] hover:text-[var(--terra)] transition-colors cursor-pointer"
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Auto-mode toggle */}
+            <div className="mt-4 flex items-center justify-between gap-3 rounded-none border border-[var(--line)] bg-[var(--panel-2)] p-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
+                  AUTO AI IRRIGATION
+                </p>
+                <p className="text-[10px] text-[var(--ink-3)]">
+                  Autonomous sensor-driven threshold dispatch
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPumpMode(autoMode ? "manual" : "auto")}
+                className={cn(
+                  "px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-none border transition-colors cursor-pointer",
+                  autoMode
+                    ? "border-[var(--moss)] bg-[var(--moss-soft)] text-[var(--moss)]"
+                    : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-3)]",
+                )}
+              >
+                {autoMode ? "ENABLED" : "DISABLED"}
+              </button>
+            </div>
+          </div>
         </div>
-      </GlassSheet>
+      )}
     </>
   );
 }
