@@ -164,7 +164,7 @@ export default function LiveFarmPill({ className }: { className?: string } = {})
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              router.push("/camera");
+              router.push("/app/camera");
             }}
             aria-label={t("dashboard.scanLeaf")}
             className="glass-pill flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.05] text-zinc-300 transition-all hover:border-rose-400/40 hover:text-rose-200 active:scale-90 cursor-pointer"

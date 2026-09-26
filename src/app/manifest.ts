@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "KrishiNethra",
     description:
       "Har Khet Ka AI Doctor — liquid glass smart farm command center with live sensors, AI agent reasoning, crop doctor, irrigation and ESP32 edge control.",
-    start_url: "/dashboard",
+    start_url: "/app/dashboard",
     scope: "/",
     display: "standalone",
     orientation: "portrait",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   Check,
@@ -35,17 +35,6 @@ function rssiPct(rssi: number | null): number {
   return Math.min(100, Math.max(0, Math.round(((rssi + 90) / 60) * 100)));
 }
 
-function subscribeNow(callback: () => void) {
-  const id = setInterval(callback, 1000);
-  return () => clearInterval(id);
-}
-function getNowSec(): number {
-  return Math.floor(Date.now() / 1000);
-}
-function getServerSnapshot(): number {
-  return 0;
-}
-
 /**
  * WirelessEdgeCard — Settings → "Wireless Edge Bridge".
  * Token (default patelfarm01) with Copy + Regenerate, broker dropdown
@@ -75,7 +64,12 @@ export default function WirelessEdgeCard() {
   const [customUrl, setCustomUrl] = useState(isCustom ? brokerUrl : "");
   const [copied, setCopied] = useState(false);
 
-  const nowSec = useSyncExternalStore(subscribeNow, getNowSec, getServerSnapshot);
+  const [nowSec, setNowSec] = useState(0);
+  useEffect(() => {
+    setNowSec(Math.floor(Date.now() / 1000));
+    const id = setInterval(() => setNowSec(Math.floor(Date.now() / 1000)), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const topics = topicsFor(token);
   const connected = mqttStatus === "online";

@@ -105,22 +105,22 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", labelKey: "nav.dashboard", titleKey: "titles.dashboard", icon: LayoutDashboard },
-  { href: "/camera", label: "📷 Leaf Scanner", labelKey: "nav.camera", titleKey: "titles.camera", icon: Camera },
-  { href: "/irrigation", labelKey: "nav.irrigation", titleKey: "titles.irrigation", icon: Droplets },
-  { href: "/climate", labelKey: "nav.climate", titleKey: "titles.climate", icon: CloudSun },
-  { href: "/sensors", label: "🔌 Sensor Health", labelKey: "nav.sensors", titleKey: "titles.sensors", icon: Activity },
-  { href: "/spray", labelKey: "nav.spray", titleKey: "titles.spray", icon: SprayCan },
-  { href: "/fertilizer", labelKey: "nav.fertilizer", titleKey: "titles.fertilizer", icon: FlaskConical },
-  { href: "/market", labelKey: "nav.market", titleKey: "titles.market", icon: TrendingUp },
-  { href: "/schemes", labelKey: "nav.schemes", titleKey: "titles.schemes", icon: Landmark },
-  { href: "/diary", labelKey: "nav.diary", titleKey: "titles.diary", icon: BookOpen },
-  { href: "/tasks", labelKey: "nav.tasks", titleKey: "titles.tasks", icon: CheckSquare },
-  { href: "/assistant", labelKey: "nav.assistant", titleKey: "titles.assistant", icon: MessageCircle },
-  { href: "/reports", labelKey: "nav.reports", titleKey: "titles.reports", icon: BarChart3 },
-  { href: "/alerts", labelKey: "nav.alerts", titleKey: "titles.alerts", icon: Bell },
-  { href: "/voice", labelKey: "nav.voice", titleKey: "titles.voice", icon: Mic },
-  { href: "/settings", labelKey: "nav.settings", titleKey: "titles.settings", icon: Settings },
+  { href: "/app/dashboard", labelKey: "nav.dashboard", titleKey: "titles.dashboard", icon: LayoutDashboard },
+  { href: "/app/camera", label: "📷 Leaf Scanner", labelKey: "nav.camera", titleKey: "titles.camera", icon: Camera },
+  { href: "/app/irrigation", labelKey: "nav.irrigation", titleKey: "titles.irrigation", icon: Droplets },
+  { href: "/app/climate", labelKey: "nav.climate", titleKey: "titles.climate", icon: CloudSun },
+  { href: "/app/sensors", label: "🔌 Sensor Health", labelKey: "nav.sensors", titleKey: "titles.sensors", icon: Activity },
+  { href: "/app/spray", labelKey: "nav.spray", titleKey: "titles.spray", icon: SprayCan },
+  { href: "/app/fertilizer", labelKey: "nav.fertilizer", titleKey: "titles.fertilizer", icon: FlaskConical },
+  { href: "/app/market", labelKey: "nav.market", titleKey: "titles.market", icon: TrendingUp },
+  { href: "/app/schemes", labelKey: "nav.schemes", titleKey: "titles.schemes", icon: Landmark },
+  { href: "/app/diary", labelKey: "nav.diary", titleKey: "titles.diary", icon: BookOpen },
+  { href: "/app/tasks", labelKey: "nav.tasks", titleKey: "titles.tasks", icon: CheckSquare },
+  { href: "/app/assistant", labelKey: "nav.assistant", titleKey: "titles.assistant", icon: MessageCircle },
+  { href: "/app/reports", labelKey: "nav.reports", titleKey: "titles.reports", icon: BarChart3 },
+  { href: "/app/alerts", labelKey: "nav.alerts", titleKey: "titles.alerts", icon: Bell },
+  { href: "/app/voice", labelKey: "nav.voice", titleKey: "titles.voice", icon: Mic },
+  { href: "/app/settings", labelKey: "nav.settings", titleKey: "titles.settings", icon: Settings },
 ];
 
 const MOBILE_TABS: Array<NavItem | { key: "more" }> = [
@@ -320,17 +320,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const farmProfile = useFarmStore((s) => s.settings.farmProfile);
   const snapshot = useFarmStore((s) => s.snapshot);
 
+  // Bypass AppShell UI for onboarding / entry routes
+  const isOnboarding = pathname === "/app/onboarding" || pathname === "/app";
+
   // Routing guard: wizard first, PIN-locked second.
   useEffect(() => {
-    if (!mounted || !hydrated) return;
+    if (!mounted || !hydrated || isOnboarding) return;
     if (!onboardingDone) {
-      router.replace("/");
+      router.replace("/app/onboarding");
       return;
     }
     if (appPinHash && !isAuthenticated) {
-      router.replace("/");
+      router.replace("/app/onboarding");
     }
-  }, [mounted, hydrated, onboardingDone, appPinHash, isAuthenticated, router]);
+  }, [mounted, hydrated, onboardingDone, appPinHash, isAuthenticated, router, isOnboarding]);
 
   // Scroll restoration: on pathname change reset main-scroll to top
   useEffect(() => {
@@ -362,6 +365,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // V2.5 a11y — trap focus inside the mobile "More" sheet, restore on close.
   const moreSheetRef = useFocusTrap<HTMLDivElement>(moreOpen, () => setMoreOpen(false));
 
+  if (isOnboarding) {
+    return <>{children}</>;
+  }
+
   return (
     <MotionConfig reducedMotion="user">
     <div
@@ -391,7 +398,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <nav aria-label="Primary" className="flex-1 overflow-y-auto scrollbar-hide px-3 space-y-1">
           {NAV_ITEMS.map(({ href, label, labelKey, icon: Icon }) => {
             const active = pathname === href || pathname?.startsWith(href + "/");
-            const showBadge = href === "/alerts" && unread > 0;
+            const showBadge = href === "/app/alerts" && unread > 0;
             return (
               <Link
                 key={href}
@@ -593,7 +600,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <div className="liquid-glass-strong absolute right-0 top-full z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-emerald-500/25 p-1">
                   <div className="flex items-center justify-between border-b border-white/5 px-3 py-2.5">
                     <span className="text-xs font-bold text-white">{t("common.recentAlerts")}</span>
-                    <Link href="/alerts" onClick={closeOverlays} className="text-[11px] font-medium text-emerald-300 hover:text-emerald-200">
+                    <Link href="/app/alerts" onClick={closeOverlays} className="text-[11px] font-medium text-emerald-300 hover:text-emerald-200">
                       {t("common.viewAll")}
                     </Link>
                   </div>
@@ -614,7 +621,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
           {/* Health score chip */}
           <Link
-            href="/dashboard"
+            href="/app/dashboard"
             className="liquid-glass-pill hidden items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-emerald-200 border border-emerald-500/30 shadow-[0_0_12px_rgba(34,197,94,0.2)] transition-all hover:border-emerald-400/50 xs:flex sm:flex"
             title={t("common.farmHealthScore")}
           >
@@ -678,7 +685,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               }
               const Icon = tab.icon;
               const active = pathname === tab.href || pathname?.startsWith(tab.href + "/");
-              const showBadge = tab.href === "/alerts" && unread > 0;
+              const showBadge = tab.href === "/app/alerts" && unread > 0;
               const tabAccent = getSectionAccent(tab.href);
               return (
                 <Link
@@ -749,7 +756,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <LiquidButton
           icon={MessageCircle}
           iconOnly
-          href="/assistant"
+          href="/app/assistant"
           variant="primary"
           aria-label="Ask KrishiGPT"
           title="Ask KrishiGPT"
@@ -792,7 +799,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               </div>
               <div className="grid grid-cols-3 gap-2.5">
                 {NAV_ITEMS.filter((n) => !MOBILE_TABS.some((m) => "href" in m && m.href === n.href)).map(({ href, label, labelKey, icon: Icon }) => {
-                  const showBadge = href === "/alerts" && unread > 0;
+                  const showBadge = href === "/app/alerts" && unread > 0;
                   const itemAccent = getSectionAccent(href);
                   const active = pathname === href || pathname?.startsWith(href + "/");
                   return (

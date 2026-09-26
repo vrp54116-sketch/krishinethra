@@ -51,7 +51,7 @@ export default function DemoTourButton({ className }: { className?: string }) {
     toast.info(`Demo tour started (${where})`, {
       description: "Pump → R2 → buzzer → sweep. Watch the dashboard.",
     });
-    router.push("/dashboard");
+    router.push("/app/dashboard");
     try {
       // 1. Pump 5s.
       s.setPumpManual(true, 5);

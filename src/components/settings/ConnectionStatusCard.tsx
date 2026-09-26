@@ -1,27 +1,21 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { Clock, MessageSquare, Radio, Server, Wifi } from "lucide-react";
 import { useFarmStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
-
-function subscribeNow(callback: () => void) {
-  const timer = setInterval(callback, 1000);
-  return () => clearInterval(timer);
-}
-function getNow(): number {
-  return Date.now();
-}
-function getServerSnapshot(): number {
-  return 0;
-}
 
 export default function ConnectionStatusCard({ className }: { className?: string }) {
   const snapshot = useFarmStore((s) => s.snapshot);
   const mqttStatus = useFarmStore((s) => s.mqttStatus);
   const mqttConnected = mqttStatus === "online";
 
-  const now = useSyncExternalStore(subscribeNow, getNow, getServerSnapshot);
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const rawRssi = snapshot.rssi ?? -55;
   const rawUptime = snapshot.uptime ?? 3600 * 2 + 1800; // seconds

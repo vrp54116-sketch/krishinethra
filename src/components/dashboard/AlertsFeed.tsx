@@ -99,7 +99,7 @@ export default function AlertsFeed() {
               </button>
             )}
             <Link
-              href="/alerts"
+              href="/app/alerts"
               aria-label="View all alerts"
               className="rounded-full border border-white/10 px-3 py-1 text-[11px] font-bold text-[#F3F4F6] transition-colors hover:border-[#34D399]/40 hover:text-[#34D399]"
             >
@@ -114,7 +114,7 @@ export default function AlertsFeed() {
           {overdueTasks.slice(0, 3).map((task) => (
             <li key={task.id}>
               <Link
-                href="/tasks"
+                href="/app/tasks"
                 className="block w-full animate-pulse rounded-xl border border-red-500/60 bg-red-500/[0.07] p-3 text-left shadow-[0_0_18px_rgba(239,68,68,0.25)] transition-all hover:bg-red-500/[0.12]"
               >
                 <div className="flex items-center justify-between gap-2">

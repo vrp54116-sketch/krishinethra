@@ -103,7 +103,7 @@ export default function SensorHealthCard({ className }: { className?: string }) 
         </div>
 
         <Link
-          href="/sensors"
+          href="/app/sensors"
           className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-400/25 transition-all duration-200"
         >
           <span>Full Telemetry</span>

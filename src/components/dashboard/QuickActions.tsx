@@ -31,10 +31,10 @@ export default function QuickActions() {
   };
 
   const actions: Action[] = [
-    { key: "scan", label: t("dashboard.scanLeaf"), sub: "Crop doctor", icon: Camera, tint: "bg-rose-500/15 text-rose-300", href: "/camera" },
+    { key: "scan", label: t("dashboard.scanLeaf"), sub: "Crop doctor", icon: Camera, tint: "bg-rose-500/15 text-rose-300", href: "/app/camera" },
     { key: "irrigate", label: t("dashboard.irrigateZoneB"), sub: "Run pump 10s", icon: Droplets, tint: "bg-sky-500/15 text-sky-300", run: irrigateQuick },
-    { key: "gpt", label: t("dashboard.openGPT"), sub: "Ask anything", icon: MessageCircle, tint: "bg-emerald-500/15 text-emerald-300", href: "/assistant" },
-    { key: "map", label: t("dashboard.viewMap"), sub: "Field zones", icon: Map, tint: "bg-amber-500/15 text-amber-300", href: "/map" },
+    { key: "gpt", label: t("dashboard.openGPT"), sub: "Ask anything", icon: MessageCircle, tint: "bg-emerald-500/15 text-emerald-300", href: "/app/assistant" },
+    { key: "map", label: t("dashboard.viewMap"), sub: "Field zones", icon: Map, tint: "bg-amber-500/15 text-amber-300", href: "/app/map" },
   ];
 
   return (

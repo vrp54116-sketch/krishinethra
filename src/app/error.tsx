@@ -44,7 +44,7 @@ export default function RootError({
             Try again
           </button>
           <Link
-            href="/dashboard"
+            href="/app/dashboard"
             className="flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-6 py-3 text-sm font-semibold text-[#F3F4F6] transition-colors hover:border-[#34D399]/40 hover:text-white"
           >
             <Leaf className="h-4 w-4" />

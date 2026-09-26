@@ -82,7 +82,8 @@ export const STATUS_COLORS = {
 
 export function getSectionAccent(pathname: string | null | undefined): SectionAccent {
   if (!pathname) return CARBON_EMBER_ACCENT;
-  const segment = pathname.split("/").filter(Boolean)[0] || "dashboard";
+  const segments = pathname.split("/").filter(Boolean);
+  const segment = (segments[0] === "app" ? segments[1] : segments[0]) || "dashboard";
   if (segment in SECTION_ACCENTS) {
     return SECTION_ACCENTS[segment];
   }

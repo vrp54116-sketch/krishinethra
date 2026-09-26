@@ -279,7 +279,7 @@ function answerWater(state: FarmState): KrishiGptAnswer {
     `Pump abhi ${state.pump.running ? "RUNNING hai" : `band hai (${state.pump.mode} mode)`}. ` +
     `Kya main pump chalane mein madad karoon?`;
 
-  return { text, actions: [pumpAction, link("goto-irrigation", "Go to Irrigation", "/irrigation")] };
+  return { text, actions: [pumpAction, link("goto-irrigation", "Go to Irrigation", "/app/irrigation")] };
 }
 
 function answerDisease(state: FarmState): KrishiGptAnswer {
@@ -295,7 +295,7 @@ function answerDisease(state: FarmState): KrishiGptAnswer {
       `Kya naya leaf scan karna hai?`;
     return {
       text,
-      actions: [link("goto-camera", "Scan a Leaf", "/camera"), link("goto-spray", "Spray Planner", "/spray")],
+      actions: [link("goto-camera", "Scan a Leaf", "/app/camera"), link("goto-spray", "Spray Planner", "/app/spray")],
     };
   }
 
@@ -317,7 +317,7 @@ function answerDisease(state: FarmState): KrishiGptAnswer {
 
   return {
     text,
-    actions: [link("goto-spray", "Open Spray Plan", "/spray"), link("goto-camera", "Scan New Leaf", "/camera")],
+    actions: [link("goto-spray", "Open Spray Plan", "/app/spray"), link("goto-camera", "Scan New Leaf", "/app/camera")],
   };
 }
 
@@ -347,7 +347,7 @@ function answerFertilizer(state: FarmState): KrishiGptAnswer {
     `Agli dose ${dueLine}. Aam sabzi cycle 15 din ka hai. Best time: subah 6-8 ya sham 5-7 baje, geeli mitti me. ` +
     `Exact g/plant dose (vermicompost + NPK) ke liye calculator use karo. Kya fertilizer calculator khol doon?`;
 
-  return { text, actions: [link("goto-fertilizer", "Open Calculator", "/fertilizer")] };
+  return { text, actions: [link("goto-fertilizer", "Open Calculator", "/app/fertilizer")] };
 }
 
 function answerWeather(state: FarmState): KrishiGptAnswer {
@@ -369,7 +369,7 @@ function answerWeather(state: FarmState): KrishiGptAnswer {
     `Aaj ka offline anumaan: max ~${f1(tMax)}°C / min ~${f1(tMin)}°C, barish chance ~${rainProb}%. ` +
     `${rainAdvice} Kya sinchai ki final salah moisture se jod kar bataoon?`;
 
-  return { text, actions: [link("goto-climate", "Open Climate", "/climate")] };
+  return { text, actions: [link("goto-climate", "Open Climate", "/app/climate")] };
 }
 
 function answerPump(state: FarmState): KrishiGptAnswer {
@@ -389,7 +389,7 @@ function answerPump(state: FarmState): KrishiGptAnswer {
     `Pump (LIVE): abhi ${p.running ? "RUNNING hai" : "band hai"}, mode ${p.mode === "auto" ? "Auto AI" : p.mode}. ` +
     `Aaj kul ${run} chala. Last run: ${fmtClock(p.lastRunAt)}. Soil moisture ${f1(soil)}%, Rain: ${s.rain ? "Yes" : "No"}. ${suggestion}`;
 
-  return { text, actions: [pumpAction, link("goto-irrigation", "Go to Irrigation", "/irrigation")] };
+  return { text, actions: [pumpAction, link("goto-irrigation", "Go to Irrigation", "/app/irrigation")] };
 }
 
 function answerTank(state: FarmState): KrishiGptAnswer {
@@ -399,14 +399,14 @@ function answerTank(state: FarmState): KrishiGptAnswer {
     `Tank update: Actual hardware configuration me ultrasonic tank sensor installed nahi hai. ` +
     `KrishiNethra directly aapke soil moisture sensor (${f1(soil)}%) aur rain sensor (${s.rain ? "Rain detected" : "Dry"}) ke zariye irrigation manage karta hai.`;
 
-  return { text, actions: [link("goto-irrigation", "Go to Irrigation", "/irrigation")] };
+  return { text, actions: [link("goto-irrigation", "Go to Irrigation", "/app/irrigation")] };
 }
 
 function answerReport(state: FarmState): KrishiGptAnswer {
   const para = generateDailyReport(state);
   const text =
     `${para}\n\nKisi khaas cheez par detail chahiye to poochho — jaise "Zone B ka paani" ya "rog ka ilaaj"?`;
-  return { text, actions: [link("goto-reports", "Open Reports", "/reports")] };
+  return { text, actions: [link("goto-reports", "Open Reports", "/app/reports")] };
 }
 
 function answerMarket(state: FarmState): KrishiGptAnswer {
@@ -440,7 +440,7 @@ function answerMarket(state: FarmState): KrishiGptAnswer {
     `Andaza: 20 kg ${first.crop} ≈ ${formatINR(estimateIncome(20, first.modal))} (modal rate par). ` +
     `Kya Market page par 7-day chart dekhna chahenge?`;
 
-  return { text, actions: [link("goto-market", "Open Market", "/market")] };
+  return { text, actions: [link("goto-market", "Open Market", "/app/market")] };
 }
 
 function answerScheme(state: FarmState): KrishiGptAnswer {
@@ -457,7 +457,7 @@ function answerScheme(state: FarmState): KrishiGptAnswer {
     `${top.scheme.shortName} (${top.scheme.name}): ${top.scheme.benefit} Kyun: ${top.reason} ` +
     `Apply: ${top.scheme.howToApply[0]} Kya top-3 schemes Schemes page par dekhni hain?`;
 
-  return { text, actions: [link("goto-schemes", "Open Schemes", "/schemes")] };
+  return { text, actions: [link("goto-schemes", "Open Schemes", "/app/schemes")] };
 }
 
 function answerHelp(): KrishiGptAnswer {

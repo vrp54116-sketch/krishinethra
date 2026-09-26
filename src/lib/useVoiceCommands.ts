@@ -347,7 +347,7 @@ export function executeVoiceCommand(
       spoken: hindi
         ? "पत्ती स्कैनर खोल रहा हूँ।"
         : "Opening leaf scanner.",
-      navigateTo: "/camera?tab=scanner",
+      navigateTo: "/app/camera?tab=scanner",
       success: true,
     };
   }
@@ -404,7 +404,7 @@ export function executeVoiceCommand(
       spoken: hindi
         ? `चेतावनी खोल रहा हूँ। ${unread} नई चेतावनी हैं।`
         : `Opening alerts. You have ${unread} unread alerts.`,
-      navigateTo: "/alerts",
+      navigateTo: "/app/alerts",
       success: true,
     };
   }
@@ -416,7 +416,7 @@ export function executeVoiceCommand(
       spoken: hindi
         ? "खेत का नक्शा खोल रहा हूँ।"
         : "Opening farm map.",
-      navigateTo: "/map",
+      navigateTo: "/app/map",
       success: true,
     };
   }

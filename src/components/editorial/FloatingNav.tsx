@@ -23,19 +23,20 @@ export interface FloatingNavProps {
 }
 
 const DEFAULT_LINKS: NavLinkItem[] = [
-  { label: "DASHBOARD", href: "/dashboard" },
-  { label: "SENSORS", href: "/sensors" },
-  { label: "IRRIGATION", href: "/irrigation" },
-  { label: "CLIMATE", href: "/climate" },
-  { label: "MARKET", href: "/market" },
+  { label: "OVERVIEW", href: "#overview" },
+  { label: "FIELD DECK", href: "#field-deck" },
+  { label: "CROP LEDGER", href: "#crop-ledger" },
+  { label: "AGENT GARDEN", href: "#agent-garden" },
+  { label: "HOW IT WORKS", href: "#how-it-works" },
+  { label: "FARM STUDIO", href: "#farm-studio" },
 ];
 
 export function FloatingNav({
-  logoText = "KRISHINETHRA",
-  logoHref = "/dashboard",
+  logoText = "KrishiNethra",
+  logoHref = "#overview",
   links = DEFAULT_LINKS,
-  ctaLabel = "COMM CENTER",
-  ctaHref = "/dashboard",
+  ctaLabel = "Try KrishiNethra AI ↗",
+  ctaHref = "/app/dashboard",
   onCtaClick,
   className,
 }: FloatingNavProps) {

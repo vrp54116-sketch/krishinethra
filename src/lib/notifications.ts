@@ -73,11 +73,11 @@ export function getAlertLink(alert: Pick<Alert, "title" | "message">): {
   label: string;
 } {
   const text = `${alert.title} ${alert.message}`;
-  if (JAL_RE.test(text)) return { href: "/irrigation", label: "Open Irrigation" };
-  if (ROG_RE.test(text)) return { href: "/camera", label: "Open Crop Doctor" };
-  if (VAYU_RE.test(text)) return { href: "/climate", label: "Open Climate" };
-  if (TASK_RE.test(text)) return { href: "/tasks", label: "Open Tasks" };
-  return { href: "/dashboard", label: "Open Dashboard" };
+  if (JAL_RE.test(text)) return { href: "/app/irrigation", label: "Open Irrigation" };
+  if (ROG_RE.test(text)) return { href: "/app/camera", label: "Open Crop Doctor" };
+  if (VAYU_RE.test(text)) return { href: "/app/climate", label: "Open Climate" };
+  if (TASK_RE.test(text)) return { href: "/app/tasks", label: "Open Tasks" };
+  return { href: "/app/dashboard", label: "Open Dashboard" };
 }
 
 /* ------------------------------------------------------------------ */

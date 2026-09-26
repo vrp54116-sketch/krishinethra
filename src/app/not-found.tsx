@@ -18,7 +18,7 @@ export default function NotFound() {
         </p>
         <div className="mt-6 flex flex-col gap-2">
           <Link
-            href="/dashboard"
+            href="/app/dashboard"
             className="btn-primary-aurora flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-bold text-black"
           >
             <Leaf className="h-4 w-4" />

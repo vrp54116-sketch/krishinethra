@@ -45,10 +45,15 @@ export function CreamButton({
     className,
   );
 
+  const hasArrowGlyph =
+    typeof content === "string" &&
+    (content.includes("↗") || content.includes("↘") || content.includes("→"));
+  const showArrow = arrow && !hasArrowGlyph;
+
   const inner = (
     <>
       <span className="leading-none">{content}</span>
-      {arrow && (
+      {showArrow && (
         <ArrowRight
           className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5"
           aria-hidden="true"

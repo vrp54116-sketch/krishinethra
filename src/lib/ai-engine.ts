@@ -741,7 +741,7 @@ export function suggestActions(state: DashboardAiState): Suggestion[] {
       icon: "water",
       score: 100,
       actionLabel: "Irrigate",
-      actionHref: "/irrigation",
+      actionHref: "/app/irrigation",
     });
   } else if (soilVal < t.moistureLow) {
     out.push({
@@ -752,7 +752,7 @@ export function suggestActions(state: DashboardAiState): Suggestion[] {
       icon: "water",
       score: 95,
       actionLabel: "Irrigate",
-      actionHref: "/irrigation",
+      actionHref: "/app/irrigation",
     });
   }
 
@@ -766,7 +766,7 @@ export function suggestActions(state: DashboardAiState): Suggestion[] {
       icon: "heat",
       score: 88,
       actionLabel: "Climate",
-      actionHref: "/climate",
+      actionHref: "/app/climate",
     });
   }
 
@@ -780,7 +780,7 @@ export function suggestActions(state: DashboardAiState): Suggestion[] {
       icon: "humidity",
       score: 76,
       actionLabel: "Scan leaf",
-      actionHref: "/camera",
+      actionHref: "/app/camera",
     });
   } else if (s.humidity < t.humidityLow) {
     out.push({
@@ -791,7 +791,7 @@ export function suggestActions(state: DashboardAiState): Suggestion[] {
       icon: "humidity",
       score: 70,
       actionLabel: "Irrigate",
-      actionHref: "/irrigation",
+      actionHref: "/app/irrigation",
     });
   }
 
@@ -805,7 +805,7 @@ export function suggestActions(state: DashboardAiState): Suggestion[] {
       icon: "air",
       score: 72,
       actionLabel: "Climate",
-      actionHref: "/climate",
+      actionHref: "/app/climate",
     });
   }
 
@@ -819,7 +819,7 @@ export function suggestActions(state: DashboardAiState): Suggestion[] {
       icon: "rain",
       score: 75,
       actionLabel: "Irrigation",
-      actionHref: "/irrigation",
+      actionHref: "/app/irrigation",
     });
   }
 
@@ -836,7 +836,7 @@ export function suggestActions(state: DashboardAiState): Suggestion[] {
       icon: "disease",
       score: scan.severity === "severe" ? 99 : scan.severity === "medium" ? 86 : 60,
       actionLabel: "Spray plan",
-      actionHref: "/spray",
+      actionHref: "/app/spray",
     });
   }
 
@@ -857,7 +857,7 @@ export function suggestActions(state: DashboardAiState): Suggestion[] {
       icon: "fertilizer",
       score: 45,
       actionLabel: "Planner",
-      actionHref: "/fertilizer",
+      actionHref: "/app/fertilizer",
     });
   }
 
@@ -871,7 +871,7 @@ export function suggestActions(state: DashboardAiState): Suggestion[] {
       icon: "rain",
       score: 65,
       actionLabel: "Climate",
-      actionHref: "/climate",
+      actionHref: "/app/climate",
     });
   }
 
@@ -884,7 +884,7 @@ export function suggestActions(state: DashboardAiState): Suggestion[] {
     icon: "scout",
     score: 15,
     actionLabel: "Farm map",
-    actionHref: "/map",
+    actionHref: "/app/map",
   });
 
   return out.sort((a, b) => b.score - a.score);
@@ -959,7 +959,7 @@ export function climateAdvice(
       icon: "heat",
       score: 98,
       actionLabel: "Irrigation",
-      actionHref: "/irrigation",
+      actionHref: "/app/irrigation",
     });
   }
 
@@ -973,7 +973,7 @@ export function climateAdvice(
       icon: "frost",
       score: 97,
       actionLabel: "Climate",
-      actionHref: "/climate",
+      actionHref: "/app/climate",
     });
   }
 
@@ -987,7 +987,7 @@ export function climateAdvice(
       icon: "fungus",
       score: 88,
       actionLabel: "Scan leaf",
-      actionHref: "/camera",
+      actionHref: "/app/camera",
     });
   }
 
@@ -1002,7 +1002,7 @@ export function climateAdvice(
       icon: "rain",
       score: 85,
       actionLabel: "Irrigation",
-      actionHref: "/irrigation",
+      actionHref: "/app/irrigation",
     });
   } else if (s.rainMm >= 0.3) {
     out.push({
@@ -1013,7 +1013,7 @@ export function climateAdvice(
       icon: "rain",
       score: 82,
       actionLabel: "Irrigation",
-      actionHref: "/irrigation",
+      actionHref: "/app/irrigation",
     });
   }
 
@@ -1048,7 +1048,7 @@ export function climateAdvice(
       icon: "spray",
       score: 60,
       actionLabel: "Spray plan",
-      actionHref: "/spray",
+      actionHref: "/app/spray",
     });
   }
 

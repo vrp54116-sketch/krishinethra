@@ -93,7 +93,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark h-full">
+    <html lang="en" className="dark h-full" data-theme="dark" suppressHydrationWarning>
       <head>
         {/* Inter via runtime stylesheet (non-blocking, offline-safe fallback) */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -117,7 +117,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="h-full bg-[var(--bg)] font-sans text-[var(--text)] antialiased overflow-hidden">
+      <body className="min-h-full bg-[var(--bg)] font-sans text-[var(--text)] antialiased">
         <AmbientBackground />
         {children}
         <AppToaster />
