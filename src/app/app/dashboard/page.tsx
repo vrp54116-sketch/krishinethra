@@ -35,6 +35,9 @@ export default function DashboardPage() {
 
   return (
     <LiquidStaggerContainer className="mx-auto w-full max-w-7xl space-y-4">
+      {/* Accessible h1 heading for Lighthouse */}
+      <h1 className="sr-only">KrishiNethra Farm Command Center Dashboard</h1>
+
       {/* 0. PERSONALIZED GREETING - ONE ROW (height ≤56px) */}
       {(profile?.farmerName || profile?.farmName) && (
         <LiquidStaggerItem>

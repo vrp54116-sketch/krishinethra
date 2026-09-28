@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
     // Webcam snapshots are data URLs; keep remote formats modern + lean.
     formats: ["image/avif", "image/webp"],
   },
+  compress: true,
+  poweredByHeader: false,
   async redirects() {
     return [
       { source: "/dashboard", destination: "/app/dashboard", permanent: true },

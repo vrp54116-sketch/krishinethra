@@ -209,7 +209,7 @@ function LogoBlock({ className }: { className?: string }) {
         KrishiNethra
       </span>
       <span className="font-editorial-mono text-[10px] font-bold text-[var(--ink-3)] uppercase tracking-[0.12em]">
-        VER 4.0.0
+        SYSTEM VER 4.0.0
       </span>
     </div>
   );

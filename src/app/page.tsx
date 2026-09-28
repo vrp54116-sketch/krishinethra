@@ -31,6 +31,7 @@ import {
   CreamButton,
 } from "@/components/editorial";
 import { logAnalyticsEvent } from "@/lib/analytics";
+import { cn } from "@/lib/utils";
 
 /* --------------------------------------------------------------------------
    SIMULATOR CALCULATOR LOGIC
@@ -1454,22 +1455,30 @@ Stop watering guesses. Start growing data.`}
               const isOpen = Boolean(faqOpen[idx]);
               return (
                 <div key={idx} className="py-5 flex flex-col gap-3">
-                  <div
+                  <button
+                    type="button"
                     onClick={() => toggleFaq(idx)}
-                    className="flex items-center justify-between gap-4 cursor-pointer select-none group"
+                    aria-expanded={isOpen}
+                    aria-controls={`faq-answer-${idx}`}
+                    className="w-full flex items-center justify-between gap-4 text-left cursor-pointer select-none group bg-transparent border-0 p-0"
                   >
                     <h3 className="font-editorial-display text-base sm:text-lg font-bold text-[var(--ink)] group-hover:text-[var(--terra)] transition-colors">
                       {item.q}
                     </h3>
-                    <SquareToggle
-                      icon={isOpen ? <X className="w-4 h-4 text-[var(--terra)]" /> : <Plus className="w-4 h-4" />}
-                      active={isOpen}
-                      onClick={() => toggleFaq(idx)}
-                      ariaLabel={isOpen ? "Collapse question" : "Expand question"}
-                    />
-                  </div>
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "w-10 h-10 shrink-0 inline-flex items-center justify-center border border-[var(--line)] rounded-[2px] bg-[var(--panel)] text-[var(--ink-2)] transition-all duration-200",
+                        "group-hover:text-[var(--ink)] group-hover:border-[var(--ink-2)] group-hover:bg-[var(--panel-2)]",
+                        isOpen && "border-[var(--terra)] text-[var(--ink)] bg-[var(--terra-soft)]",
+                      )}
+                    >
+                      {isOpen ? <X className="w-4 h-4 text-[var(--terra)]" /> : <Plus className="w-4 h-4" />}
+                    </span>
+                  </button>
                   {isOpen && (
                     <motion.p
+                      id={`faq-answer-${idx}`}
                       initial={{ opacity: 0, y: -4 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.2 }}

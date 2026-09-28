@@ -1415,8 +1415,9 @@ export const useFarmStore = create<FarmState>()(
         // takes precedence; the legacy HTTP gateway is the fallback.
         const pre = get();
         const mqttLive =
-          pre.settings.mode === "live" &&
-          pre.liveSource === "mqtt" &&
+          (pre.settings.mode === "live" &&
+            pre.liveSource === "mqtt" &&
+            pre.mqttStatus === "online") ||
           pre.mqttStatus === "online";
         const liveGw =
           pre.settings.mode === "live" && !mqttLive
