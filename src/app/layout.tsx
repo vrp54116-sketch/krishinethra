@@ -20,9 +20,9 @@ import "../lib/editorial.css";
 // runtime via <link> below with a system-font fallback, so the build is
 // fully offline-safe.
 
-const SITE_TITLE = "KrishiNethra AI v2 — Liquid Glass Smart Farm";
+const SITE_TITLE = "KrishiNethra AI — Stop the guesswork. Start the growth.";
 const SITE_DESCRIPTION =
-  "KrishiNethra AI v2 liquid glass edition — Har Khet Ka AI Doctor: offline-first smart farm command center with live sensors, AI agent reasoning, irrigation, weather, market and ESP32 MQTT edge control from anywhere.";
+  "KrishiNethra AI — Stop the guesswork. Start the growth. Har Khet Ka AI Doctor: offline-first smart farm command center with live sensors, AI agent reasoning, and edge irrigation control.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -30,25 +30,26 @@ export const metadata: Metadata = {
   ),
   title: {
     default: SITE_TITLE,
-    template: "%s • KrishiNethra AI v2",
+    template: "%s • KrishiNethra AI",
   },
   description: SITE_DESCRIPTION,
   applicationName: "KrishiNethra AI",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "KrishiNethra",
+    title: "KrishiNethra AI",
     statusBarStyle: "black-translucent",
   },
   formatDetection: { telephone: false },
   keywords: [
     "smart farm",
     "precision agriculture",
-    "liquid glass",
+    "edge ai",
     "ESP32",
     "MQTT",
     "irrigation",
     "KrishiNethra",
+    "KrishiNethra AI",
   ],
   icons: {
     icon: [
@@ -60,14 +61,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    siteName: "KrishiNethra AI v2",
+    siteName: "KrishiNethra AI",
     type: "website",
     images: [
       {
-        url: "/icon-512.png",
-        width: 512,
-        height: 512,
-        alt: "KrishiNethra AI v2 liquid glass smart farm",
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "KrishiNethra AI — Stop the guesswork. Start the growth.",
       },
     ],
   },
@@ -75,12 +76,12 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    images: ["/icon-512.png"],
+    images: ["/og-image.png"],
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#070B09",
+  themeColor: "#0A0F0B",
   colorScheme: "dark",
   width: "device-width",
   initialScale: 1,

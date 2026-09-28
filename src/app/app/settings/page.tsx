@@ -38,6 +38,7 @@ import BuzzerPatternTester from "@/components/alerts/BuzzerPatternTester";
 import LcdMessageSender from "@/components/settings/LcdMessageSender";
 import CommandLogCard from "@/components/settings/CommandLogCard";
 import SensorCalibrationCard from "@/components/settings/SensorCalibrationCard";
+import DiagnosticsCard from "@/components/settings/DiagnosticsCard";
 import ThemeToggle, { useTheme, applyTheme } from "@/components/ui/glass/ThemeToggle";
 
 function Rise({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
@@ -577,6 +578,11 @@ export default function SettingsPage() {
           <CommandLogCard />
         </Rise>
       </div>
+
+      {/* ============ DIAGNOSTICS & ANALYTICS COUNTERS ============ */}
+      <Rise delay={0.13}>
+        <DiagnosticsCard />
+      </Rise>
 
       {/* ============ 1. FARM PROFILE ============ */}
       <Rise delay={0.14}>

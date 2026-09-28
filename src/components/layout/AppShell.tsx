@@ -422,8 +422,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <div className="relative z-10 flex h-full min-w-0 flex-1 flex-col">
         {/* Top Header: Editorial bordered panel, 0 radius */}
         <header className="shrink-0 z-40 w-full border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5 flex items-center justify-between gap-3 rounded-none m-0">
-          {/* Left: ChapterLabel-style page stamp */}
-          <div className="flex items-center gap-3 min-w-0">
+          {/* Left: Overview link & ChapterLabel-style page stamp */}
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1 font-editorial-mono text-[11px] uppercase tracking-[0.14em] text-[var(--ink-2)] hover:text-[var(--terra)] border border-[var(--line)] bg-[var(--panel-2)] px-2 py-1 sm:px-2.5 sm:py-1 transition-colors select-none shrink-0"
+              title="Return to Marketing Overview"
+            >
+              ← BACK TO OVERVIEW
+            </Link>
             <div className="flex h-7 w-7 shrink-0 items-center justify-center border border-[var(--line)] bg-[var(--panel-2)] md:hidden">
               <Leaf className="h-3.5 w-3.5 text-[var(--terra)]" />
             </div>
@@ -675,7 +682,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             >
               <div className="mb-4 flex items-center justify-between border-b border-[var(--line)] pb-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-[var(--terra)]">
-                  {t("nav.more")} // NAVIGATION
+                  {`${t("nav.more")} // NAVIGATION`}
                 </span>
                 <button
                   type="button"

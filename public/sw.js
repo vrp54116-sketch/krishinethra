@@ -2,15 +2,24 @@
  * Data itself lives in localStorage (zustand persist), so once the shell
  * is cached the app OPENS and runs fully offline.
  */
-const CACHE = "krishinethra-v1";
+const CACHE = "krishinethra-v2";
 const APP_SHELL = [
   "/",
-  "/dashboard",
+  "/app",
+  "/app/dashboard",
+  "/app/sensors",
+  "/app/irrigation",
+  "/app/climate",
+  "/app/market",
+  "/app/tasks",
+  "/app/alerts",
+  "/app/settings",
   "/offline",
   "/manifest.webmanifest",
   "/icon-192.png",
   "/icon-512.png",
   "/apple-touch-icon.png",
+  "/og-image.png",
 ];
 
 self.addEventListener("install", (event) => {
@@ -58,7 +67,8 @@ self.addEventListener("fetch", (event) => {
           if (cached) return cached;
           const offline =
             (await caches.match("/offline")) ||
-            (await caches.match("/dashboard")) ||
+            (await caches.match("/app/dashboard")) ||
+            (await caches.match("/app")) ||
             (await caches.match("/"));
           if (offline) return offline;
           return new Response("Offline — KrishiNethra AI needs a connection for this page.", {

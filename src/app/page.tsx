@@ -30,6 +30,7 @@ import {
   SquareToggle,
   CreamButton,
 } from "@/components/editorial";
+import { logAnalyticsEvent } from "@/lib/analytics";
 
 /* --------------------------------------------------------------------------
    SIMULATOR CALCULATOR LOGIC
@@ -143,6 +144,7 @@ export default function MarketingLandingPage() {
     e.preventDefault();
     if (!email || !email.includes("@")) return;
     setRequestSubmitted(true);
+    logAnalyticsEvent("queue_signup", { email });
   };
 
   // Chapter 09: FAQ Open/Close state
@@ -166,6 +168,7 @@ export default function MarketingLandingPage() {
         links={navLinks}
         ctaLabel="Try KrishiNethra AI ↗"
         ctaHref="/app/dashboard"
+        onCtaClick={() => logAnalyticsEvent("try_krishinethra", { source: "floating_nav" })}
       />
 
       {/* ====================================================================
@@ -214,6 +217,7 @@ export default function MarketingLandingPage() {
               label="Try KrishiNethra AI ↘"
               arrow={false}
               href="/app/dashboard"
+              onClick={() => logAnalyticsEvent("try_krishinethra", { source: "hero" })}
               className="py-3 px-6 text-xs sm:text-sm font-bold shadow-[3px_3px_0_var(--terra)]"
             />
             <GhostChip
@@ -718,7 +722,7 @@ Stop watering guesses. Start growing data.`}
                 <CreamButton
                   label="Execute GROW ↗"
                   arrow={false}
-                  href="/app/irrigation"
+                  href="/app/dashboard"
                   className="py-2.5 px-5"
                 />
               </div>
@@ -887,6 +891,13 @@ Stop watering guesses. Start growing data.`}
                     label="Reclaim mine → →"
                     arrow={false}
                     href="/app/dashboard"
+                    onClick={() =>
+                      logAnalyticsEvent("reclaim_mine", {
+                        farmSize,
+                        irrigationHours,
+                        annualLossRupees: computedMetrics.annualLossRupees,
+                      })
+                    }
                     className="py-2.5 px-5"
                   />
                 </div>
