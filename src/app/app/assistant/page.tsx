@@ -1,410 +1,461 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { motion } from "framer-motion";
-import {
-  ArrowUpRight,
-  Info,
-  MessageCircle,
-  Mic,
-  Send,
-  Volume2,
-  VolumeX,
-  Zap,
-} from "lucide-react";
-import { toast } from "sonner";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Mic, Send, Square, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useFarmStore } from "@/lib/store";
+import { useFarmStore, type FarmSource } from "@/lib/store";
 import { useT } from "@/lib/i18n";
-import {
-  QUICK_QUESTIONS,
-  askKrishiGPTDetailed,
-  type KrishiGptAction,
-} from "@/lib/krishi-gpt";
-import { Card, CardHeader, useMounted } from "@/components/dashboard/ui";
+import { Card, CardHeader } from "@/components/dashboard/ui";
 
-function voiceLang(lang: string): string {
-  switch (lang) {
-    case "hi":
-      return "hi-IN";
-    case "gu":
-      return "gu-IN";
-    case "mr":
-      return "mr-IN";
-    default:
-      return "en-IN";
-  }
-}
-
-function fmtTime(ts: number): string {
-  return new Date(ts).toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-interface SpeechRec {
+type ChatRole = "user" | "assistant";
+type ChatMessage = {
+  id: string;
+  role: ChatRole;
+  text: string;
+  offline?: boolean;
+};
+type FarmContext = {
+  soil: number;
+  temp: number;
+  hum: number;
+  aqi: number;
+  rain: boolean;
+  pump: boolean;
+  mode: string;
+};
+type SpeechRecognitionResultItem = { transcript: string };
+type SpeechRecognitionEventLike = {
+  resultIndex: number;
+  results: ArrayLike<{ isFinal: boolean; 0: SpeechRecognitionResultItem }>;
+};
+interface SpeechRecognitionLike {
   lang: string;
   interimResults: boolean;
   maxAlternatives: number;
-  onresult: ((e: { results: { 0: { 0: { transcript: string } } } }) => void) | null;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
   onend: (() => void) | null;
   onerror: (() => void) | null;
-  start: () => void;
-  stop: () => void;
+  start(): void;
+  stop(): void;
 }
+type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
-function getSpeechRecognition(): (new () => SpeechRec) | null {
-  if (typeof window === "undefined") return null;
-  const w = window as unknown as {
-    webkitSpeechRecognition?: new () => SpeechRec;
-    SpeechRecognition?: new () => SpeechRec;
+const SUGGESTIONS = [
+  "What is farming?",
+  "Why do tomato leaves curl?",
+  "How much urea for 10 tomato plants?",
+  "Explain MQTT like I'm 5",
+  "What is the weather risk this week?",
+];
+
+const OFFLINE_ANSWERS: Array<{ terms: string[]; answer: string }> = [
+  {
+    terms: ["leaf curl", "curling leaves", "leaves curl"],
+    answer:
+      "Tomato leaf curl can come from whiteflies carrying a virus, heat, or uneven watering. Check the undersides of leaves for whiteflies, remove badly affected plants, keep weeds down, and use insect netting where possible. Neem oil at 5 ml per litre can help reduce soft-bodied pests; test a few leaves first and spray in the evening.",
+  },
+  {
+    terms: ["blight", "late blight", "early blight"],
+    answer:
+      "For suspected tomato blight, remove spotted leaves and fruit and discard them away from the field. Avoid wetting leaves, water near the soil in the morning, and give plants good airflow. Blight can spread quickly in wet weather; confirm the disease locally before choosing a treatment.",
+  },
+  {
+    terms: ["watering", "water tomato", "irrigat", "weather risk", "weather this week"],
+    answer:
+      "Water tomatoes deeply near the roots when the top layer of soil begins to dry. Keep moisture steady, especially while plants flower and fruit, and avoid frequent shallow watering. Your offline knowledge base has no forecast, so it cannot assess this week's rain risk.",
+  },
+  {
+    terms: ["urea", "nitrogen dose", "fertilizer dose"],
+    answer:
+      "Urea needs vary with soil tests, crop stage, and other fertilizers already applied, so a safe per-plant dose cannot be set from plant count alone. Avoid applying it directly against stems or just before heavy rain. Ask your local agriculture officer for a soil-test-based dose; organic compost is a gentler first step.",
+  },
+];
+
+function currentFarmContext(): FarmContext {
+  const state = useFarmStore.getState();
+  const live = state.live;
+  const activeLive: boolean = (state.source as FarmSource) === "LIVE" || state.settings.mode === "live";
+  const snapshot = state.snapshot;
+  return {
+    soil: activeLive
+      ? live?.soil ?? snapshot.soil ?? snapshot.soilMoistureB
+      : snapshot.soil ?? snapshot.soilMoistureA,
+    temp: activeLive ? live?.temp ?? snapshot.temp ?? snapshot.tempC : snapshot.temp ?? snapshot.tempC,
+    hum: activeLive
+      ? live?.hum ?? snapshot.hum ?? snapshot.humidity
+      : snapshot.hum ?? snapshot.humidity,
+    aqi: activeLive ? live?.aqi ?? snapshot.aqi : snapshot.aqi,
+    rain: activeLive ? Boolean(live?.rain ?? snapshot.rain) : Boolean(snapshot.rain),
+    pump: activeLive ? Boolean(live?.pump ?? state.pump.running) : state.pump.running,
+    mode: activeLive
+      ? live?.mode ?? (state.pump.mode === "auto" ? "AUTO" : "MANUAL")
+      : state.pump.mode.toUpperCase(),
   };
-  return w.webkitSpeechRecognition ?? w.SpeechRecognition ?? null;
 }
 
-/**
- * /assistant — KrishiGPT chat. Offline rule-based engine answers from live
- * farm data; chat persists in the store; mic fills the input; voice output
- * reads answers aloud; action chips (pump / links / follow-ups) work inline.
- */
-export default function AssistantPage() {
+function recognitionConstructor(): SpeechRecognitionConstructor | null {
+  if (typeof window === "undefined") return null;
+  const target = window as Window & {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  };
+  return target.SpeechRecognition ?? target.webkitSpeechRecognition ?? null;
+}
+
+function recognitionLanguage(language: string): string {
+  return ({ hi: "hi-IN", gu: "gu-IN", mr: "mr-IN" } as Record<string, string>)[language] ?? "en-IN";
+}
+
+function speechLanguage(language: string): string {
+  return language === "hi" ? "hi-IN" : "en-IN";
+}
+
+function offlineAnswer(question: string): string {
+  const normalized = question.toLowerCase();
   return (
-    <Suspense fallback={null}>
-      <AssistantInner />
-    </Suspense>
+    OFFLINE_ANSWERS.find(({ terms }) => terms.some((term) => normalized.includes(term)))?.answer ??
+    "I cannot answer that from the small offline tomato knowledge base. Reconnect to Gemini to ask this question."
   );
 }
 
-function AssistantInner() {
+export default function AssistantPage() {
   const t = useT();
-  const router = useRouter();
-  const mounted = useMounted();
   const searchParams = useSearchParams();
-  const queryParam = searchParams?.get("q") ?? searchParams?.get("query") ?? "";
-
-  const chat = useFarmStore((s) => s.chat);
-  const settings = useFarmStore((s) => s.settings);
-  const addChatMessage = useFarmStore((s) => s.addChatMessage);
-  const setPumpManual = useFarmStore((s) => s.setPumpManual);
-  const updateSettings = useFarmStore((s) => s.updateSettings);
-
-  const [input, setInput] = useState(queryParam);
+  const query = searchParams?.get("q") ?? searchParams?.get("query") ?? "";
+  const language = useFarmStore((state) => state.settings.language);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState(query);
   const [typing, setTyping] = useState(false);
   const [listening, setListening] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const recRef = useRef<SpeechRec | null>(null);
-  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [eli5, setEli5] = useState(false);
+  const [readAloud, setReadAloud] = useState(false);
+  const [activeSpeech, setActiveSpeech] = useState<string | null>(null);
+  const [hasRecognition, setHasRecognition] = useState(false);
+  const [farmContext, setFarmContext] = useState<FarmContext | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const interimRef = useRef("");
 
   useEffect(() => {
-    if (queryParam) {
-      setInput(queryParam);
-    }
-  }, [queryParam]);
+    setFarmContext(currentFarmContext());
+    setHasRecognition(Boolean(recognitionConstructor()));
+    setEli5(localStorage.getItem("krishigpt-eli5") === "true");
+    setReadAloud(localStorage.getItem("krishigpt-read-aloud") === "true");
+  }, []);
 
-  const speak = (text: string, lang: string) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const synth = window.speechSynthesis;
-    synth.cancel();
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = voiceLang(lang);
-    synth.speak(utter);
-  };
+  useEffect(() => {
+    if (query) setInput(query);
+  }, [query]);
 
-  // Stop any speech when leaving the page.
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, typing]);
+
   useEffect(() => {
     return () => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
-      if (typingTimer.current) clearTimeout(typingTimer.current);
-      recRef.current?.stop();
+      recognitionRef.current?.stop();
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
     };
   }, []);
 
-  // Auto-scroll to the latest message.
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [chat.length, typing]);
+  const stopSpeech = useCallback(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    setActiveSpeech(null);
+  }, []);
 
-  const send = (raw: string) => {
-    const q = raw.trim();
-    if (!q || typing) return;
-    addChatMessage({ role: "user", text: q });
-    setInput("");
-    setTyping(true);
-    typingTimer.current = setTimeout(() => {
-      const st = useFarmStore.getState();
-      const ans = askKrishiGPTDetailed(q, st);
-      addChatMessage({ role: "assistant", text: ans.text, actions: ans.actions });
+  const speak = useCallback(
+    (id: string, text: string) => {
+      if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = speechLanguage(language);
+      utterance.rate = 0.9;
+      utterance.onend = () => setActiveSpeech((current) => (current === id ? null : current));
+      utterance.onerror = () => setActiveSpeech((current) => (current === id ? null : current));
+      setActiveSpeech(id);
+      window.speechSynthesis.speak(utterance);
+    },
+    [language],
+  );
+
+  const send = useCallback(
+    async (raw: string) => {
+      const question = raw.trim();
+      if (!question || typing) return;
+
+      const userMessage: ChatMessage = {
+        id: `${Date.now()}-user`,
+        role: "user",
+        text: question,
+      };
+      const previousMessages = messages;
+      setMessages((current) => [...current, userMessage]);
+      setInput("");
+      if (inputRef.current) inputRef.current.style.height = "auto";
+      setTyping(true);
+      const liveContext = currentFarmContext();
+      setFarmContext(liveContext);
+
+      let answer: string;
+      let offline = false;
+      try {
+        const response = await fetch("/api/gemini", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: question,
+            history: previousMessages
+              .map(({ role, text }) => ({ role, text })),
+            eli5,
+            lang: language,
+            context: liveContext,
+          }),
+        });
+        const payload = (await response.json()) as { reply?: string; error?: string };
+        if (!response.ok || !payload.reply) throw new Error(payload.error || "Gemini request failed");
+        answer = payload.reply;
+      } catch {
+        answer = offlineAnswer(question);
+        offline = true;
+      }
+
+      const assistantMessage: ChatMessage = {
+        id: `${Date.now()}-assistant`,
+        role: "assistant",
+        text: answer,
+        offline,
+      };
+      setMessages((current) => [...current, assistantMessage]);
       setTyping(false);
-      if (st.settings.voiceOutput) speak(ans.text, st.settings.language);
-    }, 800);
-  };
-
-  const handleAction = (a: KrishiGptAction) => {
-    if (a.kind === "link" && a.href) {
-      router.push(a.href);
-      return;
-    }
-    if (a.kind === "ask") {
-      send(a.label);
-      return;
-    }
-    if (a.kind === "pump10") {
-      const st = useFarmStore.getState();
-      const soilVal = st.snapshot?.soil ?? 45;
-      setPumpManual(true, 10);
-      const msg =
-        `✅ Pump started for 10 seconds. Soil moisture ${soilVal.toFixed(1)}% ` +
-        `se nami badh rahi hai. 10 sec baad pump apne-aap band ho jayega. ` +
-        `Aur paani chahiye to dobara dabayein?`;
-      addChatMessage({ role: "assistant", text: msg, actions: [] });
-      toast.success("Pump ON for 10s");
-      if (st.settings?.voiceOutput) speak("Pump started for 10 seconds.", st.settings?.language ?? "en");
-    }
-  };
+      if (readAloud) speak(assistantMessage.id, answer);
+    },
+    [eli5, language, messages, readAloud, speak, typing],
+  );
 
   const toggleMic = () => {
-    const SR = getSpeechRecognition();
-    if (!SR) {
-      toast.error("Voice input not supported in this browser");
-      return;
-    }
     if (listening) {
-      recRef.current?.stop();
+      recognitionRef.current?.stop();
       setListening(false);
       return;
     }
-    try {
-      const rec = new SR();
-      rec.lang = voiceLang(settings.language);
-      rec.interimResults = false;
-      rec.maxAlternatives = 1;
-      rec.onresult = (e) => {
-        const t = e.results[0][0].transcript;
-        if (t) setInput(t);
-      };
-      rec.onend = () => setListening(false);
-      rec.onerror = () => {
-        setListening(false);
-        toast.error("Mic error — please try again");
-      };
-      recRef.current = rec;
-      rec.start();
-      setListening(true);
-    } catch {
-      toast.error("Mic error — please try again");
-    }
+    const Recognition = recognitionConstructor();
+    if (!Recognition) return;
+    const recognition = new Recognition();
+    recognition.lang = recognitionLanguage(language);
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    interimRef.current = "";
+    recognition.onresult = (event) => {
+      let finalTranscript = "";
+      let interimTranscript = "";
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        if (result.isFinal) finalTranscript += result[0].transcript;
+        else interimTranscript += result[0].transcript;
+      }
+      interimRef.current += finalTranscript;
+      setInput(`${interimRef.current} ${interimTranscript}`.trimStart());
+      if (finalTranscript.trim()) void send(`${interimRef.current} ${interimTranscript}`);
+    };
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => setListening(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setListening(true);
   };
 
-  const toggleVoice = () => {
-    const next = !settings.voiceOutput;
-    updateSettings({ voiceOutput: next });
-    if (!next && typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
-    toast.success(next ? "Voice output ON" : "Voice output OFF");
+  const toggleEli5 = () => {
+    setEli5((current) => {
+      localStorage.setItem("krishigpt-eli5", String(!current));
+      return !current;
+    });
+  };
+
+  const toggleReadAloud = () => {
+    setReadAloud((current) => {
+      localStorage.setItem("krishigpt-read-aloud", String(!current));
+      if (current) stopSpeech();
+      return !current;
+    });
   };
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-3">
-      {/* Header note */}
-      <div className="flex items-start gap-2 rounded-2xl border border-sky-500/25 bg-sky-500/[0.06] p-3">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-300">
-          <Info className="h-4 w-4" />
-        </span>
-        <p className="text-xs leading-relaxed text-sky-100/80">
-          KrishiGPT v1.0 — offline rule-based engine. Future: connected to agricultural
-          knowledge base.
-        </p>
-      </div>
-
       <Card className="flex flex-col">
         <CardHeader
           title={t("assistant.title")}
-          subtitle={t("assistant.subtitle")}
+          subtitle="Ask KrishiGPT about farming or anything else"
           action={
             <button
               type="button"
-              onClick={toggleVoice}
-              aria-label={settings.voiceOutput ? "Mute voice output" : "Enable voice output"}
-              title={settings.voiceOutput ? "Voice output ON" : "Voice output OFF"}
+              onClick={toggleReadAloud}
+              aria-pressed={readAloud}
               className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-xl border transition-all",
-                settings.voiceOutput
-                  ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-200 shadow-[0_0_16px_rgba(34,197,94,0.4)]"
-                  : "border-white/10 bg-white/[0.03] text-zinc-400 hover:border-emerald-500/40 hover:text-emerald-200",
+                "flex h-9 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-all",
+                readAloud
+                  ? "border-emerald-400/60 bg-emerald-500/20 text-emerald-100"
+                  : "border-white/10 bg-white/[0.03] text-zinc-400 hover:text-white",
               )}
             >
-              {settings.voiceOutput ? (
-                <Volume2 className="h-4 w-4" />
-              ) : (
-                <VolumeX className="h-4 w-4" />
-              )}
+              {readAloud ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              Read aloud
             </button>
           }
         />
 
-        {/* Quick question chips */}
-        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2">
-          {QUICK_QUESTIONS.map((q) => (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 px-1 py-3">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-200">
+            <input
+              type="checkbox"
+              checked={eli5}
+              onChange={toggleEli5}
+              className="h-4 w-4 accent-emerald-400"
+            />
+            Explain Like I&apos;m 5
+          </label>
+          <span className="text-xs text-zinc-500">
+            {farmContext
+              ? `Farm context ready · ${farmContext.soil.toFixed(0)}% soil moisture · ${farmContext.temp.toFixed(1)}°C`
+              : "Loading farm context…"}
+          </span>
+        </div>
+
+        <div className="-mx-1 flex gap-2 overflow-x-auto px-1 py-3">
+          {SUGGESTIONS.map((suggestion) => (
             <button
-              key={q}
+              key={suggestion}
               type="button"
-              onClick={() => send(q)}
+              onClick={() => void send(suggestion)}
               disabled={typing}
-              className="shrink-0 whitespace-nowrap rounded-full border border-emerald-500/30 bg-emerald-500/[0.07] px-3 py-1.5 text-xs font-semibold text-emerald-100 transition-all hover:bg-emerald-500/20 active:scale-[0.97] disabled:opacity-50"
+              className="shrink-0 whitespace-nowrap rounded-full border border-emerald-500/30 bg-emerald-500/[0.07] px-3 py-1.5 text-xs font-semibold text-emerald-100 transition-all hover:bg-emerald-500/20 disabled:opacity-50"
             >
-              {q}
+              {suggestion}
             </button>
           ))}
         </div>
 
-        {/* Messages */}
-        <div
-          ref={scrollRef}
-          className="h-[52vh] space-y-3 overflow-y-auto py-2 pr-1 sm:h-[56vh]"
-        >
-          {chat.map((m, i) => {
-            const key = `${m.timestamp}-${i}`;
-            if (m.role === "user") {
-              return (
-                <motion.div
-                  key={key}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex justify-end"
-                >
-                  <div className="max-w-[85%]">
-                    <div className="whitespace-pre-wrap rounded-2xl rounded-br-md bg-emerald-500 px-3 py-2.5 text-sm font-medium leading-relaxed text-black shadow-[0_0_16px_rgba(34,197,94,0.3)]">
-                      {m.text}
-                    </div>
-                    <p className="mt-1 text-right text-[10px] text-zinc-600">
-                      {mounted ? fmtTime(m.timestamp) : " "}
-                    </p>
-                  </div>
-                </motion.div>
-              );
-            }
-            const actions: KrishiGptAction[] = m.actions ?? [];
-            return (
-              <motion.div
-                key={key}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
-                className="flex items-end gap-2"
-              >
-                <span
-                  aria-hidden
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10 text-base"
-                >
+        <div className="h-[52vh] space-y-3 overflow-y-auto py-2 pr-1 sm:h-[56vh]" aria-live="polite">
+          {messages.length === 0 && (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm leading-relaxed text-zinc-300">
+              Namaste! I&apos;m KrishiGPT. Ask a farming question or anything you&apos;re curious about.
+            </div>
+          )}
+          {messages.map((message) => (
+            <div
+              key={message.id}
+              className={cn("flex", message.role === "user" ? "justify-end" : "items-end gap-2")}
+            >
+              {message.role === "assistant" && (
+                <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10 text-base">
                   🌾
                 </span>
-                <div className="max-w-[85%]">
-                  <div className="whitespace-pre-wrap rounded-2xl rounded-bl-md border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm leading-relaxed text-zinc-100">
-                    {m.text}
+              )}
+              <div className="max-w-[88%]">
+                {message.offline && (
+                  <div className="mb-2 rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs font-semibold leading-relaxed text-amber-200">
+                    Gemini unreachable — showing offline knowledge base answer
                   </div>
-                  {actions.length > 0 && (
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      {actions.map((a) => (
-                        <button
-                          key={a.id}
-                          type="button"
-                          onClick={() => handleAction(a)}
-                          className="flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold text-emerald-200 transition-all hover:bg-emerald-500/25 active:scale-[0.97]"
-                        >
-                          {a.kind === "pump10" ? (
-                            <Zap className="h-3 w-3" />
-                          ) : a.kind === "link" ? (
-                            <ArrowUpRight className="h-3 w-3" />
-                          ) : (
-                            <MessageCircle className="h-3 w-3" />
-                          )}
-                          {a.label}
-                        </button>
-                      ))}
-                    </div>
+                )}
+                <div
+                  className={cn(
+                    "whitespace-pre-wrap rounded-2xl px-3 py-2.5 text-sm leading-relaxed transition-shadow",
+                    message.role === "user"
+                      ? "rounded-br-md bg-emerald-500 font-medium text-black shadow-[0_0_16px_rgba(34,197,94,0.3)]"
+                      : "rounded-bl-md border border-white/10 bg-white/[0.04] text-zinc-100",
+                    activeSpeech === message.id && "border-emerald-300 bg-emerald-500/15 shadow-[0_0_22px_rgba(52,211,153,0.3)]",
                   )}
-                  <p className="mt-1 text-[10px] text-zinc-600">
-                    {mounted ? fmtTime(m.timestamp) : " "}
-                  </p>
+                >
+                  {message.text}
                 </div>
-              </motion.div>
-            );
-          })}
-
-          {/* Typing indicator */}
+                {message.role === "assistant" && (
+                  <div className="mt-1.5 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => speak(message.id, message.text)}
+                      className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-zinc-300 hover:border-emerald-400/40 hover:text-emerald-100"
+                    >
+                      Listen
+                    </button>
+                    <button
+                      type="button"
+                      onClick={stopSpeech}
+                      className="flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-zinc-300 hover:border-red-400/40 hover:text-red-100"
+                    >
+                      <Square className="h-3 w-3" /> Stop
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
           {typing && (
             <div className="flex items-end gap-2">
-              <span
-                aria-hidden
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10 text-base"
-              >
-                🌾
-              </span>
-              <div
-                aria-label="KrishiGPT typing"
-                className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-white/10 bg-white/[0.04] px-4 py-3.5"
-              >
-                {[0, 1, 2].map((d) => (
-                  <span
-                    key={d}
-                    className="h-2 w-2 animate-bounce rounded-full bg-emerald-400"
-                    style={{ animationDelay: `${d * 0.15}s` }}
-                  />
+              <span aria-hidden className="flex h-8 w-8 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10">🌾</span>
+              <div aria-label="KrishiGPT is thinking" className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-white/10 bg-white/[0.04] px-4 py-3.5">
+                {[0, 1, 2].map((dot) => (
+                  <span key={dot} className="h-2 w-2 animate-bounce rounded-full bg-emerald-400" style={{ animationDelay: `${dot * 0.15}s` }} />
                 ))}
               </div>
             </div>
           )}
+          <div ref={bottomRef} />
         </div>
 
-        {/* Input row */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            send(input);
-          }}
-          className="mt-2 flex items-center gap-2 border-t border-white/5 pt-3"
-        >
-          <button
-            type="button"
-            onClick={toggleMic}
-            aria-label={listening ? "Stop listening" : "Voice input"}
-            title={`Mic (${voiceLang(settings.language)})`}
-            className={cn(
-              "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-all active:scale-[0.96]",
-              listening
-                ? "animate-pulse border-red-400/60 bg-red-500/20 text-red-200 shadow-[0_0_16px_rgba(239,68,68,0.5)]"
-                : "border-white/10 bg-white/[0.03] text-zinc-300 hover:border-emerald-500/40 hover:text-emerald-200",
-            )}
+        <div className="-mx-1 flex gap-2 overflow-x-auto border-t border-white/5 px-1 pt-3">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void send(input);
+            }}
+            className="flex w-full items-end gap-2"
           >
-            <Mic className="h-4 w-4" />
-          </button>
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={t("assistant.placeholder")}
-            className="h-11 min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-emerald-500/50"
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || typing}
-            aria-label="Send"
-            className={cn(
-              "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all active:scale-[0.96]",
-              input.trim() && !typing
-                ? "bg-emerald-500 text-black shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:bg-emerald-400"
-                : "cursor-not-allowed border border-white/10 bg-white/[0.03] text-zinc-600",
+            {hasRecognition && (
+              <button
+                type="button"
+                onClick={toggleMic}
+                aria-label={listening ? "Stop listening" : "Speak your question"}
+                title={`Voice input (${recognitionLanguage(language)})`}
+                className={cn(
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-all",
+                  listening
+                    ? "animate-pulse border-red-400/60 bg-red-500/20 text-red-200"
+                    : "border-white/10 bg-white/[0.03] text-zinc-300 hover:border-emerald-500/40 hover:text-emerald-200",
+                )}
+              >
+                <Mic className="h-4 w-4" />
+              </button>
             )}
-          >
-            <Send className="h-4 w-4" />
-          </button>
-        </form>
+            <textarea
+              ref={inputRef}
+              rows={1}
+              value={input}
+              onChange={(event) => {
+                setInput(event.target.value);
+                event.currentTarget.style.height = "auto";
+                event.currentTarget.style.height = `${Math.min(event.currentTarget.scrollHeight, 160)}px`;
+              }}
+              placeholder={t("assistant.placeholder")}
+              className="max-h-40 min-h-11 min-w-0 flex-1 resize-none rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm leading-5 text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-emerald-500/50"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || typing}
+              aria-label="Send"
+              className={cn(
+                "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all",
+                input.trim() && !typing
+                  ? "bg-emerald-500 text-black shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:bg-emerald-400"
+                  : "cursor-not-allowed border border-white/10 bg-white/[0.03] text-zinc-600",
+              )}
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          </form>
+        </div>
       </Card>
     </div>
   );
