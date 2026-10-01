@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CloudSun, LocateFixed, MapPin, WifiOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ClimateForecastDay } from "@/lib/ai-engine";
-import { useFarmStore } from "@/lib/store";
+import { useFarm, useFarmStore } from "@/lib/store";
 import { DEFAULT_SETTINGS } from "@/lib/store";
 import { capitalForState } from "@/lib/india-locations";
 import { Card, CardHeader, useMounted } from "@/components/dashboard/ui";
@@ -41,7 +41,8 @@ export default function ForecastCards({
 }: {
   onForecast?: (days: ClimateForecastDay[], offline: boolean) => void;
 }) {
-  const snapshot = useFarmStore((s) => s.snapshot);
+  const farm = useFarm();
+  const snapshot = farm.snapshot;
   const location = useFarmStore((s) => s.settings.location);
   const farmProfile = useFarmStore((s) => s.settings.farmProfile);
   const updateSettings = useFarmStore((s) => s.updateSettings);

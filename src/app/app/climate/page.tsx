@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import type { ClimateForecastDay } from "@/lib/ai-engine";
-import { useFarmStore } from "@/lib/store";
+import { useFarm } from "@/lib/store";
 import AdvisorCard from "@/components/climate/AdvisorCard";
 import ComfortPanel from "@/components/climate/ComfortPanel";
 import ForecastCards from "@/components/climate/ForecastCards";
@@ -43,7 +43,8 @@ function Rise({
  * AI climate advisor, 12h history graphs and crop comfort panel.
  */
 export default function ClimatePage() {
-  const snapshot = useFarmStore((s) => s.snapshot);
+  const farm = useFarm();
+  const snapshot = farm.snapshot;
 
   // Shared forecast state: ForecastCards fetches (live or offline
   // fallback) and the advisor consumes the same days — never errors.

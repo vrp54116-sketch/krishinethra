@@ -36,7 +36,7 @@ function seedCommands(): CommandLogEntry[] {
     {
       id: "cmd-4",
       timestamp: now - 1_200_000,
-      command: "SERVO:90",
+      command: "R2_OFF",
       status: "Success",
       responseTimeMs: 50,
     },

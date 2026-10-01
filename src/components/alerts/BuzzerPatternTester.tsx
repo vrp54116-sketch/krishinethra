@@ -81,7 +81,7 @@ export default function BuzzerPatternTester({ className }: { className?: string 
               Test Alert Sounds
             </h3>
             <p className="text-[11px] text-zinc-400">
-              Active piezo buzzer patterns on Arduino UNO D8
+              Active piezo buzzer patterns on ESP32 GPIO
             </p>
           </div>
         </div>

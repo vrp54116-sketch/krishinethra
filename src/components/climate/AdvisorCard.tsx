@@ -19,7 +19,7 @@ import {
   type ClimateAdviceIcon,
   type ClimateForecastDay,
 } from "@/lib/ai-engine";
-import { useFarmStore } from "@/lib/store";
+import { useFarm } from "@/lib/store";
 import { Card, CardHeader } from "@/components/dashboard/ui";
 
 const ICONS: Record<ClimateAdviceIcon, LucideIcon> = {
@@ -58,9 +58,9 @@ export default function AdvisorCard({
 }: {
   forecast: ClimateForecastDay[];
 }) {
-  const snapshot = useFarmStore((s) => s.snapshot);
+  const farm = useFarm();
 
-  const advices = climateAdvice({ snapshot }, forecast);
+  const advices = climateAdvice({ snapshot: farm.snapshot }, forecast);
 
   return (
     <Card className="h-full">

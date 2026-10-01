@@ -275,7 +275,7 @@ function HealthCardInner({
             : "border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)]",
         )}
       >
-        {isLive ? "EDGE-LIVE" : chip === "stale" ? "EDGE-LIVE · STALE" : "SIMULATION"}
+        {isLive ? "EDGE-LIVE" : "SIMULATION"}
       </div>
     </div>
   );
@@ -648,7 +648,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* Floating live farm pill: fixed z-50 bottom-20 md:bottom-6 right-4 */}
       <LiveFarmPill className="fixed z-50 bottom-16 md:bottom-6 right-4" />
 
-      {/* Wireless edge supervisor: auto LIVE/SIM + LCD mirror (no UI) */}
+      {/* Wireless edge supervisor: auto LIVE/SIM watchdog (no UI) */}
       <MqttManager />
 
       {/* V2.5 a11y — screen-reader announcements for pump state + new alerts */}

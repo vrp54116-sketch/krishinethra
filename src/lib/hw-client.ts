@@ -101,24 +101,3 @@ export async function sendHwPump(
     return unreachable(err instanceof Error ? err.message : "Network error");
   }
 }
-
-export async function sendHwServo(
-  gw: string,
-  axis: "pan" | "tilt",
-  angle: number,
-): Promise<HwEnvelope> {
-  try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 10000);
-    const res = await fetch(`/api/hw/servo?${bridgeQuery(gw)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ axis, angle: Math.round(angle) }),
-      signal: ctrl.signal,
-    });
-    clearTimeout(timer);
-    return await readEnvelope(res);
-  } catch (err) {
-    return unreachable(err instanceof Error ? err.message : "Network error");
-  }
-}

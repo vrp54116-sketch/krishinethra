@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { toast } from "sonner";
 import { Camera, Droplets, Map, MessageCircle, type LucideIcon } from "lucide-react";
-import { useFarmStore } from "@/lib/store";
+import { useFarm, useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 
 interface Action {
@@ -18,13 +18,13 @@ interface Action {
 
 export default function QuickActions() {
   const t = useT();
-  const snapshot = useFarmStore((s) => s.snapshot);
-  const setPumpManual = useFarmStore((s) => s.setPumpManual);
+  const farm = useFarm();
+  const setPumpManual = farm.setPumpManual;
   const addAlert = useFarmStore((s) => s.addAlert);
 
   const irrigateQuick = () => {
     setPumpManual(true, 10);
-    const soilVal = (snapshot?.soil ?? snapshot?.soilMoistureB ?? 0).toFixed(1);
+    const soilVal = farm.soil.toFixed(1);
     const msg = `Soil at ${soilVal}% — 10s quick irrigation started.`;
     addAlert({ level: "info", title: "Quick Irrigation (10s)", message: msg });
     toast.success("Quick Irrigation — 10s", { description: msg });

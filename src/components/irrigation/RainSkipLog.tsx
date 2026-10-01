@@ -1,7 +1,7 @@
 "use client";
 
 import { CloudRain, ShieldCheck, Calendar } from "lucide-react";
-import { useFarmStore } from "@/lib/store";
+import { useFarm } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 interface RainSkipEvent {
@@ -15,7 +15,8 @@ interface RainSkipEvent {
 }
 
 export default function RainSkipLog({ className }: { className?: string }) {
-  const snapshot = useFarmStore((s) => s.snapshot);
+  const farm = useFarm();
+  const snapshot = farm.snapshot;
 
   // Generate 7-day calendar activity squares
   const weekDays = [

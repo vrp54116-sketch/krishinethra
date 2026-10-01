@@ -40,9 +40,8 @@ export interface SensorSnapshot {
   rain: boolean; // boolean (rainMm > 0)
   pump: boolean; // boolean (running)
   mode: "AUTO" | "MANUAL";
-  servo: number; // 0-180°
   rssi: number | null; // WiFi signal strength
-  stale: boolean; // boolean (UNO link dead)
+  stale: boolean; // boolean (telemetry stale / silent)
   uptime: number; // seconds since ESP32 boot
   soilRaw?: number; // raw analog ADC (e.g. 540)
   mqRaw?: number; // raw analog MQ-135 (e.g. 230)
@@ -268,6 +267,8 @@ export interface AppSettings {
   mqttToken: string;
   /** Selected broker wss URL (or "auto" to walk the default list). */
   mqttBrokerUrl: string;
+  /** Auto-connect to MQTT on app load */
+  autoConnect?: boolean;
   cameraSource: "simulation" | "stream";
   cameraStreamUrl: string;
   /** Pan-tilt glide speed (deg per tick, 1–10). Used by Settings → Camera. */

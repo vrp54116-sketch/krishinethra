@@ -11,7 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import { cn } from "@/lib/utils";
-import { useFarmStore } from "@/lib/store";
+import { useFarm, useFarmStore } from "@/lib/store";
 import { Card, CardHeader } from "@/components/dashboard/ui";
 import { buildTwelveHourSeries } from "./shared";
 
@@ -62,8 +62,9 @@ const TABS: Array<{
  * ticks never re-render the chart more than 1/sec.
  */
 function HistoryGraphsInner() {
-  const snapshot = useFarmStore((s) => s.snapshot);
-  const sensorHistory = useFarmStore((s) => s.sensorHistory);
+  const farm = useFarm();
+  const snapshot = farm.snapshot;
+  const sensorHistory = farm.sensorHistory;
   const [tab, setTab] = useState<TabId>("temp");
 
   // 5s bucket: snapshot ticks every 1s, chart rebuilds at most 0.2Hz.

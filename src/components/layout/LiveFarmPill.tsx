@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Droplets, Power, ScanLine, Timer, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useFarmStore } from "@/lib/store";
+import { useFarm } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { useMounted } from "@/components/dashboard/ui";
 
@@ -27,25 +27,21 @@ export default function LiveFarmPill({ className }: { className?: string } = {})
   const mounted = useMounted();
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const pump = useFarmStore((s) => s.pump);
-  const snapshot = useFarmStore((s) => s.snapshot);
-  const alerts = useFarmStore((s) => s.alerts);
-  const defaultDuration = useFarmStore(
-    (s) => s.settings.thresholds.pumpDurationSec,
-  );
-  const setPumpManual = useFarmStore((s) => s.setPumpManual);
-  const setPumpMode = useFarmStore((s) => s.setPumpMode);
-
-  const running = pump.running;
-  const autoMode = pump.mode === "auto";
+  const farm = useFarm();
+  const running = farm.pump;
+  const autoMode = farm.mode === "AUTO";
+  const alerts = farm.alerts;
+  const defaultDuration = farm.thresholds?.pumpDurationSec ?? 30;
+  const setPumpManual = farm.setPumpManual;
+  const setPumpMode = farm.setPumpMode;
   const hasCritical = alerts.some(
     (a) => !a.read && a.level === "critical",
   );
 
   const soilMoisture = mounted
-    ? Math.round(snapshot.soil ?? 45)
+    ? Math.round(farm.soil)
     : 45;
-  const tempC = mounted ? Math.round(snapshot.temp ?? 30) : 30;
+  const tempC = mounted ? Math.round(farm.temp) : 30;
 
   const liveText = `SOIL ${soilMoisture}% // PUMP ${running ? "ON" : "OFF"} // ${tempC}°C`;
 

@@ -936,16 +936,16 @@ Stop watering guesses. Start growing data.`}
 
               {/* Row 1 */}
               <div className="grid grid-cols-12 px-6 py-3.5 items-center font-editorial-mono text-xs">
-                <span className="col-span-4 font-bold text-[var(--ink)]">ARDUINO UNO</span>
-                <span className="col-span-4 text-[var(--ink-2)]">ATMEGA328P</span>
-                <span className="col-span-4 text-right text-[var(--terra)] font-semibold">SENSOR HUB</span>
+                <span className="col-span-4 font-bold text-[var(--ink)]">ESP32-WROOM</span>
+                <span className="col-span-4 text-[var(--ink-2)]">XTENSA DUAL-CORE</span>
+                <span className="col-span-4 text-right text-[var(--terra)] font-semibold">EDGE CONTROLLER</span>
               </div>
 
               {/* Row 2 */}
               <div className="grid grid-cols-12 px-6 py-3.5 items-center font-editorial-mono text-xs">
-                <span className="col-span-4 font-bold text-[var(--ink)]">ESP32</span>
-                <span className="col-span-4 text-[var(--ink-2)]">WIFI+MQTT</span>
-                <span className="col-span-4 text-right text-[var(--terra)] font-semibold">EDGE BRAIN</span>
+                <span className="col-span-4 font-bold text-[var(--ink)]">MQTT BRIDGE</span>
+                <span className="col-span-4 text-[var(--ink-2)]">WIFI / WSS</span>
+                <span className="col-span-4 text-right text-[var(--terra)] font-semibold">CLOUD TELEMETRY</span>
               </div>
 
               {/* Row 3 */}
@@ -979,22 +979,15 @@ Stop watering guesses. Start growing data.`}
               {/* Row 7 */}
               <div className="grid grid-cols-12 px-6 py-3.5 items-center font-editorial-mono text-xs">
                 <span className="col-span-4 font-bold text-[var(--ink)]">2-CH RELAY</span>
-                <span className="col-span-4 text-[var(--ink-2)]">10A</span>
-                <span className="col-span-4 text-right text-[var(--terra)] font-semibold">PUMP</span>
+                <span className="col-span-4 text-[var(--ink-2)]">10A / AC250V</span>
+                <span className="col-span-4 text-right text-[var(--terra)] font-semibold">PUMP + R2 AUX</span>
               </div>
 
               {/* Row 8 */}
               <div className="grid grid-cols-12 px-6 py-3.5 items-center font-editorial-mono text-xs">
-                <span className="col-span-4 font-bold text-[var(--ink)]">SG90</span>
-                <span className="col-span-4 text-[var(--ink-2)]">180°</span>
-                <span className="col-span-4 text-right text-[var(--ink-2)] font-semibold">VISION PAN</span>
-              </div>
-
-              {/* Row 9 */}
-              <div className="grid grid-cols-12 px-6 py-3.5 items-center font-editorial-mono text-xs">
-                <span className="col-span-4 font-bold text-[var(--ink)]">16x2 I2C</span>
-                <span className="col-span-4 text-[var(--ink-2)]">LCD</span>
-                <span className="col-span-4 text-right text-[var(--ink-2)] font-semibold">FIELD DISPLAY</span>
+                <span className="col-span-4 font-bold text-[var(--ink)]">ACTIVE BUZZER</span>
+                <span className="col-span-4 text-[var(--ink-2)]">GPIO / 5V</span>
+                <span className="col-span-4 text-right text-[var(--ink-2)] font-semibold">FIELD ALARM</span>
               </div>
             </div>
           </div>
@@ -1429,7 +1422,7 @@ Stop watering guesses. Start growing data.`}
             {[
               {
                 q: "What is the total hardware setup cost for a typical farm?",
-                a: "A complete KrishiNethra edge hub with Arduino Uno, ESP32, capacitive moisture probe, DHT22 climate sensor, MQ-135 air monitor, rain sensor and relay module costs under ₹3,500 total. Payback is achieved within 45 days through reduced electricity and pump wear.",
+                a: "A complete KrishiNethra edge hub with an ESP32 microcontroller, capacitive moisture probe, DHT22 climate sensor, MQ-135 air monitor, rain sensor and 2-channel relay module costs under ₹2,500 total. Payback is achieved within 45 days through reduced electricity and pump wear.",
               },
               {
                 q: "Does KrishiNethra work without internet connectivity?",
@@ -1437,7 +1430,7 @@ Stop watering guesses. Start growing data.`}
               },
               {
                 q: "Can I control the pump and check soil moisture from my phone when away?",
-                a: "Yes. KrishiNethra connects over lightweight MQTT broker queues with sub-second latency. When your edge node is online, you can monitor moisture curves, override relay schedules, or center the vision gimbal from anywhere in the world.",
+                a: "Yes. KrishiNethra connects over lightweight MQTT broker queues with sub-second latency. When your edge node is online, you can monitor moisture curves, override relay schedules, or trigger auxiliary farm loads from anywhere in the world.",
               },
               {
                 q: "How many crop varieties are supported by the agronomy engine?",

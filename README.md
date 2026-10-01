@@ -67,7 +67,7 @@ MQTT from any network.
   (EN/HI/GU/MR) + voice I/O.
 - **Wireless edge (MQTT)** — ESP32 publishes telemetry to `…/up`, the app
   subscribes over `wss` from ANY device/network, commands (`PUMP:ON`,
-  `BUZZ:…`, `LCD1:…`) publish to `…/cmd`; throttled to 10 updates/sec.
+  `BUZZ:…`, `R2:…`) publish to `…/cmd`; throttled to 10 updates/sec.
 - **PWA** — `app/manifest.ts`, generated 192/512 icons, apple touch icon,
   service worker (`public/sw.js`) with app-shell cache + `/offline` fallback,
   header **Install App** button (`beforeinstallprompt`, mobile).
@@ -92,9 +92,8 @@ MQTT from any network.
    bottom tab bar, FAB and pump buttons control the same farm over MQTT.
 6. **Test buzzer patterns** — Alerts → Buzzer Pattern Tester; each pattern
    fires the physical buzzer with visual feedback on the button.
-7. **Send a custom message to the physical LCD** — Settings/Hardware → LCD
-   form posts `LCD1:`/`LCD2:` lines through the liquid glass form; the 16×2
-   display updates instantly.
+7. **Control auxiliary load (R2)** — Farm Map / Settings; toggle auxiliary
+   relay loads directly over MQTT.
 
 ## Hardware Requirements
 
@@ -109,13 +108,11 @@ sensor, 1 pump*):
 | 3 | MQ-135 gas sensor | 1 | Air quality / AQI proxy |
 | 4 | DHT22 (AM2302) | 1 | Temperature + humidity |
 | 5 | Rain sensor module (analog out) | 1 | Rain detect → pump lock-out |
-| 6 | 1-channel 5 V relay module | 1 | Pump switching (active-HIGH) |
+| 6 | 2-channel 5 V relay module | 1 | Pump & Aux switching (active-HIGH) |
 | 7 | Submersible pump (12 V/DC or AC) | 1 | Irrigation |
 | 8 | 5 V 2 A power supply | 1 | ESP32 + sensors (common GND) |
-| 9 | 16×2 I2C LCD (optional) | 1 | Field status display (`LCD1`/`LCD2`) |
-| 10 | Piezo buzzer (optional) | 1 | Alarm patterns (`BUZZ:n:ms`) |
-| 11 | SG90 servos + pan-tilt bracket (optional) | 2 | Camera sweep (`SERVO`, `SWEEP`) |
-| 12 | HC-SR04 ultrasonic (optional) | 1 | Tank level % |
+| 9 | Piezo buzzer (optional) | 1 | Alarm patterns (`BUZZ:n:ms`) |
+| 10 | HC-SR04 ultrasonic (optional) | 1 | Tank level % |
 
 - Contract: [`docs/HARDWARE_CONTRACT.md`](docs/HARDWARE_CONTRACT.md)
 - Flash/wire guide: [`docs/ESP32_QUICKSTART.md`](docs/ESP32_QUICKSTART.md)
@@ -200,7 +197,7 @@ MQTT the flip is automatic: fresh telemetry (<5s) → EDGE-LIVE, silence →
 graceful SIMULATION fallback.
 
 - Contract: [`docs/HARDWARE_CONTRACT.md`](docs/HARDWARE_CONTRACT.md) — the exact
-  JSON for `GET /status`, `GET /sensors`, `POST /pump`, `POST /servo` plus the
+  JSON for `GET /status`, `GET /sensors`, `POST /pump` plus the
   `/api/hw/*` bridge envelope (`{ ok, data, source }`, never throws).
 - Quickstart: [`docs/ESP32_QUICKSTART.md`](docs/ESP32_QUICKSTART.md) — flash,
   wire and point `HARDWARE_GATEWAY_URL` (or Settings → Hardware Bridge) at the

@@ -10,7 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useFarmStore } from "@/lib/store";
+import { useFarm, useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { AnimatedNumber, CardHeader, Sparkline, StatusPill, type PillTone } from "./ui";
 
@@ -38,25 +38,25 @@ interface SensorDef {
 
 export default function SensorGrid() {
   const t = useT();
-  // Narrow Zustand selectors so one field update doesn't re-render the whole grid
-  const soilVal = useFarmStore((s) => s.snapshot?.soil ?? 45);
-  const tempVal = useFarmStore((s) => s.snapshot?.temp ?? s.snapshot?.tempC ?? 28);
-  const humVal = useFarmStore((s) => s.snapshot?.hum ?? s.snapshot?.humidity ?? 60);
-  const aqiVal = useFarmStore((s) => s.snapshot?.aqi ?? 50);
-  const isRaining = useFarmStore((s) => Boolean(s.snapshot?.rain));
+  const farm = useFarm();
+  const soilVal = farm.soil;
+  const tempVal = farm.temp;
+  const humVal = farm.hum;
+  const aqiVal = farm.aqi;
+  const isRaining = farm.rain;
 
-  const soilRawVal = useFarmStore((s) => s.snapshot?.soilRaw);
-  const mqRawVal = useFarmStore((s) => s.snapshot?.mqRaw);
-  const sensorHistory = useFarmStore((s) => s.sensorHistory ?? []);
+  const soilRawVal = farm.snapshot?.soilRaw;
+  const mqRawVal = farm.snapshot?.mqRaw;
+  const sensorHistory = farm.sensorHistory ?? [];
 
-  const thresholds = useFarmStore((s) => s.settings?.thresholds ?? {
+  const thresholds = farm.thresholds ?? {
     moistureLow: 30,
     moistureHigh: 75,
     tempHigh: 35,
     humidityLow: 40,
     aqiHigh: 150,
-  });
-  const showRaw = useFarmStore((s) => s.settings?.showRawCalibrationValues);
+  };
+  const showRaw = farm.settings?.showRawCalibrationValues;
 
   const soilRaw = soilRawVal ?? Math.round(1023 - (soilVal * 6.5));
   const mqRaw = mqRawVal ?? 230;

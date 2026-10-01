@@ -9,7 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useFarmStore } from "@/lib/store";
+import { useFarm, useFarmStore } from "@/lib/store";
 import {
   AnimatedNumber,
   Sparkline,
@@ -117,24 +117,23 @@ function Shell({
 /* ------------------------------------------------------------------ */
 
 export default function SensorRow() {
-  const snapshot = useFarmStore((s) => s.snapshot);
-  const sensorHistory = useFarmStore((s) => s.sensorHistory);
-  const tempHigh = useFarmStore((s) => s.settings?.thresholds?.tempHigh ?? 35);
-  const aqiHigh = useFarmStore((s) => s.settings?.thresholds?.aqiHigh ?? 150);
+  const farm = useFarm();
+  const tempHigh = farm.thresholds?.tempHigh ?? 35;
+  const aqiHigh = farm.thresholds?.aqiHigh ?? 150;
 
   const series = useMemo(
-    () => buildTwelveHourSeries(snapshot, sensorHistory, 48),
-    [snapshot, sensorHistory],
+    () => buildTwelveHourSeries(farm.snapshot, farm.sensorHistory, 48),
+    [farm.snapshot, farm.sensorHistory],
   );
 
   const tempSeries = useMemo(() => series.map((p) => p.tempC), [series]);
   const humSeries = useMemo(() => series.map((p) => p.humidity), [series]);
   const aqiSeries = useMemo(() => series.map((p) => p.aqi), [series]);
 
-  const tempVal = snapshot?.temp ?? snapshot?.tempC ?? 0;
-  const humVal = snapshot?.hum ?? snapshot?.humidity ?? 0;
-  const aqiVal = snapshot?.aqi ?? 0;
-  const isRaining = Boolean(snapshot?.rain);
+  const tempVal = farm.temp;
+  const humVal = farm.hum;
+  const aqiVal = farm.aqi;
+  const isRaining = farm.rain;
 
   const band = aqiBand(aqiVal);
 

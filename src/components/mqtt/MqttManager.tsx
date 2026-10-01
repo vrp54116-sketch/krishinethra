@@ -5,81 +5,72 @@ import { toast } from "sonner";
 import { useFarmStore } from "@/lib/store";
 
 /**
- * MqttManager — invisible supervisor for TRUE WIRELESS live mode.
- *
- * - LIVE flip: when mqttStatus === "online" AND a telemetry frame arrived
- *   <5s ago → settings.mode = "live", liveSource = "mqtt" (sim halts).
- * - SIM fallback: when the link drops or telemetry goes stale >5s while we
- *   are in mqtt-live → settings.mode = "simulation", liveSource = "sim"
- *   with toast "Edge node offline — simulation resumed".
- * - LCD mirror: every 3s in EDGE-LIVE, push LCD1/LCD2 status strings so the
- *   field display tracks the app (fire-and-forget).
- *
- * Kill ESP32 power → graceful SIMULATION fallback in <6s; restore → auto LIVE.
+ * MqttManager — single ESP32 edge supervisor:
+ * - Auto-connect on load if settings.autoConnect !== false
+ * - LIVE flip: when mqttStatus === "online" AND last msg <5s → source = "LIVE"
+ * - SIM fallback: when disconnected OR last msg >=5s → fallback source = "SIM"
+ * - Single ESP32 edge telemetry supervisor.
  */
 export default function MqttManager() {
   const fallbackToastAt = useRef(0);
   const liveToastAt = useRef(0);
+  const initialConnected = useRef(false);
 
+  // Auto-connect on load
+  useEffect(() => {
+    if (typeof window === "undefined" || initialConnected.current) return;
+    initialConnected.current = true;
+
+    const s = useFarmStore.getState();
+    const autoConnect = s.settings.autoConnect ?? true;
+    if (autoConnect) {
+      const token = s.settings.mqttToken || "patelfarm01";
+      const brokerUrl = s.settings.mqttBrokerUrl || "wss://broker.emqx.io:8084/mqtt";
+      void import("@/lib/mqtt-bridge").then((m) => {
+        m.connect(token, brokerUrl);
+      });
+    }
+  }, []);
+
+  // Watchdog supervisor: LIVE when online & last msg <5s, else fallback SIM
   useEffect(() => {
     if (typeof window === "undefined") return;
+
     const id = setInterval(() => {
       const s = useFarmStore.getState();
       const online = s.mqttStatus === "online";
-      const age =
-        s.mqttLastSeen != null ? Date.now() - s.mqttLastSeen : Infinity;
+      const lastSeen = s.live.lastSeenAt ?? s.mqttLastSeen;
+      const age = lastSeen != null ? Date.now() - lastSeen : Infinity;
       const fresh = online && age < 5000;
-      const inMqttLive = s.settings.mode === "live" && s.liveSource === "mqtt";
+      const inLive = s.source === "LIVE";
 
-      if (fresh && !inMqttLive) {
-        // Edge proved fresh → go LIVE automatically.
-        s.setLiveSource("mqtt");
+      if (fresh && !inLive) {
+        // Telemetry fresh (<5s) and online → Go LIVE
+        s.setSource("LIVE");
         s.updateSettings({ mode: "live" });
         s.stopSimulation();
         s.stopLivePolling();
+
         if (Date.now() - liveToastAt.current > 30000) {
           liveToastAt.current = Date.now();
-          toast.success("EDGE-LIVE — wireless telemetry streaming", {
+          toast.success("EDGE-LIVE — streaming telemetry", {
             description: "ESP32 edge node connected over MQTT.",
           });
         }
-      } else if (inMqttLive && !fresh) {
-        // Stale or dropped → graceful fallback in <6s.
-        s.setLiveSource("sim");
+      } else if (inLive && !fresh) {
+        // Disconnected or stale (>=5s) → Fallback to SIMULATION
+        s.setSource("SIM");
         s.updateSettings({ mode: "simulation" });
         s.stopLivePolling();
         s.startSimulation();
+
         if (Date.now() - fallbackToastAt.current > 10000) {
           fallbackToastAt.current = Date.now();
-          toast.warning("Edge node offline — simulation resumed", {
-            description: "No telemetry for 5s. Showing simulated farm.",
-          });
+          toast.warning("Edge node offline — simulation resumed");
         }
       }
     }, 1000);
-    return () => clearInterval(id);
-  }, []);
 
-  // LCD mirror every 3s in EDGE-LIVE.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const id = setInterval(() => {
-      const s = useFarmStore.getState();
-      if (
-        s.settings.mode !== "live" ||
-        s.liveSource !== "mqtt" ||
-        s.mqttStatus !== "online"
-      )
-        return;
-      const t = (s.snapshot?.tempC ?? s.snapshot?.temp ?? 0).toFixed(1);
-      const h = Math.round(s.snapshot?.humidity ?? s.snapshot?.hum ?? 0);
-      const soil = Math.round(s.snapshot?.soil ?? s.snapshot?.soilMoistureB ?? 0);
-      const rain = s.snapshot?.rain ? "RAIN" : "DRY";
-      const pump = s.pump?.running ? "PUMP:ON" : "PUMP:OFF";
-      const l1 = `T:${t} H:${h}% S:${soil}%`.slice(0, 16);
-      const l2 = `${rain} ${pump}`.slice(0, 16);
-      void import("@/lib/mqtt-bridge").then((m) => m.cmdLcd(l1, l2));
-    }, 3000);
     return () => clearInterval(id);
   }, []);
 

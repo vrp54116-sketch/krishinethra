@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Clock, MessageSquare, Radio, Server, Wifi } from "lucide-react";
-import { useFarmStore } from "@/lib/store";
+import { useFarm, useFarmStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export default function ConnectionStatusCard({ className }: { className?: string }) {
-  const snapshot = useFarmStore((s) => s.snapshot);
+  const farm = useFarm();
+  const snapshot = farm.snapshot;
   const mqttStatus = useFarmStore((s) => s.mqttStatus);
   const mqttConnected = mqttStatus === "online";
 
@@ -17,8 +18,8 @@ export default function ConnectionStatusCard({ className }: { className?: string
     return () => clearInterval(timer);
   }, []);
 
-  const rawRssi = snapshot.rssi ?? -55;
-  const rawUptime = snapshot.uptime ?? 3600 * 2 + 1800; // seconds
+  const rawRssi = farm.rssi ?? -55;
+  const rawUptime = farm.uptime ?? 3600 * 2 + 1800; // seconds
 
   // Format uptime string
   const formatUptime = (totalSec: number) => {

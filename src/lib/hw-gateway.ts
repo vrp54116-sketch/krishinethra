@@ -89,7 +89,7 @@ export interface ProxyResult {
 /** GET/POST passthrough to the gateway with a hard timeout. Never throws. */
 export async function proxyGateway(
   base: string,
-  path: "/status" | "/sensors" | "/pump" | "/servo",
+  path: "/status" | "/sensors" | "/pump",
   init: { method?: string; body?: unknown; headers?: Record<string, string> },
   timeoutMs: number = DEFAULT_TIMEOUT_MS,
 ): Promise<ProxyResult> {
@@ -166,7 +166,6 @@ export function sanitizeSnapshot(raw: unknown): Record<string, unknown> {
   const rain = Boolean(r["rain"]);
   const pump = Boolean(r["pump"]);
   const mode = r["mode"] === "AUTO" ? "AUTO" : "MANUAL";
-  const servo = num(r["servo"], 90);
 
   return {
     timestamp: num(r["timestamp"], Date.now()),
@@ -177,7 +176,6 @@ export function sanitizeSnapshot(raw: unknown): Record<string, unknown> {
     rain,
     pump,
     mode,
-    servo,
     rssi: num(r["rssi"], 0),
     stale: Boolean(r["stale"]),
     uptime: num(r["uptime"], 0),

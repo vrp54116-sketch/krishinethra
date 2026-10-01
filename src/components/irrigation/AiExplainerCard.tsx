@@ -2,18 +2,18 @@
 
 import { CircleCheck, CircleX, Cpu } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useFarmStore } from "@/lib/store";
+import { useFarm } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { Card, CardHeader } from "@/components/dashboard/ui";
 
 export default function AiExplainerCard() {
   const t = useT();
-  const snapshot = useFarmStore((s) => s.snapshot);
-  const thresholds = useFarmStore((s) => s.settings.thresholds);
-  const pumpMode = useFarmStore((s) => s.pump.mode);
+  const farm = useFarm();
+  const thresholds = farm.thresholds ?? { moistureLow: 30, moistureHigh: 75 };
 
-  const soil = snapshot.soil;
-  const rain = snapshot.rain;
+  const soil = farm.soil;
+  const rain = farm.rain;
+  const pumpMode = farm.pumpState?.mode ?? (farm.mode === "AUTO" ? "auto" : "manual");
 
   const rules = [
     {

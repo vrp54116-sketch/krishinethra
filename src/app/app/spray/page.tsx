@@ -19,7 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useFarmStore } from "@/lib/store";
+import { useFarm, useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import {
   generateSprayPlanSteps,
@@ -96,8 +96,9 @@ function Rise({
 /* ------------------------------------------------------------------ */
 
 function RainBanner() {
+  const farm = useFarm();
   const location = useFarmStore((s) => s.settings.location);
-  const rainNowMm = useFarmStore((s) => s.snapshot.rainMm);
+  const rainNowMm = farm.snapshot.rainMm;
   const [tomorrow, setTomorrow] = useState<ClimateForecastDay | null>(null);
 
   useEffect(() => {

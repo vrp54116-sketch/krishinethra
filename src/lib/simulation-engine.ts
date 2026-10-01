@@ -191,7 +191,6 @@ export function createInitialSnapshot(now: number = Date.now()): SensorSnapshot 
     rain: false,
     pump: false,
     mode: "AUTO",
-    servo: 90,
     rssi: -55,
     stale: false,
     uptime: 120,
@@ -270,7 +269,7 @@ export function tick(
   }
   tankLevelPercent = Math.round(tankLevelPercent * 100) / 100;
 
-  // Raw analog values (Uno 10-bit ADC 0-1023)
+  // Raw analog values (ESP32 10-bit ADC 0-1023)
   // At 22% moisture, raw is ~540; MQ-135 at 85 AQI, raw is ~230
   const soilRaw = Math.round(850 - (soilMoistureB / 100) * 650);
   const mqRaw = Math.round(aqi * 2.7);
@@ -296,7 +295,6 @@ export function tick(
       rain: rainMm > 0,
       pump: running,
       mode: (pump.mode === "auto" ? "AUTO" : "MANUAL") as "AUTO" | "MANUAL",
-      servo: snapshot.servo ?? 90,
       rssi: snapshot.rssi ?? -55,
       stale: snapshot.stale ?? false,
       uptime,

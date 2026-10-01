@@ -3,66 +3,63 @@
 import { motion } from "framer-motion";
 import {
   CloudRain,
-  Compass,
+  Radio,
   Cpu,
   Droplets,
   Power,
-  RotateCcw,
   Sparkles,
   Thermometer,
   Volume2,
   Waves,
   Wind,
+  Lightbulb,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useFarmStore } from "@/lib/store";
+import { useFarm } from "@/lib/store";
 
 export default function FarmMap() {
-  const snapshot = useFarmStore((s) => s.snapshot);
-  const pump = useFarmStore((s) => s.pump);
-  const thresholds = useFarmStore((s) => s.settings.thresholds);
-  const setPumpManual = useFarmStore((s) => s.setPumpManual);
-  const setPumpMode = useFarmStore((s) => s.setPumpMode);
-  const sendEdgeBuzz = useFarmStore((s) => s.sendEdgeBuzz);
-  const sendEdgeSweep = useFarmStore((s) => s.sendEdgeSweep);
-
-  const isAuto = pump.mode === "auto";
-  const isPumping = pump.running;
+  const farm = useFarm();
+  const { soil, temp, hum, aqi, rain, pump: isPumping, mode, r2, rssi, thresholds } = farm;
+  const isAuto = mode === "AUTO";
 
   const togglePump = () => {
     if (isAuto) {
       toast.info("Switched to Manual mode to toggle pump");
-      setPumpMode("manual");
+      farm.setPumpMode("manual");
     }
     const next = !isPumping;
-    setPumpManual(next);
-    toast.success(next ? "Pump started (Manual)" : "Pump stopped (Manual)");
+    farm.setPumpManual(next);
+    farm.farmCmd(next ? "PUMP_ON" : "PUMP_OFF");
+    toast.success(next ? "Command: PUMP_ON" : "Command: PUMP_OFF");
   };
 
   const toggleMode = () => {
-    const nextMode = isAuto ? "manual" : "auto";
-    setPumpMode(nextMode);
-    toast.success(`Mode changed to ${nextMode === "auto" ? "Auto AI" : "Manual"}`);
+    const nextCmd = isAuto ? "MODE_MANUAL" : "MODE_AUTO";
+    farm.setPumpMode(isAuto ? "manual" : "auto");
+    farm.farmCmd(nextCmd);
+    toast.success(`Command: ${nextCmd}`);
   };
 
   const triggerBuzz = () => {
-    sendEdgeBuzz();
-    toast.success("Buzzer alert sent (BUZZ:2:150)");
+    farm.sendEdgeBuzz();
+    toast.success("Command: BUZZ:2:150");
   };
 
-  const triggerSweep = () => {
-    sendEdgeSweep();
-    toast.success("Servo 180° pan sweep initiated");
+  const toggleR2 = () => {
+    farm.setEdgeR2(!r2);
+    toast.success(r2 ? "Command: R2_OFF" : "Command: R2_ON");
   };
 
-  const soilVal = snapshot?.soil ?? 0;
+  const soilVal = soil;
+  const tLow = thresholds?.moistureLow ?? 30;
+  const tHigh = thresholds?.moistureHigh ?? 75;
   const soilStatus =
     soilVal < 20
       ? { label: "Critical Low", color: "text-red-400 border-red-500/30 bg-red-500/10" }
-      : soilVal < thresholds.moistureLow
+      : soilVal < tLow
       ? { label: "Needs Water", color: "text-amber-400 border-amber-500/30 bg-amber-500/10" }
-      : soilVal > thresholds.moistureHigh
+      : soilVal > tHigh
       ? { label: "Saturated", color: "text-blue-400 border-blue-500/30 bg-blue-500/10" }
       : { label: "Optimal", color: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" };
 
@@ -170,7 +167,7 @@ export default function FarmMap() {
                 </div>
                 <div>
                   <p className="text-[10px] font-medium text-sky-200/70">Soil Moisture</p>
-                  <p className="text-xs sm:text-sm font-black text-white">{(snapshot?.soil ?? 0).toFixed(1)}%</p>
+                  <p className="text-xs sm:text-sm font-black text-white">{soil.toFixed(1)}%</p>
                 </div>
               </motion.div>
             </div>
@@ -186,7 +183,7 @@ export default function FarmMap() {
                 </div>
                 <div>
                   <p className="text-[10px] font-medium text-red-200/70">Temperature</p>
-                  <p className="text-xs sm:text-sm font-black text-white">{(snapshot?.temp ?? 0).toFixed(1)}°C</p>
+                  <p className="text-xs sm:text-sm font-black text-white">{temp.toFixed(1)}°C</p>
                 </div>
               </motion.div>
             </div>
@@ -202,7 +199,7 @@ export default function FarmMap() {
                 </div>
                 <div>
                   <p className="text-[10px] font-medium text-cyan-200/70">Humidity</p>
-                  <p className="text-xs sm:text-sm font-black text-white">{(snapshot?.hum ?? 0).toFixed(1)}%</p>
+                  <p className="text-xs sm:text-sm font-black text-white">{hum.toFixed(1)}%</p>
                 </div>
               </motion.div>
             </div>
@@ -218,7 +215,7 @@ export default function FarmMap() {
                 </div>
                 <div>
                   <p className="text-[10px] font-medium text-violet-200/70">Air Quality</p>
-                  <p className="text-xs sm:text-sm font-black text-white">{snapshot?.aqi ?? 0} AQI</p>
+                  <p className="text-xs sm:text-sm font-black text-white">{aqi} AQI</p>
                 </div>
               </motion.div>
             </div>
@@ -229,7 +226,7 @@ export default function FarmMap() {
                 whileHover={{ scale: 1.08 }}
                 className={cn(
                   "flex items-center gap-2 rounded-2xl border px-3 py-1.5 backdrop-blur-md shadow-md",
-                  snapshot?.rain
+                  rain
                     ? "border-blue-400/60 bg-[rgba(16,28,48,0.9)] text-blue-200 shadow-[0_0_18px_rgba(59,130,246,0.35)]"
                     : "border-white/10 bg-[rgba(20,25,22,0.8)] text-zinc-300"
                 )}
@@ -237,30 +234,40 @@ export default function FarmMap() {
                 <div
                   className={cn(
                     "flex h-7 w-7 items-center justify-center rounded-xl",
-                    snapshot?.rain ? "bg-blue-500/30 text-blue-300" : "bg-white/[0.06] text-zinc-400"
+                    rain ? "bg-blue-500/30 text-blue-300" : "bg-white/[0.06] text-zinc-400"
                   )}
                 >
                   <CloudRain className="h-4 w-4" />
                 </div>
                 <div>
                   <p className="text-[10px] font-medium opacity-80">Rain Sensor</p>
-                  <p className="text-xs sm:text-sm font-black text-white">{snapshot?.rain ? "Rain Detected" : "Dry"}</p>
+                  <p className="text-xs sm:text-sm font-black text-white">{rain ? "Rain Detected" : "Dry"}</p>
                 </div>
               </motion.div>
             </div>
 
-            {/* 6. Servo Pan Angle (Top Left) */}
+            {/* 6. Relay R2 (Top Left) */}
             <div className="absolute top-8 sm:top-12 -left-3 sm:left-2 z-20">
               <motion.div
                 whileHover={{ scale: 1.08 }}
-                className="flex items-center gap-2 rounded-2xl border border-amber-400/40 bg-[rgba(35,26,12,0.8)] px-3 py-1.5 shadow-[0_0_15px_rgba(245,158,11,0.2)] backdrop-blur-md"
+                className={cn(
+                  "flex items-center gap-2 rounded-2xl border px-3 py-1.5 backdrop-blur-md shadow-md",
+                  r2
+                    ? "border-amber-400/60 bg-[rgba(35,26,12,0.85)] text-amber-200 shadow-[0_0_15px_rgba(245,158,11,0.25)]"
+                    : "border-white/10 bg-[rgba(20,25,22,0.8)] text-zinc-300",
+                )}
               >
-                <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-amber-500/20 text-amber-300">
-                  <Compass className="h-4 w-4" />
+                <div
+                  className={cn(
+                    "flex h-7 w-7 items-center justify-center rounded-xl",
+                    r2 ? "bg-amber-500/20 text-amber-300" : "bg-white/[0.06] text-zinc-400",
+                  )}
+                >
+                  <Lightbulb className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-medium text-amber-200/70">Pan Servo</p>
-                  <p className="text-xs sm:text-sm font-black text-white">{Math.round(snapshot?.servo ?? 90)}°</p>
+                  <p className="text-[10px] font-medium opacity-80">Relay R2</p>
+                  <p className="text-xs sm:text-sm font-black text-white">{r2 ? "ON" : "OFF"}</p>
                 </div>
               </motion.div>
             </div>
@@ -311,14 +318,14 @@ export default function FarmMap() {
               Buzzer Beep
             </button>
 
-            {/* Servo Sweep */}
+            {/* Relay R2 Toggle */}
             <button
               type="button"
-              onClick={triggerSweep}
+              onClick={toggleR2}
               className="flex items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.05] px-4 py-3 text-xs sm:text-sm font-extrabold text-white transition-all hover:border-amber-400/40 hover:bg-white/[0.09] active:scale-[0.98]"
             >
-              <RotateCcw className="h-4 w-4 text-amber-400" />
-              Servo Sweep
+              <Lightbulb className="h-4 w-4 text-amber-400" />
+              R2: {r2 ? "OFF" : "ON"}
             </button>
           </div>
         </div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CheckCircle2, ChevronDown, Sprout, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useFarmStore } from "@/lib/store";
+import { useFarm } from "@/lib/store";
 import { Card, CardHeader, StatusPill } from "@/components/dashboard/ui";
 import { CROP_PROFILES, currentPressure, type CropId } from "./shared";
 
@@ -73,12 +73,12 @@ function ComfortBar({
 }
 
 export default function ComfortPanel() {
-  const snapshot = useFarmStore((s) => s.snapshot);
+  const farm = useFarm();
   const [cropId, setCropId] = useState<CropId>("tomato");
 
   const profile =
     CROP_PROFILES.find((c) => c.id === cropId) ?? CROP_PROFILES[0];
-  const pressure = currentPressure(snapshot);
+  const pressure = currentPressure(farm.snapshot);
 
   const rows = [
     {
@@ -88,7 +88,7 @@ export default function ComfortPanel() {
       max: 45,
       idealMin: profile.temp[0],
       idealMax: profile.temp[1],
-      value: snapshot?.tempC ?? snapshot?.temp ?? 0,
+      value: farm.temp,
       unit: "°C",
       decimals: 1,
     },
@@ -99,7 +99,7 @@ export default function ComfortPanel() {
       max: 100,
       idealMin: profile.humidity[0],
       idealMax: profile.humidity[1],
-      value: snapshot?.humidity ?? snapshot?.hum ?? 0,
+      value: farm.hum,
       unit: "%",
       decimals: 1,
     },
@@ -110,7 +110,7 @@ export default function ComfortPanel() {
       max: 100,
       idealMin: profile.soil[0],
       idealMax: profile.soil[1],
-      value: snapshot?.soil ?? 0,
+      value: farm.soil,
       unit: "%",
       decimals: 1,
     },
@@ -121,7 +121,7 @@ export default function ComfortPanel() {
       max: 300,
       idealMin: 0,
       idealMax: profile.aqiMax,
-      value: snapshot?.aqi ?? 0,
+      value: farm.aqi,
       unit: "",
       decimals: 0,
       invert: true,
@@ -133,10 +133,10 @@ export default function ComfortPanel() {
   ).length;
 
   function snapshotFor(key: string): number {
-    if (key === "temp") return snapshot?.tempC ?? snapshot?.temp ?? 0;
-    if (key === "humidity") return snapshot?.humidity ?? snapshot?.hum ?? 0;
-    if (key === "soil") return snapshot?.soil ?? 0;
-    return snapshot?.aqi ?? 0;
+    if (key === "temp") return farm.temp;
+    if (key === "humidity") return farm.hum;
+    if (key === "soil") return farm.soil;
+    return farm.aqi;
   }
 
   const allGood = insideCount === rows.length;

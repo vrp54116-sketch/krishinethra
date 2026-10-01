@@ -2,25 +2,25 @@
 
 import Link from "next/link";
 import { Activity, ArrowUpRight, Cpu, Droplets, Thermometer, Wind, CloudRain } from "lucide-react";
-import { useFarmStore } from "@/lib/store";
+import { useFarm, useFarmStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export default function SensorHealthCard({ className }: { className?: string }) {
-  const snapshot = useFarmStore((s) => s.snapshot);
-  const settings = useFarmStore((s) => s.settings);
+  const farm = useFarm();
+  const settings = farm.settings;
 
-  const stale = snapshot?.stale ?? false;
-  const soilRaw = snapshot?.soilRaw ?? (snapshot?.soil ? Math.round(1023 - (snapshot.soil * 6.5)) : 540);
-  const mqRaw = snapshot?.mqRaw ?? 230;
+  const stale = farm.stale;
+  const soilRaw = farm.snapshot?.soilRaw ?? (farm.soil ? Math.round(1023 - (farm.soil * 6.5)) : 540);
+  const mqRaw = farm.snapshot?.mqRaw ?? 230;
   const showRaw = settings?.showRawCalibrationValues ?? false;
 
   // Simulate MQ-135 preheat (60 seconds after boot)
-  const uptimeSec = snapshot?.uptime ? (typeof snapshot.uptime === "number" ? snapshot.uptime : 120) : 120;
+  const uptimeSec = farm.uptime ? (typeof farm.uptime === "number" ? farm.uptime : 120) : 120;
   const isMqPreheating = uptimeSec < 60;
   const mqPreheatRemain = Math.max(0, 60 - uptimeSec);
 
-  const isRaining = Boolean(snapshot?.rain);
-  const rainMmVal = (snapshot?.rainMm ?? 0).toFixed(1);
+  const isRaining = farm.rain;
+  const rainMmVal = (farm.snapshot?.rainMm ?? (farm.rain ? 2.5 : 0)).toFixed(1);
 
   const sensors = [
     {
@@ -29,7 +29,7 @@ export default function SensorHealthCard({ className }: { className?: string }) 
       icon: <Droplets className="h-4 w-4 text-emerald-400" />,
       status: stale ? "stale" : "healthy",
       statusLabel: stale ? "Stale" : "Connected",
-      value: `${Math.round(snapshot?.soil ?? 45)}%`,
+      value: `${Math.round(farm.soil)}%`,
       raw: `raw: ${soilRaw}`,
       subtext: "Capacitive / Resistive A0",
     },
@@ -38,9 +38,9 @@ export default function SensorHealthCard({ className }: { className?: string }) 
       name: "DHT22 Climate",
       icon: <Thermometer className="h-4 w-4 text-sky-400" />,
       status: stale ? "stale" : "healthy",
-      statusLabel: stale ? "Stale" : `${Math.round(snapshot?.temp ?? 30)}°C / ${Math.round(snapshot?.hum ?? 60)}%`,
-      value: `${Math.round(snapshot?.temp ?? 30)}°C`,
-      raw: `Hum: ${Math.round(snapshot?.hum ?? 60)}%`,
+      statusLabel: stale ? "Stale" : `${Math.round(farm.temp)}°C / ${Math.round(farm.hum)}%`,
+      value: `${Math.round(farm.temp)}°C`,
+      raw: `Hum: ${Math.round(farm.hum)}%`,
       subtext: "Digital D4 Bus",
     },
     {
@@ -52,8 +52,8 @@ export default function SensorHealthCard({ className }: { className?: string }) 
         ? "Stale"
         : isMqPreheating
           ? `Preheating ${mqPreheatRemain}s`
-          : `AQI ${snapshot?.aqi ?? 85}`,
-      value: isMqPreheating ? "Warming" : `AQI ${snapshot?.aqi ?? 85}`,
+          : `AQI ${farm.aqi}`,
+      value: isMqPreheating ? "Warming" : `AQI ${farm.aqi}`,
       raw: `raw: ${mqRaw}`,
       subtext: isMqPreheating ? "Heater cycle 45/60s" : "SnO2 Metal Oxide A1",
     },
@@ -68,14 +68,14 @@ export default function SensorHealthCard({ className }: { className?: string }) 
       subtext: "Digital Comparator D2",
     },
     {
-      id: "unolink",
-      name: "UNO Edge Link",
-      icon: <Cpu className="h-4 w-4 text-amber-400" />,
-      status: stale ? "stale" : "healthy",
-      statusLabel: stale ? "Dead (5s+)" : "Active (1s ago)",
-      value: stale ? "Offline" : "UART 9600",
-      raw: `RSSI: ${snapshot?.rssi ?? -55} dBm`,
-      subtext: "Serial Hardware UART",
+      id: "edgelink",
+      name: "ESP32 Edge Link",
+      icon: <Cpu className="h-4 w-4 text-emerald-400" />,
+      status: stale ? "stale" : farm.isLive ? "healthy" : "preheat",
+      statusLabel: stale ? "Stale (5s+)" : farm.isLive ? "Active (Live)" : "Simulated",
+      value: stale ? "Offline" : farm.isLive ? "MQTT / WiFi" : "Sim Mode",
+      raw: `RSSI: ${farm.rssi ?? -55} dBm`,
+      subtext: "ESP32 WSS Bridge",
     },
   ];
 

@@ -35,7 +35,6 @@ import { exportFarmBackup } from "@/lib/report-export";
 import WirelessEdgeCard from "@/components/mqtt/WirelessEdgeCard";
 import ConnectionStatusCard from "@/components/settings/ConnectionStatusCard";
 import BuzzerPatternTester from "@/components/alerts/BuzzerPatternTester";
-import LcdMessageSender from "@/components/settings/LcdMessageSender";
 import CommandLogCard from "@/components/settings/CommandLogCard";
 import SensorCalibrationCard from "@/components/settings/SensorCalibrationCard";
 import DiagnosticsCard from "@/components/settings/DiagnosticsCard";
@@ -566,18 +565,13 @@ export default function SettingsPage() {
           <BuzzerPatternTester />
         </Rise>
         <Rise delay={0.08}>
-          <LcdMessageSender />
-        </Rise>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-2">
-        <Rise delay={0.1}>
-          <SensorCalibrationCard />
-        </Rise>
-        <Rise delay={0.12}>
           <CommandLogCard />
         </Rise>
       </div>
+
+      <Rise delay={0.1}>
+        <SensorCalibrationCard />
+      </Rise>
 
       {/* ============ DIAGNOSTICS & ANALYTICS COUNTERS ============ */}
       <Rise delay={0.13}>

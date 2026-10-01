@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Clock, OctagonX, Play, Power, ShieldAlert, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useFarmStore } from "@/lib/store";
+import { useFarm, useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { Card, CardHeader } from "@/components/dashboard/ui";
 import SegmentedControl from "@/components/ui/SegmentedControl";
@@ -73,14 +73,15 @@ function Impeller({ running }: { running: boolean }) {
 
 export const PumpHeroCard = memo(function PumpHeroCard() {
   const t = useT();
-  const pump = useFarmStore((s) => s.pump);
-  const snapshot = useFarmStore((s) => s.snapshot);
-  const thresholds = useFarmStore((s) => s.settings.thresholds);
-  const manualRemaining = useFarmStore((s) => s.manualPumpRemainingSec);
-  const setPumpManual = useFarmStore((s) => s.setPumpManual);
-  const setPumpMode = useFarmStore((s) => s.setPumpMode);
+  const farm = useFarm();
+  const pump = farm.pumpState;
+  const snapshot = farm.snapshot;
+  const thresholds = farm.thresholds;
+  const manualRemaining = farm.manualRemainingSec;
+  const setPumpManual = farm.setPumpManual;
+  const setPumpMode = farm.setPumpMode;
   const addAlert = useFarmStore((s) => s.addAlert);
-  const alerts = useFarmStore((s) => s.alerts);
+  const alerts = farm.alerts;
 
   const [customSec, setCustomSec] = useState<number>(30);
   const [pulse, setPulse] = useState(false);
@@ -225,11 +226,11 @@ export const PumpHeroCard = memo(function PumpHeroCard() {
       </div>
 
       {/* Safety lock banner when sensor node is stale */}
-      {snapshot.stale && (
+      {farm.stale && (
         <div className="mt-3 liquid-glass-pill rounded-2xl p-3 border border-rose-500/35 bg-rose-500/10 flex items-center gap-2.5 text-xs text-rose-200">
           <ShieldAlert className="h-4 w-4 shrink-0 text-rose-400" />
           <span>
-            <strong>Pump Safety Lock:</strong> Auto mode locked — manual override only (sensor node offline / UNO link dead 5s+).
+            <strong>Pump Safety Lock:</strong> Auto mode locked — manual override only (sensor node offline / Edge node offline 5s+).
           </span>
         </div>
       )}

@@ -22,7 +22,7 @@ import {
   CloudRain,
   type LucideIcon,
 } from "lucide-react";
-import { useFarmStore } from "@/lib/store";
+import { useFarm, useFarmStore } from "@/lib/store";
 import type { SensorHistoryPoint } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { resampleChartPoints } from "@/components/dashboard/ui";
@@ -208,7 +208,7 @@ export const SensorsChart = memo(function SensorsChart({
 
 export default function SensorsView() {
   const sensorHistory = useFarmStore((s) => s.sensorHistory);
-  const snapshot = useFarmStore((s) => s.snapshot);
+  const farm = useFarm();
   const [selectedMetric, setSelectedMetric] = useState<SensorKey>("soil");
   const [viewMode, setViewMode] = useState<"area" | "line">("area");
 
@@ -236,21 +236,21 @@ export default function SensorsView() {
     }
 
     // Deterministic fallback for smooth charts if store history is fresh
-    const baseTime = snapshot?.timestamp ?? 1700000000000;
+    const baseTime = Date.now();
     const fallback = Array.from({ length: 30 }).map((_, i) => {
       const t = new Date(baseTime - (30 - i) * 60 * 1000);
       return {
         time: t.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }),
         timestamp: t.getTime(),
-        soil: Math.round(snapshot?.soil ?? 45) + Math.sin(i * 0.4) * 4,
-        temp: Number(((snapshot?.temp ?? 30) + Math.sin(i * 0.3) * 1.5).toFixed(1)),
-        hum: Math.round(snapshot?.hum ?? 60) + Math.cos(i * 0.4) * 3,
-        aqi: Math.round(snapshot?.aqi ?? 85) + Math.sin(i * 0.5) * 5,
-        rain: snapshot?.rain ? 1.8 + (i % 3) * 0.2 : 0,
+        soil: Math.round(farm.soil) + Math.sin(i * 0.4) * 4,
+        temp: Number((farm.temp + Math.sin(i * 0.3) * 1.5).toFixed(1)),
+        hum: Math.round(farm.hum) + Math.cos(i * 0.4) * 3,
+        aqi: Math.round(farm.aqi) + Math.sin(i * 0.5) * 5,
+        rain: farm.rain ? 1.8 + (i % 3) * 0.2 : 0,
       };
     });
     return resampleChartPoints(fallback, 60);
-  }, [sensorHistory, snapshot]);
+  }, [sensorHistory, farm.soil, farm.temp, farm.hum, farm.aqi, farm.rain]);
 
   // Calculate statistics (min, max, avg) for each metric
   const stats = useMemo(() => {
@@ -319,7 +319,7 @@ export default function SensorsView() {
                 SENSOR TELEMETRY & HEALTH
               </h1>
               <p className="text-[10px] text-[var(--ink-3)] uppercase tracking-wide">
-                HIGH-RESOLUTION 1-HOUR EDGE TELEMETRY • ESP32 + ARDUINO UNO
+                HIGH-RESOLUTION 1-HOUR EDGE TELEMETRY • ESP32 EDGE NODE
               </p>
             </div>
           </div>

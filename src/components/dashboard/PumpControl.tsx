@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Pause, Play, Power, Square, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useFarmStore } from "@/lib/store";
+import { useFarm, useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { Card, CardHeader } from "./ui";
 import SegmentedControl from "@/components/ui/SegmentedControl";
@@ -21,14 +21,14 @@ const MODES: Array<{ id: Mode; labelKey: string }> = [
 
 export const PumpControl = memo(function PumpControl() {
   const t = useT();
-  const pump = useFarmStore((s) => s.pump);
-  const snapshot = useFarmStore((s) => s.snapshot);
-  const thresholds = useFarmStore((s) => s.settings.thresholds);
-  const manualRemaining = useFarmStore((s) => s.manualPumpRemainingSec);
-  const setPumpManual = useFarmStore((s) => s.setPumpManual);
-  const setPumpMode = useFarmStore((s) => s.setPumpMode);
+  const farm = useFarm();
+  const pump = farm.pumpState;
+  const thresholds = farm.thresholds;
+  const manualRemaining = farm.manualRemainingSec;
+  const setPumpManual = farm.setPumpManual;
+  const setPumpMode = farm.setPumpMode;
   const addAlert = useFarmStore((s) => s.addAlert);
-  const alerts = useFarmStore((s) => s.alerts);
+  const alerts = farm.alerts;
 
   const [pulse, setPulse] = useState(false);
   const prevRunning = useRef(pump.running);
@@ -51,7 +51,7 @@ export const PumpControl = memo(function PumpControl() {
 
   const handlePower = (on: boolean) => {
     setPumpManual(on);
-    const soilStr = (snapshot?.soil ?? 0).toFixed(1);
+    const soilStr = farm.soil.toFixed(1);
     logPump(
       on ? "Pump turned ON (Manual)" : "Pump turned OFF (Manual)",
       on
@@ -67,7 +67,7 @@ export const PumpControl = memo(function PumpControl() {
       });
     }
     setPumpManual(true, sec);
-    const soilStr = (snapshot?.soil ?? 0).toFixed(1);
+    const soilStr = farm.soil.toFixed(1);
     logPump(
       `Pump ON for ${sec}s`,
       `Quick manual run — Soil at ${soilStr}%.`,
@@ -91,8 +91,8 @@ export const PumpControl = memo(function PumpControl() {
 
   // Live Jal Agent Auto-AI reasoning lines.
   const autoLines = (): Array<{ text: string; hot: boolean }> => {
-    const soil = snapshot?.soil ?? 45;
-    const rain = Boolean(snapshot?.rain);
+    const soil = farm.soil;
+    const rain = farm.rain;
     const low = thresholds?.moistureLow ?? 30;
     const high = thresholds?.moistureHigh ?? 75;
 
@@ -132,7 +132,7 @@ export const PumpControl = memo(function PumpControl() {
   const isManual = pump.mode === "manual";
 
   const nowStamp = new Date().toLocaleTimeString("en-GB", { hour12: false });
-  const isSafetyLocked = Boolean(snapshot?.rain || snapshot?.stale);
+  const isSafetyLocked = Boolean(farm.rain || farm.stale);
 
   return (
     <Card className={cn("relative rounded-none border border-[var(--line)] bg-[var(--panel)] p-5", pulse && "border-[var(--terra)]")}>
@@ -204,7 +204,7 @@ export const PumpControl = memo(function PumpControl() {
             )}
           </p>
           <p className="truncate text-[10px] uppercase text-[var(--ink-3)]">
-            SOIL: {snapshot.soil.toFixed(1)}% · RAIN: {snapshot.rain ? "DETECTED" : "NONE"}
+            SOIL: {farm.soil.toFixed(1)}% · RAIN: {farm.rain ? "DETECTED" : "NONE"}
           </p>
         </div>
       </div>

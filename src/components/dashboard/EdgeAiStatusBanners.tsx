@@ -10,7 +10,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useFarmStore } from "@/lib/store";
+import { useFarm } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 interface BannerItem {
@@ -29,18 +29,15 @@ interface BannerItem {
 }
 
 export default function EdgeAiStatusBanners({ className }: { className?: string }) {
-  const snapshot = useFarmStore((s) => s.snapshot);
-  const pump = useFarmStore((s) => s.pump);
-  const mqttStatus = useFarmStore((s) => s.mqttStatus);
-  const mqttConnected = mqttStatus === "online";
+  const farm = useFarm();
 
   const [dismissed, setDismissed] = useState<Record<string, boolean>>({});
 
   // Evaluate candidate banner
-  const stale = Boolean(snapshot?.stale);
-  const rain = Boolean(snapshot?.rain) && !pump?.running;
-  const cloudOffline = !mqttConnected;
-  const weakWifi = snapshot?.rssi != null && snapshot.rssi < -80;
+  const stale = farm.stale;
+  const rain = farm.rain && !farm.pump;
+  const cloudOffline = !farm.isLive;
+  const weakWifi = farm.rssi != null && farm.rssi < -80;
 
   let candidate: BannerItem | null = null;
 
@@ -48,7 +45,7 @@ export default function EdgeAiStatusBanners({ className }: { className?: string 
     candidate = {
       id: "stale-node",
       type: "danger",
-      title: "Sensor node offline (UNO link dead 5s+)",
+      title: "Sensor node offline (Edge node offline 5s+)",
       description: "Edge AI has locked auto-irrigation for crop safety. Manual override still available.",
       icon: ShieldAlert,
       tone: {
@@ -60,7 +57,7 @@ export default function EdgeAiStatusBanners({ className }: { className?: string 
       },
     };
   } else if (rain) {
-    const rainMmVal = (snapshot?.rainMm ?? 0).toFixed(1);
+    const rainMmVal = (farm.snapshot?.rainMm ?? 0).toFixed(1);
     candidate = {
       id: "rain-lock",
       type: "warning",
@@ -94,7 +91,7 @@ export default function EdgeAiStatusBanners({ className }: { className?: string 
     candidate = {
       id: "wifi-weak",
       type: "warning",
-      title: `Weak WiFi signal (${snapshot.rssi} dBm)`,
+      title: `Weak WiFi signal (${farm.rssi} dBm)`,
       description: "ESP32 telemetry may experience dropped packets. Consider adjusting antenna position.",
       icon: Radio,
       tone: {

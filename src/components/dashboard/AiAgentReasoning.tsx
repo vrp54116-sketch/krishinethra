@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Brain, Sparkles, ShieldAlert, CloudRain, CheckCircle2, AlertTriangle } from "lucide-react";
-import { useFarmStore } from "@/lib/store";
+import { useFarm } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 interface ReasoningState {
@@ -14,34 +14,32 @@ interface ReasoningState {
 }
 
 export default function AiAgentReasoning({ className }: { className?: string }) {
-  const snapshot = useFarmStore((s) => s.snapshot);
-  const pump = useFarmStore((s) => s.pump);
-  const thresholds = useFarmStore((s) => s.settings.thresholds);
-  const manualRemaining = useFarmStore((s) => s.manualPumpRemainingSec);
+  const farm = useFarm();
+  const manualRemaining = farm.manualRemainingSec;
 
   const [elapsedSec, setElapsedSec] = useState(0);
 
   // Compute dynamic reasoning based on current telemetry & settings
   const currentReasoning = useMemo<ReasoningState>(() => {
-    const soil = Math.round(snapshot?.soil ?? 45);
-    const rain = Boolean(snapshot?.rain);
-    const stale = Boolean(snapshot?.stale);
-    const isAuto = pump?.mode === "auto";
-    const isRunning = Boolean(pump?.running);
-    const lowThresh = thresholds?.moistureLow ?? 30;
-    const highThresh = thresholds?.moistureHigh ?? 75;
+    const soil = Math.round(farm.soil);
+    const rain = farm.rain;
+    const stale = farm.stale;
+    const isAuto = farm.mode === "AUTO";
+    const isRunning = farm.pump;
+    const lowThresh = farm.thresholds?.moistureLow ?? 30;
+    const highThresh = farm.thresholds?.moistureHigh ?? 75;
 
     if (stale) {
       return {
         id: `stale-${stale}`,
         type: "stale_lock",
-        headline: "Sensor node stale (UNO link dead 5s+) → Auto-irrigation locked for safety",
+        headline: "Sensor node stale (Edge node offline 5s+) → Auto-irrigation locked for safety",
         rule: "Fail-safe watchdog triggered: irrigation suppressed until link restored",
       };
     }
 
     if (rain) {
-      const rainMmVal = (snapshot?.rainMm ?? 0).toFixed(1);
+      const rainMmVal = (farm.snapshot?.rainMm ?? 0).toFixed(1);
       return {
         id: `rain-${rain}-${isRunning}`,
         type: "rain_lock",
@@ -94,15 +92,15 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
       }
     }
   }, [
-    snapshot.soil,
-    snapshot.rain,
-    snapshot.rainMm,
-    snapshot.stale,
-    pump.mode,
-    pump.running,
+    farm.soil,
+    farm.rain,
+    farm.snapshot?.rainMm,
+    farm.stale,
+    farm.mode,
+    farm.pump,
     manualRemaining,
-    thresholds.moistureLow,
-    thresholds.moistureHigh,
+    farm.thresholds?.moistureLow,
+    farm.thresholds?.moistureHigh,
   ]);
 
   const [lastHeadline, setLastHeadline] = useState(currentReasoning.headline);
@@ -204,7 +202,7 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
             </span>
           ) : (
             <span className="px-1.5 py-0.5 border border-[var(--moss)] bg-[var(--moss-soft)] text-[var(--moss)] font-bold text-[10px] uppercase tracking-wider">
-              {pump.mode === "auto" ? "AUTONOMOUS" : "MANUAL"}
+              {farm.mode === "AUTO" ? "AUTONOMOUS" : "MANUAL"}
             </span>
           )}
           <span className="text-[10px] text-[var(--ink-3)] font-mono">
@@ -235,12 +233,12 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
       {/* Footer live status bar */}
       <div className="mt-3 pt-2 border-t border-[var(--line)] flex flex-wrap items-center justify-between gap-2 text-[10px] text-[var(--ink-3)]">
         <div className="flex items-center gap-3">
-          <span>SOIL: <strong className="text-[var(--ink)]">{Math.round(snapshot.soil ?? 45)}%</strong></span>
-          <span>RAIN: <strong className={snapshot.rain ? "text-[var(--terra)]" : "text-[var(--moss)]"}>{snapshot.rain ? "DETECTED" : "NONE"}</strong></span>
-          <span>LINK: <strong className={snapshot.stale ? "text-[var(--terra)]" : "text-[var(--moss)]"}>{snapshot.stale ? "STALE" : "LIVE"}</strong></span>
+          <span>SOIL: <strong className="text-[var(--ink)]">{Math.round(farm.soil)}%</strong></span>
+          <span>RAIN: <strong className={farm.rain ? "text-[var(--terra)]" : "text-[var(--moss)]"}>{farm.rain ? "DETECTED" : "NONE"}</strong></span>
+          <span>LINK: <strong className={farm.stale ? "text-[var(--terra)]" : "text-[var(--moss)]"}>{farm.stale ? "STALE" : "LIVE"}</strong></span>
         </div>
         <div>
-          THRESHOLDS: {thresholds.moistureLow}% / {thresholds.moistureHigh}%
+          THRESHOLDS: {farm.thresholds?.moistureLow ?? 30}% / {farm.thresholds?.moistureHigh ?? 75}%
         </div>
       </div>
     </div>

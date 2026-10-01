@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useFarmStore } from "@/lib/store";
+import { useFarm } from "@/lib/store";
 import PageSkeleton from "@/components/layout/PageSkeleton";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 
@@ -15,7 +15,7 @@ const FarmMap = dynamic(() => import("@/components/map/FarmMap"), {
 });
 
 export default function MapPage() {
-  const mode = useFarmStore((s) => s.settings.mode);
+  const { isLive } = useFarm();
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-5">
@@ -26,21 +26,21 @@ export default function MapPage() {
         </span>
         <div className="min-w-0">
           <p className="text-sm font-extrabold text-white">
-            Digital Twin · {mode === "live" ? "LIVE Hardware Mirror" : "Simulation Mirror"}
+            Digital Twin · {isLive ? "LIVE Hardware Mirror" : "Simulation Mirror"}
           </p>
           <p className="mt-0.5 text-xs leading-relaxed text-sky-100/70">
-            Real-time single-zone visualization of your physical farm node. All hardware telemetry, pump states, and servo angles update live.
+            Real-time single-zone visualization of your physical farm node. All hardware telemetry, pump states, and relays update live.
           </p>
         </div>
         <span
           className={cn(
             "ml-auto hidden shrink-0 rounded-full border px-3 py-1 text-[11px] font-bold tracking-widest sm:block",
-            mode === "live"
+            isLive
               ? "border-emerald-400/50 bg-emerald-500/15 text-emerald-300"
               : "border-amber-400/50 bg-amber-500/10 text-amber-300",
           )}
         >
-          {mode === "live" ? "LIVE" : "SIMULATION"}
+          {isLive ? "LIVE" : "SIMULATION"}
         </span>
       </div>
 

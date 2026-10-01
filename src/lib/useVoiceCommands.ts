@@ -315,7 +315,24 @@ export function executeVoiceCommand(
   const said = transcript.toLowerCase().trim();
   const s = useFarmStore.getState();
   const settings = s.settings;
-  const snap = s.snapshot;
+  const snap = s.source === "LIVE"
+    ? {
+        ...s.snapshot,
+        soil: s.live.soil,
+        temp: s.live.temp,
+        tempC: s.live.temp,
+        hum: s.live.hum,
+        humidity: s.live.hum,
+        aqi: s.live.aqi,
+        rain: s.live.rain,
+        rainMm: s.live.rain ? 2.5 : 0,
+        pump: s.live.pump,
+        mode: s.live.mode,
+        stale: s.live.stale,
+        rssi: s.live.rssi,
+        uptime: s.live.uptime,
+      }
+    : s.snapshot;
   const hindi = !recLang.toLowerCase().startsWith("en");
   const unread = s.alerts.filter((a) => !a.read).length;
 
@@ -355,7 +372,7 @@ export function executeVoiceCommand(
   // --- Daily report ---
   if (containsAny(said, REPORT_PHRASES)) {
     const report = generateDailyReport({
-      snapshot: s.snapshot,
+      snapshot: snap,
       zones: s.zones,
       settings: s.settings,
       farmHealthScore: s.farmHealthScore,

@@ -19,7 +19,21 @@ import { recommendSchemes } from "./schemes-data";
 import { daysSinceLastFertilizer } from "./agronomy";
 
 /** Live farm slice the engine reads. Structurally satisfied by the store. */
-export type FarmState = DashboardAiState;
+export type FarmState = DashboardAiState & {
+  source?: "SIM" | "LIVE";
+  live?: {
+    soil: number;
+    temp: number;
+    hum: number;
+    aqi: number;
+    rain: boolean;
+    pump: boolean;
+    mode: "AUTO" | "MANUAL";
+    rssi: number | null;
+    stale: boolean;
+    uptime: number;
+  };
+};
 
 export interface KrishiGptAction {
   id: string;
@@ -220,19 +234,45 @@ function detectIntent(q: string): Intent {
   return "fallback";
 }
 
-/* ------------------------------------------------------------------ */
-/* Shared live getters                                                 */
-/* ------------------------------------------------------------------ */
+function getTelemetry(state: FarmState) {
+  if (state.source === "LIVE" && state.live) {
+    return {
+      soil: state.live.soil,
+      temp: state.live.temp,
+      hum: state.live.hum,
+      aqi: state.live.aqi,
+      rain: state.live.rain,
+      pump: state.live.pump,
+      mode: state.live.mode,
+      rssi: state.live.rssi,
+      stale: state.live.stale,
+      uptime: state.live.uptime,
+    };
+  }
+  return {
+    soil: state.snapshot.soil ?? state.snapshot.soilMoistureB ?? 45,
+    temp: state.snapshot.temp ?? state.snapshot.tempC ?? 28,
+    hum: state.snapshot.hum ?? state.snapshot.humidity ?? 60,
+    aqi: state.snapshot.aqi ?? 50,
+    rain: Boolean(state.snapshot.rain),
+    pump: state.pump.running,
+    mode: state.pump.mode === "auto" ? "AUTO" : "MANUAL",
+    rssi: state.snapshot.rssi,
+    stale: state.snapshot.stale,
+    uptime: state.snapshot.uptime,
+  };
+}
 
 function moisture(state: FarmState): { a: number; b: number; c: number } {
+  const tel = getTelemetry(state);
   const s = state.snapshot;
   const zA = state.zones.find((z) => z.id === "A");
   const zB = state.zones.find((z) => z.id === "B");
   const zC = state.zones.find((z) => z.id === "C");
   return {
     a: zA?.soilMoisture ?? s.soilMoistureA,
-    b: zB?.soilMoisture ?? s.soilMoistureB,
-    c: zC?.soilMoisture ?? (s.soilMoistureA + s.soilMoistureB) / 2,
+    b: zB?.soilMoisture ?? tel.soil,
+    c: zC?.soilMoisture ?? (s.soilMoistureA + tel.soil) / 2,
   };
 }
 
@@ -255,10 +295,10 @@ function link(id: string, label: string, href: string): KrishiGptAction {
 /* ------------------------------------------------------------------ */
 
 function answerWater(state: FarmState): KrishiGptAnswer {
-  const s = state.snapshot;
+  const tel = getTelemetry(state);
   const t = state.settings.thresholds;
-  const soil = s.soil ?? s.soilMoistureB;
-  const rain = s.rain;
+  const soil = tel.soil;
+  const rain = tel.rain;
 
   let verdict: string;
   if (rain) {
@@ -351,21 +391,21 @@ function answerFertilizer(state: FarmState): KrishiGptAnswer {
 }
 
 function answerWeather(state: FarmState): KrishiGptAnswer {
-  const s = state.snapshot;
-  const soil = s.soil ?? s.soilMoistureB;
-  const rainProb = s.hum > 72 ? 55 : s.hum > 55 ? 25 : 10;
-  const tMax = s.temp + 2.5;
+  const tel = getTelemetry(state);
+  const soil = tel.soil;
+  const rainProb = tel.hum > 72 ? 55 : tel.hum > 55 ? 25 : 10;
+  const tMax = tel.temp + 2.5;
   const tMin = tMax - 8;
 
   const rainAdvice =
-    s.rain
+    tel.rain
       ? `Baarish sensor par detect hui hai — aaj sinchai SKIP karo, muft ka paani!`
       : rainProb >= 50
         ? `Barish chance ~${rainProb}% hai — pump rok kar rakho, kal phir dekho.`
         : `Barish chance sirf ~${rainProb}% hai — moisture ke hisab se sinchai karo (Soil ${f1(soil)}%).`;
 
   const text =
-    `Mausam (LIVE sensor): ${f1(s.temp)}°C, ${f1(s.hum)}% nami, Rain sensor: ${s.rain ? "Yes" : "No"}, AQI ${f0(s.aqi)}. ` +
+    `Mausam (LIVE sensor): ${f1(tel.temp)}°C, ${f1(tel.hum)}% nami, Rain sensor: ${tel.rain ? "Yes" : "No"}, AQI ${f0(tel.aqi)}. ` +
     `Aaj ka offline anumaan: max ~${f1(tMax)}°C / min ~${f1(tMin)}°C, barish chance ~${rainProb}%. ` +
     `${rainAdvice} Kya sinchai ki final salah moisture se jod kar bataoon?`;
 
@@ -374,12 +414,12 @@ function answerWeather(state: FarmState): KrishiGptAnswer {
 
 function answerPump(state: FarmState): KrishiGptAnswer {
   const p = state.pump;
-  const s = state.snapshot;
-  const soil = s.soil ?? s.soilMoistureB;
+  const tel = getTelemetry(state);
+  const soil = tel.soil;
   const run = `${fmtRun(p.totalRunSeconds)} (${f0(p.totalRunSeconds)} sec total)`;
 
   const suggestion =
-    s.rain
+    tel.rain
       ? `Baarish chal rahi hai — pump chalane ki zaroorat nahi hai.`
       : p.running
         ? `Pump chal raha hai — nami badh rahi hai, band hone do.`
@@ -387,17 +427,17 @@ function answerPump(state: FarmState): KrishiGptAnswer {
 
   const text =
     `Pump (LIVE): abhi ${p.running ? "RUNNING hai" : "band hai"}, mode ${p.mode === "auto" ? "Auto AI" : p.mode}. ` +
-    `Aaj kul ${run} chala. Last run: ${fmtClock(p.lastRunAt)}. Soil moisture ${f1(soil)}%, Rain: ${s.rain ? "Yes" : "No"}. ${suggestion}`;
+    `Aaj kul ${run} chala. Last run: ${fmtClock(p.lastRunAt)}. Soil moisture ${f1(soil)}%, Rain: ${tel.rain ? "Yes" : "No"}. ${suggestion}`;
 
   return { text, actions: [pumpAction, link("goto-irrigation", "Go to Irrigation", "/app/irrigation")] };
 }
 
 function answerTank(state: FarmState): KrishiGptAnswer {
-  const s = state.snapshot;
-  const soil = s.soil ?? s.soilMoistureB;
+  const tel = getTelemetry(state);
+  const soil = tel.soil;
   const text =
     `Tank update: Actual hardware configuration me ultrasonic tank sensor installed nahi hai. ` +
-    `KrishiNethra directly aapke soil moisture sensor (${f1(soil)}%) aur rain sensor (${s.rain ? "Rain detected" : "Dry"}) ke zariye irrigation manage karta hai.`;
+    `KrishiNethra directly aapke soil moisture sensor (${f1(soil)}%) aur rain sensor (${tel.rain ? "Rain detected" : "Dry"}) ke zariye irrigation manage karta hai.`;
 
   return { text, actions: [link("goto-irrigation", "Go to Irrigation", "/app/irrigation")] };
 }
@@ -474,12 +514,13 @@ function answerHelp(): KrishiGptAnswer {
 }
 
 function answerFallback(state: FarmState): KrishiGptAnswer {
-  const soil = state.snapshot.soil ?? state.snapshot.soilMoistureB;
+  const tel = getTelemetry(state);
+  const soil = tel.soil;
   const text =
     `Ye sawal samajh nahi aaya. I can help with: water (paani), disease (rog), fertilizer (khaad), ` +
     `weather (mausam), pump, market (bhav), schemes (yojana), daily report. / ` +
     `Main inme madad kar sakta hoon: paani, rog, khaad, mausam, pump, bazaar bhav, yojana, daily report. ` +
-    `Abhi LIVE: health ${f0(state.farmHealthScore)}/100, Soil ${f1(soil)}% nami, Rain: ${state.snapshot.rain ? "Yes" : "No"}. ` +
+    `Abhi LIVE: health ${f0(state.farmHealthScore)}/100, Soil ${f1(soil)}% nami, Rain: ${tel.rain ? "Yes" : "No"}. ` +
     `Try: "Aaj paani dena chahiye?" — kya paani par salah doon?`;
 
   return {

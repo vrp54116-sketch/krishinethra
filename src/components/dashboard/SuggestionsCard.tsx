@@ -19,7 +19,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useFarmStore } from "@/lib/store";
+import { useFarm, useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { suggestActions, type SuggestionIcon, type SuggestionSeverity } from "@/lib/ai-engine";
 import { Card, CardHeader } from "./ui";
@@ -56,16 +56,17 @@ const SEVERITY: Record<SuggestionSeverity, { dot: string; border: string; icon: 
 
 export default function SuggestionsCard() {
   const t = useT();
-  const snapshot = useFarmStore((s) => s.snapshot);
-  const zones = useFarmStore((s) => s.zones);
-  const settings = useFarmStore((s) => s.settings);
-  const farmHealthScore = useFarmStore((s) => s.farmHealthScore);
+  const farm = useFarm();
+  const snapshot = farm.snapshot;
+  const zones = farm.zones;
+  const settings = farm.settings;
+  const farmHealthScore = farm.farmHealthScore;
   const totalWaterUsedL = useFarmStore((s) => s.totalWaterUsedL);
   const tasks = useFarmStore((s) => s.tasks);
   const scans = useFarmStore((s) => s.scans);
-  const alerts = useFarmStore((s) => s.alerts);
-  const pump = useFarmStore((s) => s.pump);
-  const sensorHistory = useFarmStore((s) => s.sensorHistory);
+  const alerts = farm.alerts;
+  const pump = farm.pumpState;
+  const sensorHistory = farm.sensorHistory;
   const diary = useFarmStore((s) => s.diary);
   const sprayPlans = useFarmStore((s) => s.sprayPlans);
 

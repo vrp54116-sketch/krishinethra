@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell,
-  Camera,
+  Lightbulb,
   Droplets,
   OctagonX,
   Plus,
@@ -94,13 +94,12 @@ export default function QuickActionsFAB() {
     setOpen(false);
   };
 
-  const handleCenterCamera = () => {
-    withMqtt((m) => m.cmdServo(90));
-    useFarmStore.setState((s) => ({
-      snapshot: { ...s.snapshot, servo: 90 },
-    }));
-    toast.success("CAMERA CENTERED", {
-      description: "Servo gimbal repositioned to 90°.",
+  const handleToggleR2 = () => {
+    const s = useFarmStore.getState();
+    const next = !s.edgeR2;
+    s.setEdgeR2(next);
+    toast.success(next ? "RELAY R2 ON" : "RELAY R2 OFF", {
+      description: next ? "Sent R2_ON to edge node." : "Sent R2_OFF to edge node.",
     });
     setOpen(false);
   };
@@ -157,10 +156,10 @@ export default function QuickActionsFAB() {
       color: "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink)] hover:bg-[var(--panel)]",
     },
     {
-      id: "camera",
-      label: "CENTER CAM (90°)",
-      icon: Camera,
-      onClick: handleCenterCamera,
+      id: "r2",
+      label: "TOGGLE RELAY R2",
+      icon: Lightbulb,
+      onClick: handleToggleR2,
       color: "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink)] hover:bg-[var(--panel)]",
     },
     {

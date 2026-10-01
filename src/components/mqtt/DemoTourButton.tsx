@@ -13,7 +13,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * DemoTourButton — guided hardware tour that works in SIMULATION and in
  * EDGE-LIVE. In EDGE-LIVE it asks first:
  *   "Tour will operate REAL hardware over the internet."
- * Steps: pump 5s → R2 on/off → buzzer → pan sweep → servo 90°.
+ * Steps: pump 5s → R2 on/off → buzzer alert.
  */
 export default function DemoTourButton({ className }: { className?: string }) {
   const router = useRouter();
@@ -49,31 +49,26 @@ export default function DemoTourButton({ className }: { className?: string }) {
       s.mqttStatus === "online";
     const where = live ? "REAL hardware over the internet" : "simulation";
     toast.info(`Demo tour started (${where})`, {
-      description: "Pump → R2 → buzzer → sweep. Watch the dashboard.",
+      description: "Pump → R2 → buzzer. Watch the dashboard.",
     });
     router.push("/app/dashboard");
     try {
       // 1. Pump 5s.
       s.setPumpManual(true, 5);
-      toast.success("Tour 1/4 — pump ON for 5s");
+      toast.success("Tour 1/3 — pump ON for 5s");
       await sleep(6000);
       // 2. R2 on → off.
       s.setEdgeR2(true);
-      toast.success("Tour 2/4 — R2 ON");
+      toast.success("Tour 2/3 — R2 ON");
       await sleep(2500);
       s.setEdgeR2(false);
-      toast.success("Tour 2/4 — R2 OFF");
+      toast.success("Tour 2/3 — R2 OFF");
       await sleep(1200);
       // 3. Buzzer test.
       s.sendEdgeBuzz();
-      toast.success("Tour 3/4 — buzzer test (BUZZ:2:150)");
-      await sleep(2500);
-      // 4. Pan sweep → centre.
-      s.sendEdgeSweep();
-      toast.success("Tour 4/4 — pan sweep (SWEEP)");
-      await sleep(4000);
-      s.sendEdgeServo(90);
-      toast.success("Tour done — servo centred (SERVO:90) 🌾");
+      toast.success("Tour 3/3 — buzzer test (BUZZ:2:150)");
+      await sleep(2000);
+      toast.success("Tour complete — edge node verified 🌾");
     } finally {
       setRunning(false);
     }
@@ -115,7 +110,7 @@ export default function DemoTourButton({ className }: { className?: string }) {
             <h3 className="text-base font-extrabold text-white">Start demo tour?</h3>
             <p className="mt-1.5 text-xs leading-relaxed text-zinc-300">
               Tour will operate REAL hardware over the internet — the pump,
-              relay R2, buzzer and servo will move on the field node.
+              relay R2, and buzzer will actuate on the field node.
             </p>
             <div className="mt-4 grid grid-cols-2 gap-2">
               <button

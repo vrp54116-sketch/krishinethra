@@ -45,8 +45,43 @@ import {
   fetchHwSensors,
   fetchHwStatus,
   sendHwPump,
-  sendHwServo,
 } from "./hw-client";
+
+/* ------------------------------------------------------------------ */
+/* Live Telemetry Types                                               */
+/* ------------------------------------------------------------------ */
+
+export type FarmSource = "SIM" | "LIVE";
+
+export interface LiveFarmSlice {
+  soil: number;
+  temp: number;
+  hum: number;
+  aqi: number;
+  rain: boolean;
+  pump: boolean;
+  r2: boolean;
+  mode: "AUTO" | "MANUAL";
+  stale: boolean;
+  rssi: number | null;
+  uptime: number;
+  lastSeenAt: number | null;
+}
+
+export const DEFAULT_LIVE: LiveFarmSlice = {
+  soil: 45,
+  temp: 28,
+  hum: 60,
+  aqi: 85,
+  rain: false,
+  pump: false,
+  r2: false,
+  mode: "AUTO",
+  stale: false,
+  rssi: null,
+  uptime: 0,
+  lastSeenAt: null,
+};
 
 /* ------------------------------------------------------------------ */
 /* Seed data                                                           */
@@ -78,6 +113,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   hardwareGatewayUrl: "",
   mqttToken: "patelfarm01",
   mqttBrokerUrl: "wss://broker.emqx.io:8084/mqtt",
+  autoConnect: true,
   cameraSource: "simulation",
   cameraStreamUrl: "",
   cameraPanSpeed: 5,
@@ -604,9 +640,10 @@ interface FarmState {
   hwUptimeSec: number | null;
   hwLatencyMs: number | null;
 
-  // Wireless edge bridge (MQTT) — TRUE WIRELESS live mode. Ephemeral link
-  // state, never persisted (token/broker live in settings and DO persist).
-  // liveSource === "mqtt" means telemetry flows from the ESP32 over MQTT.
+  // Wireless edge bridge (MQTT) — TRUE WIRELESS live mode.
+  // source === "LIVE" when online and last msg < 5s, else fallback "SIM".
+  source: FarmSource;
+  live: LiveFarmSlice;
   liveSource: "sim" | "mqtt";
   mqttStatus: "connecting" | "online" | "offline";
   mqttMsgCount: number;
@@ -614,15 +651,15 @@ interface FarmState {
   mqttRssi: number | null;
   /** Edge-reported stale flag (telemetry.stale === 1 → sensor node silent). */
   edgeStale: boolean;
-  /** Edge relay R2 + servo mirror (from telemetry, optimistic on toggle). */
+  /** Edge relay R2 mirror (from telemetry, optimistic on toggle). */
   edgeR2: boolean;
-  edgeServo: number;
   edgeMode: string | null;
+  setSource: (src: FarmSource) => void;
   setLiveSource: (src: "sim" | "mqtt") => void;
+  setLiveTelemetry: (t: import("./mqtt-bridge").EdgeTelemetry) => void;
+  farmCmd: (cmd: string) => void;
   setEdgeR2: (on: boolean) => void;
   sendEdgeBuzz: () => void;
-  sendEdgeSweep: () => void;
-  sendEdgeServo: (angle: number) => void;
 
   // Pan-tilt camera state (degrees, default looks straight at the field).
   panAngle: number;
@@ -801,7 +838,6 @@ function applyLiveSnapshotDirect(raw: SensorSnapshot): void {
     rain: typeof raw.rain === "boolean" ? raw.rain : Boolean(raw.rain),
     pump: typeof raw.pump === "boolean" ? raw.pump : s.pump.running,
     mode: (raw.mode as "AUTO" | "MANUAL") ?? (s.pump.mode === "auto" ? "AUTO" : "MANUAL"),
-    servo: numOr(s.snapshot.servo ?? 90, raw.servo),
     rssi: numOr(s.snapshot.rssi ?? -55, raw.rssi),
     stale: typeof raw.stale === "boolean" ? raw.stale : false,
     uptime: numOr(s.snapshot.uptime ?? 0, raw.uptime),
@@ -926,40 +962,6 @@ async function doLivePoll(): Promise<void> {
   } finally {
     livePollInFlight = false;
   }
-}
-
-/* Throttled servo forwarding: hold-to-move pads emit ~16/s, the gateway
-   only needs ~2/s — last angle wins via the next allowed send. */
-const SERVO_MIN_INTERVAL_MS = 400;
-const lastServoSent: Record<"pan" | "tilt", { angle: number; at: number }> = {
-  pan: { angle: -1, at: 0 },
-  tilt: { angle: -1, at: 0 },
-};
-
-function maybeSendServo(axis: "pan" | "tilt", angle: number): void {
-  if (typeof window === "undefined") return;
-  const st = useFarmStore.getState();
-  if (st.settings.mode !== "live") return;
-  const rounded = Math.min(180, Math.max(0, Math.round(angle)));
-  const now = Date.now();
-  // Wireless edge path: pan servo mirrors over MQTT (tilt is local-only —
-  // the edge node carries a single pan servo).
-  if (st.liveSource === "mqtt" && st.mqttStatus === "online") {
-    if (axis !== "pan") return;
-    const last = lastServoSent[axis];
-    if (rounded === last.angle) return;
-    if (now - last.at < SERVO_MIN_INTERVAL_MS) return;
-    lastServoSent[axis] = { angle: rounded, at: now };
-    void import("./mqtt-bridge").then((m) => m.cmdServo(rounded));
-    return;
-  }
-  const gw = st.settings.hardwareGatewayUrl.trim();
-  if (!gw) return;
-  const last = lastServoSent[axis];
-  if (rounded === last.angle) return;
-  if (now - last.at < SERVO_MIN_INTERVAL_MS) return;
-  lastServoSent[axis] = { angle: rounded, at: now };
-  void sendHwServo(gw, axis, rounded);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1303,6 +1305,8 @@ export const useFarmStore = create<FarmState>()(
       hwLatencyMs: null,
 
       // Wireless edge bridge starts offline; MqttManager owns it.
+      source: "SIM",
+      live: DEFAULT_LIVE,
       liveSource: "sim",
       mqttStatus: "offline",
       mqttMsgCount: 0,
@@ -1310,54 +1314,153 @@ export const useFarmStore = create<FarmState>()(
       mqttRssi: null,
       edgeStale: false,
       edgeR2: false,
-      edgeServo: 90,
       edgeMode: null,
-      setLiveSource: (src) => set({ liveSource: src }),
-      setEdgeR2: (on) => {
-        set({ edgeR2: on });
-        const st = get();
-        if (st.liveSource === "mqtt" && st.mqttStatus === "online") {
-          void import("./mqtt-bridge").then((m) => m.cmdR2(on));
+      setSource: (src) => set({ source: src, liveSource: src === "LIVE" ? "mqtt" : "sim" }),
+      setLiveSource: (src) => set({ liveSource: src, source: src === "mqtt" ? "LIVE" : "SIM" }),
+      setLiveTelemetry: (t) => {
+        const now = Date.now();
+        set((s) => {
+          const live: LiveFarmSlice = {
+            soil: t.soil,
+            temp: t.temp,
+            hum: t.hum,
+            aqi: t.aqi,
+            rain: t.rain,
+            pump: t.pump,
+            r2: t.r2,
+            mode: t.mode,
+            stale: t.stale,
+            rssi: t.rssi,
+            uptime: t.up,
+            lastSeenAt: now,
+          };
+          const isOnline = s.mqttStatus === "online";
+          const nextSource = isOnline ? "LIVE" : s.source;
+
+          // Snapshot sync
+          const snapshot: SensorSnapshot = {
+            ...s.snapshot,
+            timestamp: now,
+            soil: t.soil,
+            soilMoistureB: t.soil,
+            temp: t.temp,
+            tempC: t.temp,
+            hum: t.hum,
+            humidity: t.hum,
+            aqi: t.aqi,
+            rain: t.rain,
+            pump: t.pump,
+            mode: t.mode,
+            stale: t.stale,
+            rssi: t.rssi,
+            uptime: t.up,
+            rainMm: t.rain ? 2.5 : 0,
+            flowRateLpm: t.pump ? 0.4 : 0,
+            pumpCurrentA: t.pump ? 0.25 : 0,
+          };
+
+          const lastPt = s.sensorHistory[s.sensorHistory.length - 1];
+          let sensorHistory = s.sensorHistory;
+          if (!lastPt || now - lastPt.timestamp >= 5000) {
+            sensorHistory = [
+              ...s.sensorHistory,
+              {
+                timestamp: now,
+                tempC: t.temp,
+                humidity: t.hum,
+                aqi: t.aqi,
+                soilMoistureA: s.snapshot.soilMoistureA,
+                soilMoistureB: t.soil,
+                waterUsedL: s.totalWaterUsedL,
+                soil: t.soil,
+                temp: t.temp,
+                hum: t.hum,
+                rain: t.rain,
+                pump: t.pump,
+              },
+            ].slice(-500);
+          }
+
+          return {
+            live,
+            source: nextSource,
+            liveSource: nextSource === "LIVE" ? "mqtt" : s.liveSource,
+            mqttLastSeen: now,
+            mqttMsgCount: s.mqttMsgCount + 1,
+            mqttRssi: t.rssi,
+            edgeStale: t.stale,
+            edgeR2: t.r2,
+            edgeMode: t.mode,
+            snapshot,
+            sensorHistory,
+            hwConnected: true,
+            hwLastSeen: now,
+            hwUptimeSec: t.up,
+          };
+        });
+      },
+      farmCmd: (cmd) => {
+        const clean = (cmd || "").trim();
+        if (!clean) return;
+        if (clean === "PUMP_ON") {
+          set((s) => ({
+            pump: { ...s.pump, running: true, lastRunAt: Date.now() },
+            live: { ...s.live, pump: true },
+            snapshot: { ...s.snapshot, pump: true },
+          }));
+        } else if (clean === "PUMP_OFF") {
+          set((s) => ({
+            pump: { ...s.pump, running: false },
+            manualPumpRemainingSec: null,
+            live: { ...s.live, pump: false },
+            snapshot: { ...s.snapshot, pump: false },
+          }));
+        } else if (clean === "MODE_AUTO") {
+          set((s) => ({
+            pump: { ...s.pump, mode: "auto" },
+            live: { ...s.live, mode: "AUTO" },
+            snapshot: { ...s.snapshot, mode: "AUTO" },
+          }));
+        } else if (clean === "MODE_MANUAL") {
+          set((s) => ({
+            pump: { ...s.pump, mode: "manual" },
+            live: { ...s.live, mode: "MANUAL" },
+            snapshot: { ...s.snapshot, mode: "MANUAL" },
+          }));
+        } else if (clean === "R2_ON") {
+          set((s) => ({
+            edgeR2: true,
+            live: { ...s.live, r2: true },
+          }));
+        } else if (clean === "R2_OFF") {
+          set((s) => ({
+            edgeR2: false,
+            live: { ...s.live, r2: false },
+          }));
         }
+        void import("./mqtt-bridge").then((m) => m.farmCmd(clean as never));
+      },
+      setEdgeR2: (on) => {
+        set((s) => ({ edgeR2: on, live: { ...s.live, r2: on } }));
+        void import("./mqtt-bridge").then((m) => m.farmCmd(on ? "R2_ON" : "R2_OFF"));
       },
       sendEdgeBuzz: () => {
         const st = get();
-        if (st.liveSource === "mqtt" && st.mqttStatus === "online") {
-          void import("./mqtt-bridge").then((m) => m.cmdBuzz());
-        }
-      },
-      sendEdgeSweep: () => {
-        const st = get();
-        if (st.liveSource === "mqtt" && st.mqttStatus === "online") {
-          void import("./mqtt-bridge").then((m) => m.cmdSweep());
-        }
-      },
-      sendEdgeServo: (angle) => {
-        const rounded = Math.min(180, Math.max(0, Math.round(angle)));
-        set({ edgeServo: rounded, panAngle: rounded });
-        const st = get();
-        if (st.liveSource === "mqtt" && st.mqttStatus === "online") {
-          void import("./mqtt-bridge").then((m) => m.cmdServo(rounded));
-        } else {
-          maybeSendServo("pan", rounded);
-        }
+        if (st.settings.muteBuzzer) return;
+        void import("./mqtt-bridge").then((m) => m.farmCmd("BUZZ:2:150"));
       },
 
       setPanAngle: (angle) => {
         set({ panAngle: Math.min(180, Math.max(0, Math.round(angle))) });
-        maybeSendServo("pan", angle);
       },
       setTiltAngle: (angle) => {
         set({ tiltAngle: Math.min(180, Math.max(0, Math.round(angle))) });
-        maybeSendServo("tilt", angle);
       },
       setCameraAngles: (pan, tilt) => {
         set((s) => ({
           panAngle: Math.min(180, Math.max(0, Math.round(pan))),
           tiltAngle: tilt == null ? s.tiltAngle : Math.min(180, Math.max(0, Math.round(tilt))),
         }));
-        maybeSendServo("pan", pan);
-        if (tilt != null) maybeSendServo("tilt", tilt);
       },
 
       startSimulation: () => {
@@ -1790,7 +1893,6 @@ export const useFarmStore = create<FarmState>()(
           mqttRssi: null,
           edgeStale: false,
           edgeR2: false,
-          edgeServo: 90,
           edgeMode: null,
         });
       },
@@ -2095,6 +2197,8 @@ export const useFarmStore = create<FarmState>()(
           hwFirmware: _hwF,
           hwUptimeSec: _hwU,
           hwLatencyMs: _hwLat,
+          source: _source,
+          live: _live,
           liveSource: _ls,
           mqttStatus: _mqS,
           mqttMsgCount: _mqC,
@@ -2102,10 +2206,11 @@ export const useFarmStore = create<FarmState>()(
           mqttRssi: _mqR,
           edgeStale: _eS,
           edgeR2: _eR2,
-          edgeServo: _eSv,
           edgeMode: _eM,
           ...rest
         } = s;
+        void _source;
+        void _live;
         void _hydrated;
         void _omitted;
         void _hwC;
@@ -2120,7 +2225,6 @@ export const useFarmStore = create<FarmState>()(
         void _mqR;
         void _eS;
         void _eR2;
-        void _eSv;
         void _eM;
         return rest;
       },
@@ -2276,6 +2380,8 @@ export const useFarmStore = create<FarmState>()(
         }
         // Wireless link block is ephemeral — always start clean.
         if (state) {
+          state.source = "SIM";
+          state.live = DEFAULT_LIVE;
           state.liveSource = "sim";
           state.mqttStatus = "offline";
           state.mqttMsgCount = 0;
@@ -2283,7 +2389,6 @@ export const useFarmStore = create<FarmState>()(
           state.mqttRssi = null;
           state.edgeStale = false;
           state.edgeR2 = false;
-          state.edgeServo = 90;
           state.edgeMode = null;
           state.hwConnected = false;
         }
@@ -2370,32 +2475,111 @@ export interface SensorContextValue {
   rain: boolean;
   pump: boolean;
   mode: "AUTO" | "MANUAL";
-  servo: number;
   rssi: number | null;
   stale: boolean;
   uptime: number;
 }
 
 export function useSensorContext(): SensorContextValue {
-  const snapshot = useFarmStore((s) => s.snapshot);
-  const pump = useFarmStore((s) => s.pump);
-  const mqttRssi = useFarmStore((s) => s.mqttRssi);
-  const edgeStale = useFarmStore((s) => s.edgeStale);
-  const edgeServo = useFarmStore((s) => s.edgeServo);
-  const hwUptimeSec = useFarmStore((s) => s.hwUptimeSec);
-
+  const farm = useFarm();
   return {
-    soil: snapshot.soil ?? snapshot.soilMoistureA ?? 45,
-    temp: snapshot.temp ?? snapshot.tempC ?? 28,
-    hum: snapshot.hum ?? snapshot.humidity ?? 60,
-    aqi: snapshot.aqi ?? 85,
-    rain: Boolean(snapshot.rain),
-    pump: pump.running,
-    mode: (pump.mode === "auto" ? "AUTO" : "MANUAL") as "AUTO" | "MANUAL",
-    servo: edgeServo ?? snapshot.servo ?? 90,
-    rssi: mqttRssi ?? snapshot.rssi ?? null,
-    stale: edgeStale ?? snapshot.stale ?? false,
-    uptime: hwUptimeSec ?? snapshot.uptime ?? 0,
+    soil: farm.soil,
+    temp: farm.temp,
+    hum: farm.hum,
+    aqi: farm.aqi,
+    rain: farm.rain,
+    pump: farm.pump,
+    mode: farm.mode,
+    rssi: farm.rssi,
+    stale: farm.stale,
+    uptime: farm.uptime,
   };
+}
+
+export interface FarmView {
+  source: "SIM" | "LIVE";
+  isLive: boolean;
+  soil: number;
+  temp: number;
+  hum: number;
+  aqi: number;
+  rain: boolean;
+  pump: boolean;
+  r2: boolean;
+  mode: "AUTO" | "MANUAL";
+  stale: boolean;
+  rssi: number | null;
+  uptime: number;
+
+  zones: Zone[];
+  alerts: Alert[];
+  farmHealthScore: number;
+  sensorHistory: SensorHistoryPoint[];
+  settings: AppSettings;
+  farmProfile: AppSettings["farmProfile"];
+  thresholds: AppSettings["thresholds"];
+  manualRemainingSec: number | null;
+  snapshot: SensorSnapshot;
+  pumpState: PumpState;
+
+  farmCmd: (cmd: string) => void;
+  setPumpManual: (on: boolean, durationSec?: number) => void;
+  setPumpMode: (mode: "manual" | "auto" | "schedule") => void;
+  setEdgeR2: (on: boolean) => void;
+  sendEdgeBuzz: () => void;
+}
+
+/**
+ * Single selector useFarm() returns live-or-sim based on source ('SIM' | 'LIVE').
+ * LIVE when online and last msg < 5s, else fallback SIM.
+ */
+export function useFarm(): FarmView;
+export function useFarm<T>(selector: (farm: FarmView) => T): T;
+export function useFarm<T>(selector?: (farm: FarmView) => T): T | FarmView {
+  const store = useFarmStore();
+  const isLive = store.source === "LIVE";
+
+  const farm: FarmView = {
+    source: store.source,
+    isLive,
+    soil: isLive ? store.live.soil : (store.snapshot?.soil ?? store.snapshot?.soilMoistureA ?? 45),
+    temp: isLive ? store.live.temp : (store.snapshot?.temp ?? store.snapshot?.tempC ?? 28),
+    hum: isLive ? store.live.hum : (store.snapshot?.hum ?? store.snapshot?.humidity ?? 60),
+    aqi: isLive ? store.live.aqi : (store.snapshot?.aqi ?? 85),
+    rain: isLive ? store.live.rain : Boolean(store.snapshot?.rain),
+    pump: isLive ? store.live.pump : store.pump.running,
+    r2: isLive ? store.live.r2 : Boolean(store.edgeR2),
+    mode: isLive ? store.live.mode : (store.pump.mode === "auto" ? "AUTO" : "MANUAL"),
+    stale: isLive ? store.live.stale : false,
+    rssi: isLive ? store.live.rssi : (store.mqttRssi ?? store.snapshot?.rssi ?? null),
+    uptime: isLive ? store.live.uptime : (store.snapshot?.uptime ?? 0),
+
+    zones: store.zones,
+    alerts: store.alerts,
+    farmHealthScore: store.farmHealthScore,
+    sensorHistory: store.sensorHistory,
+    settings: store.settings,
+    farmProfile: store.settings?.farmProfile,
+    thresholds: store.settings?.thresholds,
+    manualRemainingSec: store.manualPumpRemainingSec,
+    snapshot: store.snapshot,
+    pumpState: store.pump,
+
+    farmCmd: (cmd: string) => store.farmCmd(cmd),
+    setPumpManual: store.setPumpManual,
+    setPumpMode: store.setPumpMode,
+    setEdgeR2: store.setEdgeR2,
+    sendEdgeBuzz: store.sendEdgeBuzz,
+  };
+
+  return selector ? selector(farm) : farm;
+}
+
+/**
+ * Exported farmCmd helper for dispatching EXACT commands:
+ * PUMP_ON, PUMP_OFF, MODE_AUTO, MODE_MANUAL, R2_ON, R2_OFF, BUZZ:<n>:<ms>
+ */
+export function farmCmd(cmd: string): void {
+  useFarmStore.getState().farmCmd(cmd);
 }
 

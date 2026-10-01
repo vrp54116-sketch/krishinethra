@@ -1,17 +1,18 @@
 "use client";
 
 import { Wrench, Droplets, Wind, BookOpen } from "lucide-react";
-import { useFarmStore } from "@/lib/store";
+import { useFarm, useFarmStore } from "@/lib/store";
 import { LiquidToggle } from "@/components/ui/glass";
 import { cn } from "@/lib/utils";
 
 export default function SensorCalibrationCard({ className }: { className?: string }) {
-  const snapshot = useFarmStore((s) => s.snapshot);
-  const settings = useFarmStore((s) => s.settings);
+  const farm = useFarm();
+  const snapshot = farm.snapshot;
+  const settings = farm.settings;
   const updateSettings = useFarmStore((s) => s.updateSettings);
 
   const showRaw = settings.showRawCalibrationValues ?? false;
-  const soilRaw = snapshot.soilRaw ?? (snapshot.soil ? Math.round(1023 - (snapshot.soil * 6.5)) : 540);
+  const soilRaw = snapshot.soilRaw ?? (farm.soil ? Math.round(1023 - (farm.soil * 6.5)) : 540);
   const mqRaw = snapshot.mqRaw ?? 230;
 
   const handleToggleRaw = (val: boolean) => {
@@ -102,7 +103,7 @@ export default function SensorCalibrationCard({ className }: { className?: strin
       <div className="liquid-glass-pill rounded-2xl p-4 border border-white/10 bg-white/[0.02] space-y-4">
         <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
           <BookOpen className="h-4 w-4 text-sky-400" />
-          <span>Hardware Calibration Procedures (Arduino UNO & ESP32)</span>
+          <span>Hardware Calibration Procedures (ESP32 Edge Node)</span>
         </div>
 
         <div className="space-y-3 text-xs">
@@ -116,7 +117,7 @@ export default function SensorCalibrationCard({ className }: { className?: strin
               <li>Leave probe suspended in open dry air: record <code>RAW_DRY</code> (e.g. 910).</li>
               <li>Immerse probe into a glass of clean water up to PCB line: record <code>RAW_WET</code> (e.g. 390).</li>
               <li>
-                In <code>krishinethra_uno.ino</code>, update:
+                In ESP32 firmware, update:
                 <code className="block mt-1 p-2 rounded-lg bg-black/50 text-emerald-300 border border-white/10">
                   int soilPct = constrain(map(rawA0, 910, 390, 0, 100), 0, 100);
                 </code>

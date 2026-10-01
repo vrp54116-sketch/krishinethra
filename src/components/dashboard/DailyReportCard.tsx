@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Sparkles, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useFarmStore } from "@/lib/store";
+import { useFarm, useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { generateDailyReport } from "@/lib/ai-engine";
 import { Card, useMounted } from "./ui";
@@ -24,16 +24,17 @@ function voiceLang(lang: string): string {
 
 export default function DailyReportCard() {
   const t = useT();
-  const snapshot = useFarmStore((s) => s.snapshot);
-  const zones = useFarmStore((s) => s.zones);
-  const settings = useFarmStore((s) => s.settings);
-  const farmHealthScore = useFarmStore((s) => s.farmHealthScore);
+  const farm = useFarm();
+  const snapshot = farm.snapshot;
+  const zones = farm.zones;
+  const settings = farm.settings;
+  const farmHealthScore = farm.farmHealthScore;
   const totalWaterUsedL = useFarmStore((s) => s.totalWaterUsedL);
   const tasks = useFarmStore((s) => s.tasks);
   const scans = useFarmStore((s) => s.scans);
-  const alerts = useFarmStore((s) => s.alerts);
-  const pump = useFarmStore((s) => s.pump);
-  const sensorHistory = useFarmStore((s) => s.sensorHistory);
+  const alerts = farm.alerts;
+  const pump = farm.pumpState;
+  const sensorHistory = farm.sensorHistory;
   const diary = useFarmStore((s) => s.diary);
   const sprayPlans = useFarmStore((s) => s.sprayPlans);
 

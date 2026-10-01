@@ -1,32 +1,23 @@
 /**
  * mqtt-bridge.ts
- * TRUE WIRELESS live mode over MQTT (replaces the laptop-brain Web Serial path).
+ * Single ESP32 Edge Node MQTT Bridge.
  *
- * The ESP32 edge node publishes telemetry to a public MQTT broker; this web
- * app (hosted on Vercel, opened on ANY device/network) subscribes over secure
- * WebSocket (wss) and publishes commands back. No laptop involvement at all.
+ * Connects to a single ESP32 edge node over MQTT WebSocket with automatic failover:
+ *   - wss://broker.emqx.io:8084/mqtt
+ *   - wss://broker.hivemq.com:8884/mqtt
  *
- * Topics (token acts as the farm password on a public broker):
- *   krishinethra/{token}/up    — edge telemetry (JSON, node === "EDGE")
- *   krishinethra/{token}/state  — edge state snapshot (pump/r2/servo/mode/rssi)
- *   krishinethra/{token}/cmd    — web → edge commands (plain strings)
+ * Topics:
+ *   krishinethra/{token}/up  — ESP32 telemetry (JSON, node === "EDGE")
+ *   krishinethra/{token}/cmd — Web → ESP32 commands (plain strings)
  *
- * Command strings (plain text, retain false, qos 0):
- *   PUMP:ON | PUMP:OFF | PUMP:5 | PUMP:10 | PUMP:30
- *   MODE:AUTO | MODE:MANUAL
- *   R2:ON | R2:OFF
- *   BUZZ:2:150
- *   SWEEP | SERVO:90
- *   LCD1:<16 chars> | LCD2:<16 chars>
+ * Telemetry Contract EXACT:
+ *   { node, soil, temp, hum, aqi, rain, pump, r2, mode: "AUTO"|"MANUAL", stale, rssi, up }
  *
- * This module owns the singleton mqtt.js client. It writes into the zustand
- * store (same slices the simulator uses) so every existing page works
- * untouched. The store NEVER statically imports this module (it uses a
- * dynamic import for sendCmd) so there is no import cycle.
+ * Commands EXACT:
+ *   PUMP_ON, PUMP_OFF, MODE_AUTO, MODE_MANUAL, R2_ON, R2_OFF, BUZZ:<n>:<ms>
  */
 
 import mqtt, { type MqttClient } from "mqtt";
-import throttle from "lodash.throttle";
 import { useFarmStore } from "./store";
 import { logCommand } from "./command-logger";
 import {
@@ -36,36 +27,58 @@ import {
   topicsFor,
 } from "./mqtt-config";
 
-// Re-export light constants so existing `mqtt-bridge` imports keep working.
-export { DEFAULT_BROKERS, DEFAULT_FARM_TOKEN, topicsFor } from "./mqtt-config";
+export { DEFAULT_BROKERS, DEFAULT_FARM_TOKEN, topicsFor };
 
-export type MqttConnStatus = "connecting" | "online" | "offline";
+export type MqttState = "connecting" | "online" | "offline";
+
+export interface EdgeTelemetry {
+  node: "EDGE";
+  soil: number;
+  temp: number;
+  hum: number;
+  aqi: number;
+  rain: boolean;
+  pump: boolean;
+  r2: boolean;
+  mode: "AUTO" | "MANUAL";
+  stale: boolean;
+  rssi: number;
+  up: number;
+}
+
+export type FarmCommand =
+  | "PUMP_ON"
+  | "PUMP_OFF"
+  | "MODE_AUTO"
+  | "MODE_MANUAL"
+  | "R2_ON"
+  | "R2_OFF"
+  | `BUZZ:${number}:${number}`
+  | string;
+
+const FAILOVER_BROKERS = [
+  "wss://broker.emqx.io:8084/mqtt",
+  "wss://broker.hivemq.com:8884/mqtt",
+] as const;
 
 /* ------------------------------------------------------------------ */
-/* Singleton client state                                               */
+/* Internal client state                                              */
 /* ------------------------------------------------------------------ */
 
 let client: MqttClient | null = null;
+let currentStatus: MqttState = "offline";
 let activeToken = DEFAULT_FARM_TOKEN;
-let activeBroker = "";
-let connStatus: MqttConnStatus = "offline";
-/** User intent: true after Connect, false after Disconnect. */
+let activeBroker: string = FAILOVER_BROKERS[0];
 let wantConnect = false;
-/** Failover cursor into the broker list. */
 let failoverIdx = 0;
-/** Connection-attempt timeout used to trigger failover. */
 let failoverTimer: ReturnType<typeof setTimeout> | null = null;
-/** Guard against overlapping failover hops. */
 let hopping = false;
-let edgeResponderTimer: ReturnType<typeof setInterval> | null = null;
-let lastHardwarePacketAt = 0;
 
-function clearEdgeResponder(): void {
-  if (edgeResponderTimer) {
-    clearInterval(edgeResponderTimer);
-    edgeResponderTimer = null;
-  }
-}
+export let lastSeenAt: number | null = null;
+export let msgCount = 0;
+export let rssi: number | null = null;
+
+const telemetryListeners = new Set<(t: EdgeTelemetry) => void>();
 
 function clearFailoverTimer(): void {
   if (failoverTimer) {
@@ -74,21 +87,21 @@ function clearFailoverTimer(): void {
   }
 }
 
-function pushStatusToStore(status: MqttConnStatus): void {
-  connStatus = status;
+function pushStatus(status: MqttState): void {
+  currentStatus = status;
   try {
     useFarmStore.setState({ mqttStatus: status } as never);
   } catch {
-    /* store not ready (SSR) — status is still readable via getMqttStatus() */
+    /* store not initialized yet */
   }
 }
 
-function brokerCandidates(preferred?: string): string[] {
+function getCandidates(preferred?: string): string[] {
   const list: string[] = [];
   const p = (preferred || "").trim();
   if (p) list.push(p);
   if (ENV_BROKER_URL && !list.includes(ENV_BROKER_URL)) list.push(ENV_BROKER_URL);
-  for (const b of DEFAULT_BROKERS) {
+  for (const b of FAILOVER_BROKERS) {
     if (!list.includes(b)) list.push(b);
   }
   return list;
@@ -96,231 +109,43 @@ function brokerCandidates(preferred?: string): string[] {
 
 function armFailoverTimeout(candidates: string[]): void {
   clearFailoverTimer();
-  // If we never reach "connect", hop to the next broker after 9s.
   failoverTimer = setTimeout(() => {
-    if (!wantConnect || connStatus === "online") return;
+    if (!wantConnect || currentStatus === "online") return;
     hopToNext(candidates);
-  }, 9000);
+  }, 8000);
 }
 
 function hopToNext(candidates: string[]): void {
-  if (!wantConnect || hopping) return;
+  if (!wantConnect || hopping || candidates.length <= 1) return;
   hopping = true;
   try {
     failoverIdx = (failoverIdx + 1) % candidates.length;
-    const next = candidates[failoverIdx];
-    // Tear down the stuck client and reconnect to the next broker.
+    const nextBroker = candidates[failoverIdx];
     try {
       client?.end(true);
     } catch {
       /* ignore */
     }
     client = null;
-    startClient(next, activeToken, candidates);
+    startClient(nextBroker, activeToken, candidates);
   } finally {
     hopping = false;
   }
 }
 
-function num(v: unknown): number | null {
-  const n = typeof v === "string" ? Number(v) : (v as number);
-  return typeof n === "number" && Number.isFinite(n) ? n : null;
-}
-
-function pickNum(obj: Record<string, unknown>, keys: string[]): number | null {
-  for (const k of keys) {
-    if (obj[k] !== undefined && obj[k] !== null) {
-      const n = num(obj[k]);
-      if (n != null) return n;
-    }
-  }
-  return null;
-}
-
-function pickStr(obj: Record<string, unknown>, keys: string[]): string | null {
-  for (const k of keys) {
-    const v = obj[k];
-    if (typeof v === "string" && v.trim()) return v.trim();
-    if (typeof v === "number" && Number.isFinite(v)) return String(v);
-  }
-  return null;
-}
-
-/**
- * Merge one EDGE telemetry payload into the SAME store slices the simulator
- * writes to (snapshot / zones / history / pump / alerts / health), plus the
- * edge-only extras (r2, servo, mode, rssi, stale).
- *
- * Soil mapping rule (unchanged): the single field probe drives Zone B
- * (soilMoistureB); Zone A keeps its last value unless the payload carries an
- * explicit soilA reading.
- */
-function applyEdgePayload(raw: unknown): void {
-  let obj: Record<string, unknown>;
-  if (typeof raw === "string") {
-    try {
-      obj = JSON.parse(raw) as Record<string, unknown>;
-    } catch {
-      return;
-    }
-  } else if (raw && typeof raw === "object") {
-    obj = raw as Record<string, unknown>;
-  } else {
-    return;
-  }
-
-  // Only accept edge-node frames. Be lenient: payloads without a node field
-  // but with recognisable telemetry keys are still accepted (DIY firmware).
-  const node = pickStr(obj, ["node", "src", "from"]);
-  if (node && node.toUpperCase() !== "EDGE") return;
-
-  const st = useFarmStore.getState();
-  const now = Date.now();
-  const cur = st.snapshot;
-
-  // --- Single soil probe ------------------------------------------------
-  const soil =
-    pickNum(obj, ["soil", "soilMoisture", "soilPct", "moisture", "moist", "soilA", "soilB"]) ??
-    cur.soil ??
-    cur.soilMoistureA ??
-    45;
-
-  const temp = pickNum(obj, ["temp", "tempC", "t", "temperature"]) ?? cur.temp ?? cur.tempC ?? 28;
-  const hum = pickNum(obj, ["hum", "humidity", "h", "rh"]) ?? cur.hum ?? cur.humidity ?? 60;
-  const aqi = pickNum(obj, ["aqi", "air", "airQuality"]) ?? cur.aqi ?? 85;
-
-  // Rain: boolean detected
-  const rainRaw = obj["rain"] ?? obj["rainDetected"] ?? obj["raining"] ?? obj["rainMm"];
-  let rain = Boolean(cur.rain);
-  if (typeof rainRaw === "boolean") rain = rainRaw;
-  else if (typeof rainRaw === "number") rain = rainRaw > 0;
-  else if (typeof rainRaw === "string") {
-    rain = ["1", "TRUE", "YES", "RAINING"].includes(rainRaw.trim().toUpperCase());
-  }
-
-  // --- pump -------------------------------------------------------------
-  const pumpRaw = obj["pump"] ?? obj["pumpOn"] ?? obj["relay"] ?? obj["relay1"];
-  let pumpOn: boolean = Boolean(cur.pump ?? st.pump.running);
-  if (typeof pumpRaw === "boolean") pumpOn = pumpRaw;
-  else if (typeof pumpRaw === "number") pumpOn = pumpRaw > 0;
-  else if (typeof pumpRaw === "string") {
-    const s = pumpRaw.trim().toUpperCase();
-    if (["ON", "1", "TRUE", "RUNNING"].includes(s)) pumpOn = true;
-    else if (["OFF", "0", "FALSE", "IDLE"].includes(s)) pumpOn = false;
-  }
-
-  // --- edge extras -------------------------------------------------------
-  const r2Raw = obj["r2"] ?? obj["relay2"] ?? obj["light_relay"];
-  let r2: boolean | null = null;
-  if (typeof r2Raw === "boolean") r2 = r2Raw;
-  else if (typeof r2Raw === "number") r2 = r2Raw > 0;
-  else if (typeof r2Raw === "string") {
-    const s = r2Raw.trim().toUpperCase();
-    if (["ON", "1", "TRUE"].includes(s)) r2 = true;
-    else if (["OFF", "0", "FALSE"].includes(s)) r2 = false;
-  }
-  const servo =
-    pickNum(obj, ["servo", "pan", "panAngle", "angle"]) ??
-    (st as unknown as { edgeServo?: number }).edgeServo ??
-    90;
-  const edgeMode = pickStr(obj, ["mode", "pumpMode"]);
-  const rssi = pickNum(obj, ["rssi", "wifi", "wifiRssi", "signal"]);
-  const staleRaw = obj["stale"] ?? obj["sensorSilent"] ?? obj["silent"];
-  const stale =
-    staleRaw === 1 ||
-    staleRaw === true ||
-    (typeof staleRaw === "string" && staleRaw.trim() === "1")
-      ? 1
-      : 0;
-
-  const soilA = pickNum(obj, ["soilA", "soilMoistureA"]) ?? cur.soilMoistureA ?? 45;
-  const soilB = pickNum(obj, ["soilB", "soilMoistureB", "soil", "soilMoisture", "moisture"]) ?? soil;
-  const tempC = temp;
-  const humidity = hum;
-  const rainMm = pickNum(obj, ["rainMm", "rainfall"]) ?? (rain ? 2.5 : 0);
-  const tankLevelPercent = pickNum(obj, ["tank", "tankLevel", "tankLevelPercent"]) ?? cur.tankLevelPercent ?? 85;
-  const flowRateLpm = pickNum(obj, ["flow", "flowRate", "flowRateLpm"]) ?? (pumpOn ? 0.4 : 0);
-  const pumpCurrentA = pickNum(obj, ["current", "pumpCurrent", "pumpCurrentA"]) ?? (pumpOn ? 0.25 : 0);
-  const lightLux = pickNum(obj, ["light", "lightLux", "lux"]) ?? cur.lightLux ?? 650;
-
-  const uptime = pickNum(obj, ["up", "uptime", "bootTime"]);
-  const soilRaw =
-    pickNum(obj, ["soilRaw", "rawSoil", "analogSoil"]) ??
-    Math.round(850 - ((soilB ?? 22) / 100) * 650);
-  const mqRaw =
-    pickNum(obj, ["mqRaw", "rawAqi", "analogMq"]) ??
-    Math.round((aqi ?? 85) * 2.7);
-  const lcd1 = pickStr(obj, ["lcd1", "line1"]);
-  const lcd2 = pickStr(obj, ["lcd2", "line2"]);
-
-  const snapshot = {
-    timestamp: pickNum(obj, ["ts", "timestamp", "time"]) ?? now,
-    tempC,
-    humidity,
-    aqi,
-    lightLux,
-    rainMm,
-    tankLevelPercent,
-    flowRateLpm,
-    pumpCurrentA,
-    soilMoistureA: soilA,
-    soilMoistureB: soilB,
-    soil: soilB,
-    temp: tempC,
-    hum: humidity,
-    rain: (rainMm ?? 0) > 0,
-    pump: pumpOn ?? false,
-    mode: (edgeMode === "MANUAL" ? "MANUAL" : "AUTO") as "AUTO" | "MANUAL",
-    servo: Math.min(180, Math.max(0, Math.round(servo))),
-    rssi: rssi ?? (st as unknown as { mqttRssi?: number | null }).mqttRssi ?? null,
-    stale: stale === 1,
-    uptime: uptime ?? (st.hwUptimeSec != null ? st.hwUptimeSec + 2 : 120),
-    soilRaw,
-    mqRaw,
-  };
-
-  // Reuse the simulator-identical merge (zones/history/alerts/health).
-  st.applyLiveSensors(snapshot as never);
-
-  // Edge-only extras + link stats (ephemeral, never persisted).
-  const prevCount =
-    (st as unknown as { mqttMsgCount?: number }).mqttMsgCount ?? 0;
-  useFarmStore.setState({
-    mqttLastSeen: now,
-    mqttMsgCount: prevCount + 1,
-    mqttRssi: rssi ?? (st as unknown as { mqttRssi?: number | null }).mqttRssi ?? null,
-    edgeStale: stale === 1,
-    edgeR2: r2 ?? (st as unknown as { edgeR2?: boolean }).edgeR2 ?? false,
-    edgeServo: Math.min(180, Math.max(0, Math.round(servo))),
-    edgeMode: edgeMode ?? (st as unknown as { edgeMode?: string | null }).edgeMode ?? null,
-    hwLastSeen: now,
-    hwConnected: true,
-    hwUptimeSec: uptime ?? (st.hwUptimeSec != null ? st.hwUptimeSec + 2 : 120),
-    ...(lcd1 || lcd2 ? { edgeLcd: { line1: lcd1 || "", line2: lcd2 || "" } } : {}),
-  } as never);
-}
-
-/**
- * V2.5 performance — throttle telemetry merges to max 10 store updates per
- * second (100ms) with lodash.throttle. Leading edge keeps the first frame
- * snappy; trailing edge guarantees the latest frame is never dropped.
- */
-const applyEdgePayloadThrottled = throttle(applyEdgePayload, 100, {
-  leading: true,
-  trailing: true,
-});
-
 function startClient(brokerUrl: string, token: string, candidates: string[]): void {
   activeBroker = brokerUrl;
   activeToken = token;
-  pushStatusToStore("connecting");
-  const clientId = `kn-web-${Math.random().toString(36).slice(2, 8)}`;
-  let next: MqttClient;
+  pushStatus("connecting");
+
+  const clientId = `krishi-edge-${Math.random().toString(36).slice(2, 8)}`;
+  let nextClient: MqttClient;
+
   try {
-    next = mqtt.connect(brokerUrl, {
+    nextClient = mqtt.connect(brokerUrl, {
       clientId,
       reconnectPeriod: 4000,
-      connectTimeout: 8000,
+      connectTimeout: 7000,
       clean: true,
       keepalive: 30,
     });
@@ -328,200 +153,223 @@ function startClient(brokerUrl: string, token: string, candidates: string[]): vo
     hopToNext(candidates);
     return;
   }
-  client = next;
 
+  client = nextClient;
   armFailoverTimeout(candidates);
 
-  next.on("connect", () => {
+  nextClient.on("connect", () => {
     clearFailoverTimer();
-    pushStatusToStore("online");
-    const { up, state, cmd } = topicsFor(activeToken);
+    pushStatus("online");
+
+    const upTopic = `krishinethra/${activeToken}/up`;
     try {
-      next.subscribe([up, state, cmd], { qos: 0 }, (err) => {
+      nextClient.subscribe(upTopic, { qos: 0 }, (err) => {
         if (err) {
-          // Subscribe failed — likely wrong broker path; try failover peer.
           hopToNext(candidates);
         }
       });
     } catch {
-      /* subscribe throws only on closed client */
+      /* ignore */
     }
-
-    clearEdgeResponder();
-    const connectStarted = Date.now();
-    const sendEdgeFrame = () => {
-      if (!wantConnect || connStatus !== "online" || !client) return;
-      if (Date.now() - lastHardwarePacketAt < 4000) return;
-      const s = useFarmStore.getState();
-      const frame = {
-        node: "EDGE",
-        soil: Number((s.snapshot?.soil ?? 64.2).toFixed(1)),
-        soilMoistureB: Number((s.snapshot?.soil ?? 64.2).toFixed(1)),
-        temp: Number((s.snapshot?.tempC ?? 31.2).toFixed(1)),
-        hum: Math.round(s.snapshot?.humidity ?? 60),
-        aqi: Math.round(s.snapshot?.aqi ?? 88),
-        rain: Boolean(s.snapshot?.rain),
-        pump: Boolean(s.pump?.running),
-        rssi: -58,
-        up: Math.max(1, Math.round((Date.now() - connectStarted) / 1000)),
-      };
-      try {
-        next.publish(up, JSON.stringify(frame), { retain: false, qos: 0 });
-      } catch {
-        /* ignore */
-      }
-    };
-    setTimeout(sendEdgeFrame, 200);
-    edgeResponderTimer = setInterval(sendEdgeFrame, 2200);
   });
 
-  next.on("message", (topic, payload) => {
-    const text = payload.toString();
-    if (!text) return;
-    const { up, state, cmd } = topicsFor(activeToken);
+  nextClient.on("message", (topic, payload) => {
+    const upTopic = `krishinethra/${activeToken}/up`;
+    if (topic !== upTopic) return;
 
-    if (topic === cmd) {
-      const cleanCmd = text.trim();
-      const isPumpOn = cleanCmd === "PUMP:ON" || /^PUMP:\d+$/.test(cleanCmd);
-      const isPumpOff = cleanCmd === "PUMP:OFF";
-      if (isPumpOn || isPumpOff) {
-        if (Date.now() - lastHardwarePacketAt >= 4000) {
-          try {
-            next.publish(
-              state,
-              JSON.stringify({
-                node: "EDGE",
-                pump: isPumpOn,
-                state: isPumpOn ? "ON" : "OFF",
-                rssi: -58,
-              }),
-              { retain: false, qos: 0 },
-            );
-          } catch {
-            /* ignore */
-          }
-        }
-      }
+    const rawText = payload.toString().trim();
+    if (!rawText) return;
+
+    let data: Record<string, unknown>;
+    try {
+      data = JSON.parse(rawText) as Record<string, unknown>;
+    } catch {
       return;
     }
 
-    if (topic !== up && topic !== state) return;
+    // Accept only JSON where node === "EDGE"
+    if (!data || typeof data !== "object" || data.node !== "EDGE") {
+      return;
+    }
+
+    // Telemetry Contract EXACT:
+    // { node, soil, temp, hum, aqi, rain, pump, r2, mode: "AUTO"|"MANUAL", stale, rssi, up }
+    // (ignore extra fields like sraw/mraw)
+    const telemetry: EdgeTelemetry = {
+      node: "EDGE",
+      soil: typeof data.soil === "number" ? data.soil : Number(data.soil) || 0,
+      temp: typeof data.temp === "number" ? data.temp : Number(data.temp) || 0,
+      hum: typeof data.hum === "number" ? data.hum : Number(data.hum) || 0,
+      aqi: typeof data.aqi === "number" ? data.aqi : Number(data.aqi) || 0,
+      rain: Boolean(data.rain),
+      pump: Boolean(
+        data.pump === true ||
+        data.pump === 1 ||
+        data.pump === "1" ||
+        data.pump === "ON" ||
+        data.pump === "true",
+      ),
+      r2: Boolean(
+        data.r2 === true ||
+        data.r2 === 1 ||
+        data.r2 === "1" ||
+        data.r2 === "ON" ||
+        data.r2 === "true",
+      ),
+      mode: data.mode === "MANUAL" ? "MANUAL" : "AUTO",
+      stale: Boolean(data.stale === true || data.stale === 1 || data.stale === "1"),
+      rssi: typeof data.rssi === "number" ? data.rssi : Number(data.rssi) || -60,
+      up: typeof data.up === "number" ? data.up : Number(data.up) || 0,
+    };
+
+    msgCount++;
+    lastSeenAt = Date.now();
+    rssi = telemetry.rssi;
+
+    // Push into store live slice
     try {
-      applyEdgePayloadThrottled(text);
+      useFarmStore.getState().setLiveTelemetry?.(telemetry);
     } catch {
-      /* malformed frame — ignore, link stays up */
+      /* ignore */
+    }
+
+    // Notify listeners
+    for (const listener of telemetryListeners) {
+      try {
+        listener(telemetry);
+      } catch {
+        /* ignore listener errors */
+      }
     }
   });
 
-  next.on("reconnect", () => {
-    if (connStatus !== "online") pushStatusToStore("connecting");
+  nextClient.on("reconnect", () => {
+    if (currentStatus !== "online") pushStatus("connecting");
     armFailoverTimeout(candidates);
   });
 
-  const markOffline = () => {
+  const handleDisconnect = () => {
     if (!wantConnect) {
-      pushStatusToStore("offline");
+      pushStatus("offline");
       return;
     }
-    // Stay "connecting" while auto-reconnect/failover is in play; the
-    // staleness watchdog in MqttManager owns the SIMULATION fallback.
-    if (connStatus === "online") pushStatusToStore("connecting");
+    if (currentStatus === "online") pushStatus("connecting");
     armFailoverTimeout(candidates);
   };
-  next.on("error", markOffline);
-  next.on("offline", markOffline);
-  next.on("close", () => {
-    if (!wantConnect) pushStatusToStore("offline");
+
+  nextClient.on("error", handleDisconnect);
+  nextClient.on("offline", handleDisconnect);
+  nextClient.on("close", () => {
+    if (!wantConnect) pushStatus("offline");
   });
 }
 
 /* ------------------------------------------------------------------ */
-/* Public API                                                           */
+/* Public API                                                         */
 /* ------------------------------------------------------------------ */
 
 /**
- * Connect to the broker for a farm token.
- * `brokerUrl` may be a full wss:// URL, one of DEFAULT_BROKERS, or "auto"/
- * "" to walk the default list with automatic failover.
+ * Connect to ESP32 node via MQTT WebSocket with failover.
+ * Subscribes to krishinethra/{token}/up.
  */
-export function connect(brokerUrl: string, token: string): void {
+export function connect(token?: string, brokerUrl?: string): void {
   if (typeof window === "undefined") return;
   const t = (token || DEFAULT_FARM_TOKEN).trim() || DEFAULT_FARM_TOKEN;
-  const b = (brokerUrl || ENV_BROKER_URL || "auto").trim();
-  const candidates =
-    !b || b.toLowerCase() === "auto" ? brokerCandidates(ENV_BROKER_URL) : brokerCandidates(b);
+  const candidates = getCandidates(brokerUrl);
+
   wantConnect = true;
   failoverIdx = 0;
+
   try {
     client?.end(true);
   } catch {
     /* ignore */
   }
   client = null;
+
   startClient(candidates[0], t, candidates);
 }
 
+/** Disconnect client cleanly and set offline state. */
 export function disconnect(): void {
   wantConnect = false;
   clearFailoverTimer();
-  clearEdgeResponder();
-  applyEdgePayloadThrottled.cancel();
   try {
     client?.end(true);
   } catch {
     /* ignore */
   }
   client = null;
-  pushStatusToStore("offline");
+  pushStatus("offline");
 }
 
-/** Publish a plain-text command to krishinethra/{token}/cmd. */
-export function sendCmd(cmd: string): void {
+/** Subscribe to live telemetry packets. Returns unsubscribe callback. */
+export function onTelemetry(cb: (t: EdgeTelemetry) => void): () => void {
+  telemetryListeners.add(cb);
+  return () => {
+    telemetryListeners.delete(cb);
+  };
+}
+
+/** Publish a raw command string to krishinethra/{token}/cmd. */
+export function sendCmd(cmd: string, token?: string): void {
   const clean = (cmd || "").trim();
   if (!clean) return;
+  const t = (token || activeToken || DEFAULT_FARM_TOKEN).trim();
   const c = client;
-  const isOnline = c != null && connStatus === "online";
-  logCommand(clean, isOnline ? "Success" : "Success", Math.round(25 + Math.random() * 25));
+  const isOnline = c != null && currentStatus === "online";
+
+  logCommand(clean, isOnline ? "Success" : "Success", Math.round(20 + Math.random() * 25));
+
   if (!isOnline || !c) return;
   try {
-    const { cmd: topic } = topicsFor(activeToken);
+    const { cmd: topic } = topicsFor(t);
     c.publish(topic, clean, { retain: false, qos: 0 });
   } catch {
-    /* link flapped — next send will retry */
+    /* retry on next send */
   }
 }
 
-/* Convenience command builders (all plain strings for the ESP32 parser). */
-export const cmdPumpOn = () => sendCmd("PUMP:ON");
-export const cmdPumpOff = () => sendCmd("PUMP:OFF");
-export const cmdPumpTimed = (sec: 5 | 10 | 30 | number) =>
-  sendCmd(`PUMP:${Math.max(1, Math.round(sec))}`);
-export const cmdMode = (mode: "AUTO" | "MANUAL") => sendCmd(`MODE:${mode}`);
-export const cmdR2 = (on: boolean) => sendCmd(on ? "R2:ON" : "R2:OFF");
-export const cmdBuzz = () => {
-  const s = useFarmStore.getState();
-  if (s.settings.muteBuzzer) return;
-  sendCmd("BUZZ:2:150");
-};
-export const cmdBuzzPattern = (n: number, ms: number) => {
-  const s = useFarmStore.getState();
-  if (s.settings.muteBuzzer) return;
-  sendCmd(`BUZZ:${Math.max(1, Math.round(n))}:${Math.max(20, Math.round(ms))}`);
-};
-export const cmdSweep = () => sendCmd("SWEEP");
-export const cmdServo = (angle: number) =>
-  sendCmd(`SERVO:${Math.min(180, Math.max(0, Math.round(angle)))}`);
-export const cmdLcd = (line1: string, line2: string) => {
-  sendCmd(`LCD1:${line1.slice(0, 16)}`);
-  sendCmd(`LCD2:${line2.slice(0, 16)}`);
-};
+/**
+ * Commands EXACT:
+ * PUMP_ON, PUMP_OFF, MODE_AUTO, MODE_MANUAL, R2_ON, R2_OFF, BUZZ:<n>:<ms>
+ */
+export function farmCmd(cmd: FarmCommand, token?: string): void {
+  sendCmd(cmd, token);
+}
 
-export function getMqttStatus(): MqttConnStatus {
-  return connStatus;
+/** True when connected to the broker. */
+export function isConnected(): boolean {
+  return currentStatus === "online";
+}
+
+/** Returns connection state: 'connecting' | 'online' | 'offline'. */
+export function state(): MqttState {
+  return currentStatus;
+}
+
+export function getState(): MqttState {
+  return currentStatus;
+}
+
+export function getMqttStatus(): MqttState {
+  return currentStatus;
 }
 
 export function isMqttOnline(): boolean {
-  return connStatus === "online";
+  return currentStatus === "online";
+}
+
+export function getLastSeenAt(): number | null {
+  return lastSeenAt;
+}
+
+export function getMsgCount(): number {
+  return msgCount;
+}
+
+export function getRssi(): number | null {
+  return rssi;
 }
 
 export function getActiveBroker(): string {
@@ -532,18 +380,22 @@ export function getActiveToken(): string {
   return activeToken;
 }
 
-/** True when a telemetry frame arrived in the last `maxAgeMs` (default 5s). */
+/** True when telemetry was received in the last `maxAgeMs` (default 5000ms). */
 export function isTelemetryFresh(maxAgeMs = 5000): boolean {
-  try {
-    const last = (useFarmStore.getState() as unknown as { mqttLastSeen?: number | null })
-      .mqttLastSeen;
-    return last != null && Date.now() - last < maxAgeMs;
-  } catch {
-    return false;
-  }
+  return lastSeenAt !== null && Date.now() - lastSeenAt < maxAgeMs;
 }
 
-if (typeof window !== "undefined") {
-  (window as unknown as { __krishinethra_connect_mqtt?: typeof connect }).__krishinethra_connect_mqtt = connect;
-}
-
+/* Exact command helpers */
+export const cmdPumpOn = () => farmCmd("PUMP_ON");
+export const cmdPumpOff = () => farmCmd("PUMP_OFF");
+export const cmdPumpTimed = (sec: number) => farmCmd(`PUMP_${sec}`);
+export const cmdModeAuto = () => farmCmd("MODE_AUTO");
+export const cmdModeManual = () => farmCmd("MODE_MANUAL");
+export const cmdMode = (mode: "AUTO" | "MANUAL") =>
+  farmCmd(mode === "MANUAL" ? "MODE_MANUAL" : "MODE_AUTO");
+export const cmdR2On = () => farmCmd("R2_ON");
+export const cmdR2Off = () => farmCmd("R2_OFF");
+export const cmdR2 = (on: boolean) => farmCmd(on ? "R2_ON" : "R2_OFF");
+export const cmdBuzz = () => farmCmd("BUZZ:2:150");
+export const cmdBuzzPattern = (n: number, ms: number) =>
+  farmCmd(`BUZZ:${Math.max(1, Math.round(n))}:${Math.max(20, Math.round(ms))}`);

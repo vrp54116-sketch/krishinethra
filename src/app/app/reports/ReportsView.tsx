@@ -38,7 +38,7 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import SegmentedControl from "@/components/ui/SegmentedControl";
-import { useFarmStore } from "@/lib/store";
+import { useFarm, useFarmStore } from "@/lib/store";
 import {
   REPORT_ENERGY_RATE_RS_PER_KWH,
   REPORT_KG_CO2_PER_KWH,
@@ -132,7 +132,8 @@ export default function ReportsPage() {
   const scans = useFarmStore((s) => s.scans);
   const diary = useFarmStore((s) => s.diary);
   const tasks = useFarmStore((s) => s.tasks);
-  const snapshot = useFarmStore((s) => s.snapshot);
+  const farm = useFarm();
+  const snapshot = farm.snapshot;
 
   // Backfill 30 days of plausible history on first load so monthly views look full.
   useEffect(() => {
@@ -174,8 +175,8 @@ export default function ReportsPage() {
       irrigationEvents,
       tasksDone: tasksScope.filter((t) => t.done).length,
       tasksTotal: tasksScope.length,
-      avgTempC: Math.round(snapshot.tempC * 10) / 10,
-      avgHumidity: Math.round(snapshot.humidity * 10) / 10,
+      avgTempC: Math.round(farm.temp * 10) / 10,
+      avgHumidity: Math.round(farm.hum * 10) / 10,
       diaryCount: diaryToday.length,
     };
   }, [
@@ -185,8 +186,8 @@ export default function ReportsPage() {
     totalWaterUsedL,
     farmHealthScore,
     pump.totalRunSeconds,
-    snapshot.tempC,
-    snapshot.humidity,
+    farm.temp,
+    farm.hum,
     today,
   ]);
 

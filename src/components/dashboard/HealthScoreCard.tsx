@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useFarmStore } from "@/lib/store";
+import { useFarm, useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { getHealthBreakdown } from "@/lib/ai-engine";
 import { AnimatedNumber, Card, healthColor } from "./ui";
@@ -14,9 +14,10 @@ const STROKE = 10;
 
 export default function HealthScoreCard() {
   const t = useT();
-  const farmHealthScore = useFarmStore((s) => s.farmHealthScore ?? 85);
-  const snapshot = useFarmStore((s) => s.snapshot);
-  const zones = useFarmStore((s) => s.zones ?? []);
+  const farm = useFarm();
+  const farmHealthScore = farm.farmHealthScore ?? 85;
+  const snapshot = farm.snapshot;
+  const zones = farm.zones ?? [];
   const scans = useFarmStore((s) => s.scans ?? []);
   const sprayPlans = useFarmStore((s) => s.sprayPlans ?? []);
   const [showBreakdown, setShowBreakdown] = useState(false);

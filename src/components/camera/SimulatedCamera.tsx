@@ -144,7 +144,7 @@ export default function SimulatedCamera() {
         (p) => p.x > camX - 40 && p.x < camX + CAM_VIEW_W + 40,
       ).slice(0, 4);
       const dets: Detection[] = visible.map((p, i) => {
-        const m = st.snapshot?.soil ?? 45;
+        const m = st.source === "LIVE" ? st.live.soil : (st.snapshot?.soil ?? 45);
         const dry = m < low;
         const conf = 82 + Math.floor(Math.random() * 14);
         return {
@@ -193,7 +193,7 @@ export default function SimulatedCamera() {
       const [skyTop, skyBottom] = skyColors(hour);
       const isDay = hour >= 6 && hour <= 19;
 
-      const singleSoil = st.snapshot?.soil ?? 45;
+      const singleSoil = st.source === "LIVE" ? st.live.soil : (st.snapshot?.soil ?? 45);
       const moistureOf = (_id?: string) => singleSoil;
 
       /* ---- base (fills tilt gaps) ---- */
