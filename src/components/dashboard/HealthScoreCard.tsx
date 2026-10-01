@@ -41,7 +41,7 @@ export default function HealthScoreCard() {
   );
 
   return (
-    <Card className="relative flex flex-col justify-between overflow-visible text-left max-h-[220px] h-[220px] rounded-none border border-[var(--line)] bg-[var(--panel)]">
+    <Card className="relative flex flex-col justify-between overflow-visible text-left rounded-[12px] p-6 border border-[var(--line)] bg-[var(--panel)]">
       {/* Header row = mono uppercase label left + status stamp right */}
       <div className="flex w-full items-center justify-between border-b border-[var(--line)] pb-2">
         <h2 className="font-editorial-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-2)] truncate">

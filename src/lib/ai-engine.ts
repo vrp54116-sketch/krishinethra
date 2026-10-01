@@ -229,7 +229,7 @@ export function generateDailyReport(state: DashboardAiState): string {
   const soilVal = s?.soil ?? 45;
   const tempVal = s?.tempC ?? s?.temp ?? 28;
   const humVal = s?.humidity ?? s?.hum ?? 60;
-  const rainMmVal = s?.rainMm ?? 0;
+  const isRaining = Boolean(s?.rain);
   const aqiVal = s?.aqi ?? 50;
   const waterL = totalWaterUsedL ?? 0;
 
@@ -258,8 +258,8 @@ export function generateDailyReport(state: DashboardAiState): string {
     );
     const weatherBits = `${f1(tempVal)}°C तापमान और ${f1(humVal)}% आर्द्रता है`;
     const rainBit =
-      rainMmVal > 0.2
-        ? `, ${f1(rainMmVal)} मिमी बारिश हो रही है — सिंचाई छोड़ी जा सकती है`
+      isRaining
+        ? ", बारिश हो रही है — सिंचाई छोड़ी जा सकती है"
         : ", अभी बारिश नहीं है";
     const aqiBit =
       aqiVal > t.aqiHigh ? `। AQI ${aqiVal} ज़्यादा है — पत्तों पर छिड़काव टालें` : "";
@@ -297,8 +297,8 @@ export function generateDailyReport(state: DashboardAiState): string {
       : "No active crop disease.",
   );
   const rainBit =
-    rainMmVal > 0.2
-      ? ` Rainfall of ${f1(rainMmVal)} mm is topping up the field, so irrigation can be skipped.`
+    isRaining
+      ? " Rain detected topping up the field, so irrigation can be skipped."
       : " No rain at the moment.";
   const aqiBit =
     aqiVal > t.aqiHigh
@@ -814,7 +814,7 @@ export function suggestActions(state: DashboardAiState): Suggestion[] {
     out.push({
       id: "rain-skip",
       title: "Rain detected",
-      message: `Active rainfall (${(s.rainMm ?? 0).toFixed(1)} mm) — hold scheduled irrigation to save water.`,
+      message: "Active rainfall detected — hold scheduled irrigation to save water.",
       severity: "info",
       icon: "rain",
       score: 75,
@@ -862,11 +862,11 @@ export function suggestActions(state: DashboardAiState): Suggestion[] {
   }
 
   // 8. Irrigation skip — rain is watering the field.
-  if (s.rainMm >= 0.3) {
+  if (s.rain) {
     out.push({
-      id: "rain-skip",
+      id: "rain-skip-free",
       title: "Rain detected — skip irrigation",
-      message: `${f1(s.rainMm)} mm rainfall is watering the field for free.`,
+      message: "Natural rainfall is watering the field — skip scheduled irrigation.",
       severity: "info",
       icon: "rain",
       score: 65,
@@ -993,22 +993,22 @@ export function climateAdvice(
 
   // 4. Rain expected tomorrow — skip irrigation.
   const tomorrow = forecast[1];
-  if (tomorrow && tomorrow.rainMm > 5) {
+  if (tomorrow && tomorrow.rainProb > 50) {
     out.push({
       id: "rain-tomorrow",
       title: "Rain expected tomorrow — skip irrigation",
-      message: `${f1(tomorrow.rainMm)} mm expected tomorrow (${Math.round(tomorrow.rainProb)}% chance) — hold the pump and let the rain water the field for free.`,
+      message: `Rain expected tomorrow (${Math.round(tomorrow.rainProb)}% chance) — hold the pump and let the rain water the field for free.`,
       severity: "info",
       icon: "rain",
       score: 85,
       actionLabel: "Irrigation",
       actionHref: "/app/irrigation",
     });
-  } else if (s.rainMm >= 0.3) {
+  } else if (s.rain) {
     out.push({
       id: "rain-now",
       title: "Rain watering the field",
-      message: `${f1(s.rainMm)} mm rainfall right now — skip scheduled irrigation today.`,
+      message: "Rain detected right now — skip scheduled irrigation today.",
       severity: "info",
       icon: "rain",
       score: 82,
@@ -1030,11 +1030,11 @@ export function climateAdvice(
   }
 
   // 6. Best spray window — calm wind, no rain in 24h, cool evening.
-  const todayRain = forecast[0]?.rainMm ?? s.rainMm;
-  const tomorrowRain = forecast[1]?.rainMm ?? 0;
+  const todayRainProb = forecast[0]?.rainProb ?? (s.rain ? 100 : 0);
+  const tomorrowRainProb = forecast[1]?.rainProb ?? 0;
   const wind = forecast[0]?.windKph;
   const calmWind = wind == null || wind < 10;
-  const dry24h = s.rainMm < 0.3 && todayRain < 1 && tomorrowRain < 1;
+  const dry24h = !s.rain && todayRainProb < 30 && tomorrowRainProb < 30;
   const mildTemp = s.tempC >= 12 && s.tempC <= 35;
   const okHumidity = s.humidity < 85;
   if (calmWind && dry24h && mildTemp && okHumidity) {

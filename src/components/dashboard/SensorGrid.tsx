@@ -136,32 +136,10 @@ export default function SensorGrid() {
   ];
 
   return (
-    <div>
-      <div className="flex items-center justify-between pb-3 border-b border-[var(--line)] mb-3">
-        <div>
-          <h2 className="font-editorial-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--ink-2)]">
-            {t("dashboard.liveSensors")}
-          </h2>
-          <p className="mt-0.5 text-[11px] text-[var(--ink-3)] font-editorial-mono">
-            {t("dashboard.liveSensorsSub")}
-          </p>
-        </div>
-        <div
-          className={cn(
-            "flex items-center gap-1.5 px-2.5 py-1 rounded-none text-[11px] font-editorial-mono uppercase tracking-[0.1em] border transition-all",
-            isRaining
-              ? "bg-[var(--moss-soft)] border-[var(--moss)] text-[var(--moss)] animate-pulse"
-              : "bg-[var(--panel-2)] border-[var(--line)] text-[var(--ink-2)]"
-          )}
-        >
-          <CloudRain className={cn("w-3.5 h-3.5", isRaining ? "text-[var(--moss)]" : "text-[var(--ink-3)]")} />
-          <span>RAIN: {isRaining ? "DETECTED" : "NONE"}</span>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {sensors.map((s) => (
+    <>
+      {sensors.map((s) => (
+        <div key={s.key} className="col-span-12 md:col-span-3 h-full">
           <SensorCard
-            key={s.key}
             def={s}
             rawText={
               showRaw && (s.key === "soil" || s.key === "aqi")
@@ -169,8 +147,24 @@ export default function SensorGrid() {
                 : undefined
             }
           />
-        ))}
-      </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
+export function RainChip({ isRaining }: { isRaining: boolean }) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-1.5 px-3 py-1 rounded-[12px] text-xs font-editorial-mono font-bold uppercase tracking-wider border transition-all",
+        isRaining
+          ? "bg-sky-500/20 border-sky-400/40 text-sky-300 shadow-[0_0_12px_rgba(56,189,248,0.2)] animate-pulse"
+          : "bg-zinc-800/40 border-zinc-700/50 text-zinc-400"
+      )}
+    >
+      <CloudRain className={cn("w-3.5 h-3.5", isRaining ? "text-sky-300" : "text-zinc-400")} />
+      <span>RAIN: {isRaining ? "DETECTED" : "NONE"}</span>
     </div>
   );
 }
@@ -226,17 +220,11 @@ export const SensorCard = memo(function SensorCard({ def, rawText }: { def: Sens
   return (
     <section
       className={cn(
-        "relative rounded-none p-4 bg-[var(--panel)] border border-[var(--line)] transition-all",
-        def.alertPulse && "border-[var(--terra)]"
+        "rounded-[12px] p-6 bg-[var(--panel)] border border-[var(--line)] transition-all h-full flex flex-col justify-between",
+        def.alertPulse && "border-[var(--terra)] bg-[var(--terra-soft)]/20"
       )}
     >
-      {def.alertPulse && (
-        <span
-          aria-hidden
-          className="absolute inset-0 bg-[var(--terra-soft)] pointer-events-none animate-pulse"
-        />
-      )}
-      <div className="relative z-[1]">{body}</div>
+      <div className="w-full">{body}</div>
     </section>
   );
 });

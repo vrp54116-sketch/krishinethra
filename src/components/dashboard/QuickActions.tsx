@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Camera, Droplets, Map, MessageCircle, type LucideIcon } from "lucide-react";
 import { useFarm, useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
+import { Card, CardHeader } from "./ui";
 
 interface Action {
   key: string;
@@ -38,30 +39,36 @@ export default function QuickActions() {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4 sm:gap-4">
-      {actions.map((a) => {
-        const Icon = a.icon;
-        const inner = (
-          <>
-            <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${a.tint}`}>
-              <Icon className="h-5 w-5" />
-            </span>
-            <span className="mt-2 block text-sm font-bold text-white">{a.label}</span>
-            <span className="block text-[11px] text-[#9CA3AF]">{a.sub}</span>
-          </>
-        );
-        const cls =
-          "liquid-glass liquid-glass-card liquid-card-hover p-4 text-left active:scale-[0.98]";
-        return a.href ? (
-          <Link key={a.key} href={a.href} className={cls}>
-            {inner}
-          </Link>
-        ) : (
-          <button key={a.key} type="button" onClick={a.run} className={cls}>
-            {inner}
-          </button>
-        );
-      })}
-    </div>
+    <Card className="rounded-[12px] p-6 border border-[var(--line)] bg-[var(--panel)] flex flex-col justify-between">
+      <CardHeader
+        title={t("dashboard.quickActions")}
+        subtitle="One-tap farm operations"
+      />
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+        {actions.map((a) => {
+          const Icon = a.icon;
+          const inner = (
+            <>
+              <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${a.tint}`}>
+                <Icon className="h-4.5 w-4.5" />
+              </span>
+              <span className="mt-2 block text-xs sm:text-sm font-bold text-white truncate">{a.label}</span>
+              <span className="block text-[10px] text-[#9CA3AF] truncate">{a.sub}</span>
+            </>
+          );
+          const cls =
+            "rounded-[12px] border border-white/10 bg-[rgba(18,26,22,0.85)] p-3 text-left transition-all hover:border-white/20 hover:bg-[rgba(18,26,22,0.95)] active:scale-[0.98]";
+          return a.href ? (
+            <Link key={a.key} href={a.href} className={cls}>
+              {inner}
+            </Link>
+          ) : (
+            <button key={a.key} type="button" onClick={a.run} className={cls}>
+              {inner}
+            </button>
+          );
+        })}
+      </div>
+    </Card>
   );
 }

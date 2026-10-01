@@ -39,12 +39,11 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
     }
 
     if (rain) {
-      const rainMmVal = (farm.snapshot?.rainMm ?? 0).toFixed(1);
       return {
         id: `rain-${rain}-${isRunning}`,
         type: "rain_lock",
         headline: "Rain detected → Pump locked OFF (water savings: ~12L today)",
-        rule: `Rain sensor active • Precip: ${rainMmVal} mm • Conserving reservoir`,
+        rule: "Rain sensor active • Precipitation detected • Conserving reservoir",
       };
     }
 
@@ -94,7 +93,6 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
   }, [
     farm.soil,
     farm.rain,
-    farm.snapshot?.rainMm,
     farm.stale,
     farm.mode,
     farm.pump,
@@ -178,7 +176,7 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
   return (
     <div
       className={cn(
-        "relative rounded-none border border-[var(--line)] bg-[var(--panel)] p-4 font-editorial-mono transition-all",
+        "relative rounded-[12px] border border-[var(--line)] bg-[var(--panel)] p-6 font-editorial-mono transition-all",
         className,
       )}
     >

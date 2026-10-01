@@ -20,13 +20,13 @@ export default function RainSkipLog({ className }: { className?: string }) {
 
   // Generate 7-day calendar activity squares
   const weekDays = [
-    { day: "Mon", rainMm: 0, savedL: 0, level: 0 },
-    { day: "Tue", rainMm: 4.2, savedL: 8, level: 2 },
-    { day: "Wed", rainMm: 12.5, savedL: 14, level: 3 },
-    { day: "Thu", rainMm: 0, savedL: 0, level: 0 },
-    { day: "Fri", rainMm: 2.1, savedL: 6, level: 1 },
-    { day: "Sat", rainMm: 0, savedL: 0, level: 0 },
-    { day: "Sun (Today)", rainMm: snapshot?.rain ? Number((snapshot?.rainMm ?? 0).toFixed(1)) : 0, savedL: snapshot?.rain ? 12 : 0, level: snapshot?.rain ? 2 : 0 },
+    { day: "Mon", rainDetected: false, savedL: 0, level: 0 },
+    { day: "Tue", rainDetected: true, savedL: 8, level: 2 },
+    { day: "Wed", rainDetected: true, savedL: 14, level: 3 },
+    { day: "Thu", rainDetected: false, savedL: 0, level: 0 },
+    { day: "Fri", rainDetected: true, savedL: 6, level: 1 },
+    { day: "Sat", rainDetected: false, savedL: 0, level: 0 },
+    { day: "Sun (Today)", rainDetected: Boolean(snapshot?.rain), savedL: snapshot?.rain ? 12 : 0, level: snapshot?.rain ? 2 : 0 },
   ];
 
   const totalSavedWeek = weekDays.reduce((acc, d) => acc + d.savedL, 0) || 28;
@@ -37,7 +37,7 @@ export default function RainSkipLog({ className }: { className?: string }) {
       id: "rs-1",
       date: "Today",
       time: "14:15",
-      rainDetected: snapshot?.rain ? `${(snapshot?.rainMm ?? 0).toFixed(1)} mm` : "Yes (Precip active)",
+      rainDetected: snapshot?.rain ? "RAIN: DETECTED" : "RAIN: NONE",
       action: "Suppressed Auto Run #18",
       waterSaved: "~12 Liters",
       active: Boolean(snapshot?.rain),
@@ -46,7 +46,7 @@ export default function RainSkipLog({ className }: { className?: string }) {
       id: "rs-2",
       date: "Friday",
       time: "06:30",
-      rainDetected: "2.1 mm",
+      rainDetected: "RAIN: DETECTED",
       action: "Dawn Irrigation Cancelled",
       waterSaved: "6 Liters",
       active: false,
@@ -55,8 +55,8 @@ export default function RainSkipLog({ className }: { className?: string }) {
       id: "rs-3",
       date: "Wednesday",
       time: "17:45",
-      rainDetected: "12.5 mm",
-      action: "Heavy Rain Protocol",
+      rainDetected: "RAIN: DETECTED",
+      action: "Rain Safety Protocol",
       waterSaved: "14 Liters",
       active: false,
     },
@@ -136,7 +136,7 @@ export default function RainSkipLog({ className }: { className?: string }) {
                   {item.savedL > 0 ? `${item.savedL}L` : "—"}
                 </span>
                 <span className="text-[9px] font-mono opacity-80">
-                  {item.rainMm > 0 ? `${item.rainMm}mm` : "dry"}
+                  {item.rainDetected ? "rain" : "dry"}
                 </span>
               </div>
             );

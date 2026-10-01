@@ -98,7 +98,7 @@ function Rise({
 function RainBanner() {
   const farm = useFarm();
   const location = useFarmStore((s) => s.settings.location);
-  const rainNowMm = farm.snapshot.rainMm;
+  const isRaining = Boolean(farm.snapshot.rain);
   const [tomorrow, setTomorrow] = useState<ClimateForecastDay | null>(null);
 
   useEffect(() => {
@@ -135,29 +135,28 @@ function RainBanner() {
     return () => ctrl.abort();
   }, [location?.latitude, location?.longitude]);
 
-  if (rainNowMm >= 0.3) {
+  if (isRaining) {
     return (
       <div className="flex items-start gap-3 rounded-2xl border border-sky-400/40 bg-sky-500/[0.08] p-4">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-300">
           <CloudRain className="h-4 w-4" />
         </span>
         <p className="text-sm leading-relaxed text-sky-100">
-          🌧️ Raining now ({rainNowMm.toFixed(1)} mm) — postpone spray to avoid
+          🌧️ Raining now — postpone spray to avoid
           wash-off. Resume in the next dry evening window.
         </p>
       </div>
     );
   }
 
-  if (tomorrow && (tomorrow.rainMm > 1 || tomorrow.rainProb > 50)) {
+  if (tomorrow && (tomorrow.rainMm > 0 || tomorrow.rainProb > 50)) {
     return (
       <div className="flex items-start gap-3 rounded-2xl border border-amber-400/40 bg-amber-500/[0.08] p-4">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-300">
           <TriangleAlert className="h-4 w-4" />
         </span>
         <p className="text-sm leading-relaxed text-amber-100">
-          ⚠️ Rain expected tomorrow ({tomorrow.rainMm.toFixed(1)} mm,{" "}
-          {Math.round(tomorrow.rainProb)}% chance) — postpone spray to avoid
+          ⚠️ Rain expected tomorrow ({Math.round(tomorrow.rainProb)}% chance) — postpone spray to avoid
           wash-off.
         </p>
       </div>

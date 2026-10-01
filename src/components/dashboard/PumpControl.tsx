@@ -135,7 +135,7 @@ export const PumpControl = memo(function PumpControl() {
   const isSafetyLocked = Boolean(farm.rain || farm.stale);
 
   return (
-    <Card className={cn("relative rounded-none border border-[var(--line)] bg-[var(--panel)] p-5", pulse && "border-[var(--terra)]")}>
+    <Card className={cn("relative rounded-[12px] border border-[var(--line)] bg-[var(--panel)] p-6", pulse && "border-[var(--terra)]")}>
       {/* Rule 9: pump-ON = orange pulse ring */}
       {pump.running && (
         <span aria-hidden className="pump-pulse-ring" />

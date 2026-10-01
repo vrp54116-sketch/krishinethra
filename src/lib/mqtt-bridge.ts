@@ -277,6 +277,16 @@ export function connect(token?: string, brokerUrl?: string): void {
   const t = (token || DEFAULT_FARM_TOKEN).trim() || DEFAULT_FARM_TOKEN;
   const candidates = getCandidates(brokerUrl);
 
+  // Singleton connected guard: avoid duplicate connections
+  if (
+    client &&
+    (currentStatus === "online" || currentStatus === "connecting") &&
+    activeToken === t &&
+    activeBroker === candidates[0]
+  ) {
+    return;
+  }
+
   wantConnect = true;
   failoverIdx = 0;
 

@@ -136,9 +136,10 @@ export function buildTwelveHourSeries(
       : Math.max(0, Math.round(lightForHour(hour) + wobble(41, 26)));
 
     // Rain: dry history, ramping into the live value at the tail.
+    const rainVal = snapshot.rain ? 2.5 : 0;
     const rainMm =
       isLive || frac > 0.94
-        ? snapshot.rainMm * (isLive ? 1 : (frac - 0.94) / 0.06)
+        ? rainVal * (isLive ? 1 : (frac - 0.94) / 0.06)
         : 0;
 
     out.push({

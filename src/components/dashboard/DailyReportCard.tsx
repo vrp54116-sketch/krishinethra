@@ -116,7 +116,7 @@ export default function DailyReportCard() {
   return (
     <Card
       className={cn(
-        "flex flex-col justify-between lg:col-span-2 p-3.5 sm:p-4 transition-all duration-200",
+        "flex flex-col justify-between p-6 rounded-[12px] transition-all duration-200",
         !expanded ? "max-h-[220px] h-[220px] overflow-hidden" : "h-auto",
       )}
     >

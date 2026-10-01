@@ -26,9 +26,9 @@ export const TANK_MIN_RUN_PERCENT = 5; // below this the pump cannot run
 export const AUTO_PUMP_TANK_ON = 15; // tank must be above this to auto-start
 export const AUTO_PUMP_TANK_OFF = 10; // tank below this forces auto-stop
 export const ALERT_DEDUP_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
-export const ZONE_A_BASELINE = 45; // % soil moisture
-export const ZONE_B_BASELINE = 22; // % soil moisture (dry problem zone)
-export const SOIL_BASELINE = 22;
+export const ZONE_A_BASELINE = 55; // % soil moisture
+export const ZONE_B_BASELINE = 42; // % soil moisture
+export const SOIL_BASELINE = 42;
 
 export interface TickResult {
   snapshot: SensorSnapshot;
@@ -179,7 +179,6 @@ export function createInitialSnapshot(now: number = Date.now()): SensorSnapshot 
     humidity: hum,
     aqi: 85,
     lightLux: Math.round(lightForHour(hour)),
-    rainMm: 0,
     tankLevelPercent: 85,
     flowRateLpm: 0,
     pumpCurrentA: 0,
@@ -219,20 +218,16 @@ export function tick(
   const canRun = tank >= TANK_MIN_RUN_PERCENT;
   const running = pump.running && canRun;
 
-  // --- Soil moisture ---
-  const irrigateA = (m: number) =>
+  // --- Soil moisture: in SIMULATION mode must drift smoothly between 30% and 70% and never show 0.0% ---
+  const irrigate = (m: number) =>
     running
-      ? clamp(m + IRRIGATION_PER_SEC * dt + noise(0.02), 0, 100)
-      : clamp(m - EVAPORATION_PER_SEC * dt + noise(0.02), 0, 100);
-  const irrigateB = (m: number) =>
-    running
-      ? clamp(m + IRRIGATION_PER_SEC * dt + noise(0.02), 0, 100)
-      : clamp(m - EVAPORATION_PER_SEC * dt + noise(0.02), 0, 100);
+      ? clamp(m + 0.45 * dt + noise(0.02), 30.0, 70.0)
+      : clamp(m - 0.05 * dt + noise(0.02), 30.0, 70.0);
 
-  const prevA = snapshot.soilMoistureA ?? ZONE_A_BASELINE;
-  const prevB = snapshot.soilMoistureB ?? snapshot.soil ?? ZONE_B_BASELINE;
-  const soilMoistureA = Math.round(irrigateA(prevA) * 100) / 100;
-  const soilMoistureB = Math.round(irrigateB(prevB) * 100) / 100;
+  const prevA = clamp(snapshot.soilMoistureA ?? ZONE_A_BASELINE, 30.0, 70.0);
+  const prevB = clamp(snapshot.soilMoistureB ?? snapshot.soil ?? ZONE_B_BASELINE, 30.0, 70.0);
+  const soilMoistureA = Math.round(irrigate(prevA) * 10) / 10;
+  const soilMoistureB = Math.round(irrigate(prevB) * 10) / 10;
 
   // --- Temperature / humidity / light from the simulated clock ---
   const timestamp = snapshot.timestamp + dt * 1000;
@@ -245,12 +240,14 @@ export function tick(
   // --- AQI random walk between 60 and 120 ---
   const aqi = Math.round(clamp(snapshot.aqi + noise(3), 60, 120));
 
-  // --- Rain: occasional light shower, also tops the tank up slightly ---
-  let rainMm = 0;
+  // --- Rain: boolean only (occasional shower) ---
+  let rain = snapshot.rain ?? false;
   let tankLevelPercent = tank;
-  if (Math.random() < 0.02 * dt) {
-    rainMm = Math.round((0.5 + Math.random() * 2.5) * 10) / 10;
-    tankLevelPercent = clamp(tankLevelPercent + rainMm * 0.2, 0, 100);
+  if (Math.random() < 0.005 * dt) {
+    rain = !rain;
+  }
+  if (rain) {
+    tankLevelPercent = clamp(tankLevelPercent + 0.05 * dt, 0, 100);
   }
 
   // --- Tank + pump electrics ---
@@ -270,7 +267,6 @@ export function tick(
   tankLevelPercent = Math.round(tankLevelPercent * 100) / 100;
 
   // Raw analog values (ESP32 10-bit ADC 0-1023)
-  // At 22% moisture, raw is ~540; MQ-135 at 85 AQI, raw is ~230
   const soilRaw = Math.round(850 - (soilMoistureB / 100) * 650);
   const mqRaw = Math.round(aqi * 2.7);
 
@@ -283,7 +279,6 @@ export function tick(
       humidity,
       aqi,
       lightLux,
-      rainMm,
       tankLevelPercent,
       flowRateLpm,
       pumpCurrentA,
@@ -292,7 +287,7 @@ export function tick(
       soil: soilMoistureB,
       temp: tempC,
       hum: humidity,
-      rain: rainMm > 0,
+      rain,
       pump: running,
       mode: (pump.mode === "auto" ? "AUTO" : "MANUAL") as "AUTO" | "MANUAL",
       rssi: snapshot.rssi ?? -55,
@@ -345,8 +340,12 @@ function isDuplicate(
   now: number,
   windowMs: number = ALERT_DEDUP_WINDOW_MS,
 ): boolean {
+  const currentBucket = Math.floor(now / (10 * 60 * 1000));
   return existing.some(
-    (a) => a.title === title && now - a.timestamp < windowMs,
+    (a) =>
+      a.title === title &&
+      (Math.floor(a.timestamp / (10 * 60 * 1000)) === currentBucket ||
+        now - a.timestamp < windowMs),
   );
 }
 
@@ -506,38 +505,77 @@ export interface HealthBreakdownResult {
   chipString: string;
 }
 
+interface SensorSubScores {
+  moistureScore: number;
+  tempScore: number;
+  humidityScore: number;
+  aqiScore: number;
+}
+
+const subScoreHistory: SensorSubScores[] = [];
+
+export function recordAndAverageSubScores(
+  moistureScore: number,
+  tempScore: number,
+  humidityScore: number,
+  aqiScore: number,
+): SensorSubScores {
+  subScoreHistory.push({ moistureScore, tempScore, humidityScore, aqiScore });
+  if (subScoreHistory.length > 5) {
+    subScoreHistory.shift();
+  }
+  const len = subScoreHistory.length;
+  return subScoreHistory.reduce(
+    (acc, curr) => ({
+      moistureScore: acc.moistureScore + curr.moistureScore / len,
+      tempScore: acc.tempScore + curr.tempScore / len,
+      humidityScore: acc.humidityScore + curr.humidityScore / len,
+      aqiScore: acc.aqiScore + curr.aqiScore / len,
+    }),
+    { moistureScore: 0, tempScore: 0, humidityScore: 0, aqiScore: 0 },
+  );
+}
+
 export function computeHealthBreakdown(
   snapshot: SensorSnapshot,
   _zones: Zone[] = [],
   unresolvedDiseaseCount: number = 0,
   activeSprayPlansCount: number = 0,
 ): HealthBreakdownResult {
-  const soil = snapshot.soil ?? snapshot.soilMoistureA ?? 45;
+  const soil = clamp(snapshot.soil ?? snapshot.soilMoistureA ?? 45, 30, 70);
   const temp = snapshot.temp ?? snapshot.tempC ?? 28;
   const hum = snapshot.hum ?? snapshot.humidity ?? 60;
-  const moistureScore = clamp(100 - Math.abs(soil - 45) * 2.5, 0, 100);
+  const rawMoistureScore = clamp(100 - Math.abs(soil - 50) * 2.5, 0, 100);
 
-  const tempScore =
+  const rawTempScore =
     temp <= 32
       ? 100
       : clamp(100 - (temp - 32) * 15, 0, 100);
 
-  const humidityScore =
+  const rawHumidityScore =
     hum >= 50 && hum <= 70
       ? 100
       : hum < 50
         ? clamp(100 - (50 - hum) * 3, 0, 100)
         : clamp(100 - (hum - 70) * 3, 0, 100);
 
-  const aqiScore = clamp(100 - ((snapshot.aqi - 60) * 100) / 140, 0, 100);
+  const rawAqiScore = clamp(100 - ((snapshot.aqi - 60) * 100) / 140, 0, 100);
+
+  // 5-sample moving average of the four sensor sub-scores
+  const averaged = recordAndAverageSubScores(
+    rawMoistureScore,
+    rawTempScore,
+    rawHumidityScore,
+    rawAqiScore,
+  );
+
+  const moisturePts = Math.round((averaged.moistureScore / 100) * 25);
+  const tempPts = Math.round((averaged.tempScore / 100) * 20);
+  const humidityPts = Math.round((averaged.humidityScore / 100) * 15);
+  const aqiPts = Math.round((averaged.aqiScore / 100) * 15);
 
   const totalIssues = Math.max(unresolvedDiseaseCount, activeSprayPlansCount);
   const diseaseScore = clamp(100 - totalIssues * 35, 0, 100);
-
-  const moisturePts = Math.round((moistureScore / 100) * 25);
-  const tempPts = Math.round((tempScore / 100) * 20);
-  const humidityPts = Math.round((humidityScore / 100) * 15);
-  const aqiPts = Math.round((aqiScore / 100) * 15);
   const diseasePts = Math.round((diseaseScore / 100) * 25);
 
   const totalScore = clamp(

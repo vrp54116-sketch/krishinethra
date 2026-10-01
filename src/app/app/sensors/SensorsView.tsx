@@ -93,13 +93,13 @@ const METRICS: SensorMetric[] = [
   },
   {
     key: "rain",
-    name: "Rain Precipitation",
-    unit: "mm",
-    color: "#5F8B6A", // moss
-    gradientFrom: "rgba(95, 139, 106, 0.4)",
-    gradientTo: "rgba(95, 139, 106, 0.0)",
+    name: "Rain Status",
+    unit: "DETECT",
+    color: "#38BDF8", // sky
+    gradientFrom: "rgba(56, 189, 248, 0.4)",
+    gradientTo: "rgba(56, 189, 248, 0.0)",
     icon: CloudRain,
-    getValue: (p) => p.rainMm ?? (p.rain ? 2.5 : 0),
+    getValue: (p) => (p.rain ? 1 : 0),
   },
 ];
 
@@ -229,7 +229,7 @@ export default function SensorsView() {
           temp: Number((pt.temp ?? pt.tempC ?? 30).toFixed(1)),
           hum: Math.round(pt.hum ?? pt.humidity ?? 60),
           aqi: Math.round(pt.aqi ?? 85),
-          rain: Number((pt.rainMm ?? (pt.rain ? 2.5 : 0)).toFixed(1)),
+          rain: pt.rain ? 1 : 0,
         };
       });
       return resampleChartPoints(mapped, 60);
@@ -246,7 +246,7 @@ export default function SensorsView() {
         temp: Number((farm.temp + Math.sin(i * 0.3) * 1.5).toFixed(1)),
         hum: Math.round(farm.hum) + Math.cos(i * 0.4) * 3,
         aqi: Math.round(farm.aqi) + Math.sin(i * 0.5) * 5,
-        rain: farm.rain ? 1.8 + (i % 3) * 0.2 : 0,
+        rain: farm.rain ? 1 : 0,
       };
     });
     return resampleChartPoints(fallback, 60);

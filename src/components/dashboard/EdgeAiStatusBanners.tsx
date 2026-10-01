@@ -57,12 +57,11 @@ export default function EdgeAiStatusBanners({ className }: { className?: string 
       },
     };
   } else if (rain) {
-    const rainMmVal = (farm.snapshot?.rainMm ?? 0).toFixed(1);
     candidate = {
       id: "rain-lock",
       type: "warning",
       title: "Rain detected — pump locked OFF",
-      description: `Precipitation active (${rainMmVal} mm). Water savings algorithm engaged.`,
+      description: "Precipitation active. Water savings algorithm engaged.",
       icon: CloudRain,
       tone: {
         bg: "bg-amber-500/15",

@@ -807,6 +807,24 @@ function applyLiveSnapshot(raw: SensorSnapshot): void {
   }
 }
 
+let lastHealthScoreUpdateAt = 0;
+let cachedFarmHealthScore = 82;
+
+function getThrottledHealthScore(
+  snapshot: SensorSnapshot,
+  zones: Zone[],
+  unresolved: number,
+  currentScore: number,
+  now: number,
+): number {
+  if (!lastHealthScoreUpdateAt || now - lastHealthScoreUpdateAt >= 5000) {
+    lastHealthScoreUpdateAt = now;
+    cachedFarmHealthScore = computeFarmHealthScore(snapshot, zones, unresolved);
+    return cachedFarmHealthScore;
+  }
+  return currentScore ?? cachedFarmHealthScore;
+}
+
 /**
  * Merge one gateway snapshot into the store — same slices doTick() writes:
  * snapshot, zones, sensorHistory, pump (derived from flow/current),
@@ -826,7 +844,6 @@ function applyLiveSnapshotDirect(raw: SensorSnapshot): void {
     humidity: hum,
     aqi: numOr(s.snapshot.aqi, raw.aqi),
     lightLux: numOr(s.snapshot.lightLux ?? 650, raw.lightLux),
-    rainMm: numOr(s.snapshot.rainMm ?? 0, raw.rainMm),
     tankLevelPercent: numOr(s.snapshot.tankLevelPercent ?? 85, raw.tankLevelPercent),
     flowRateLpm: numOr(s.snapshot.flowRateLpm ?? 0, raw.flowRateLpm),
     pumpCurrentA: numOr(s.snapshot.pumpCurrentA ?? 0, raw.pumpCurrentA),
@@ -885,7 +902,7 @@ function applyLiveSnapshotDirect(raw: SensorSnapshot): void {
   }
 
   const unresolved = s.scans.filter((scan) => !scan.resolved).length;
-  const farmHealthScore = computeFarmHealthScore(snapshot, s.zones, unresolved);
+  const farmHealthScore = getThrottledHealthScore(snapshot, s.zones, unresolved, s.farmHealthScore, now);
 
   // Completed live run → diary entry.
   let diary = s.diary;
@@ -1064,7 +1081,7 @@ function doTick(): void {
   }
 
   const unresolved = s.scans.filter((scan) => !scan.resolved).length;
-  const farmHealthScore = computeFarmHealthScore(snapshot, zones, unresolved);
+  const farmHealthScore = getThrottledHealthScore(snapshot, zones, unresolved, s.farmHealthScore, snapshot.timestamp);
 
   // Auto-diary: every completed irrigation run files an irrigation entry.
   const wasManualRemaining = s.manualPumpRemainingSec;
@@ -1354,7 +1371,6 @@ export const useFarmStore = create<FarmState>()(
             stale: t.stale,
             rssi: t.rssi,
             uptime: t.up,
-            rainMm: t.rain ? 2.5 : 0,
             flowRateLpm: t.pump ? 0.4 : 0,
             pumpCurrentA: t.pump ? 0.25 : 0,
           };
@@ -1668,6 +1684,7 @@ export const useFarmStore = create<FarmState>()(
 
       addAlert: (alert) => {
         const now = alert.timestamp ?? Date.now();
+        const currentBucket = Math.floor(now / (10 * 60 * 1000));
         const full: Alert = {
           id: alert.id ?? uid("alert"),
           timestamp: now,
@@ -1679,16 +1696,16 @@ export const useFarmStore = create<FarmState>()(
         };
         let alertId = full.id;
         set((s) => {
-          if (full.title.startsWith("Pump mode")) {
-            const dup = s.alerts.find(
-              (a) =>
-                a.title === full.title &&
-                now - a.timestamp < ALERT_DEDUP_WINDOW_MS,
-            );
-            if (dup) {
-              alertId = dup.id;
-              return s;
-            }
+          // Dedupe by (type/title + 10-minute bucket)
+          const dup = s.alerts.find(
+            (a) =>
+              a.title === full.title &&
+              (Math.floor(a.timestamp / (10 * 60 * 1000)) === currentBucket ||
+                now - a.timestamp < ALERT_DEDUP_WINDOW_MS),
+          );
+          if (dup) {
+            alertId = dup.id;
+            return s;
           }
           return { alerts: [full, ...s.alerts].slice(0, 100) };
         });

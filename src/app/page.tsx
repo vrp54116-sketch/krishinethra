@@ -586,7 +586,7 @@ Stop watering guesses. Start growing data.`}
                       <div>
                         <p className="text-[10px] text-[var(--ink-3)]">14:20:00 • HARVEST-BRAIN</p>
                         <p className="text-xs text-[var(--ink)] font-bold mt-0.5">
-                          ZONE 1: PREDICTED RAIN 2.4MM
+                          ZONE 1: RAIN DETECTED
                         </p>
                         <p className="text-[11px] text-[var(--ink-2)] mt-0.5">
                           SKIP IRRIGATION // PRESERVED

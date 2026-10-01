@@ -182,7 +182,6 @@ export function sanitizeSnapshot(raw: unknown): Record<string, unknown> {
     tempC: temp,
     humidity: hum,
     lightLux: num(r["lightLux"], 0),
-    rainMm: num(r["rainMm"], rain ? 2.5 : 0),
     tankLevelPercent: num(r["tankLevelPercent"], 0),
     flowRateLpm: num(r["flowRateLpm"], 0),
     pumpCurrentA: num(r["pumpCurrentA"], 0),

@@ -325,7 +325,6 @@ export function executeVoiceCommand(
         humidity: s.live.hum,
         aqi: s.live.aqi,
         rain: s.live.rain,
-        rainMm: s.live.rain ? 2.5 : 0,
         pump: s.live.pump,
         mode: s.live.mode,
         stale: s.live.stale,
@@ -442,24 +441,23 @@ export function executeVoiceCommand(
   if (containsAny(said, WEATHER_PHRASES)) {
     const temp = snap.tempC.toFixed(1);
     const hum = snap.humidity.toFixed(1);
-    const rain = snap.rainMm.toFixed(1);
-    let chanceEn = "low rain chance";
-    let chanceHi = "बारिश की संभावना कम है";
-    if (snap.rainMm > 0.2) {
-      chanceEn = "rain is falling right now";
-      chanceHi = "अभी बारिश हो रही है";
-    } else if (snap.humidity > 75) {
-      chanceEn = "high rain chance";
-      chanceHi = "बारिश की संभावना ज़्यादा है";
-    } else if (snap.humidity > 60) {
-      chanceEn = "slight rain chance";
-      chanceHi = "हल्की बारिश हो सकती है";
+    const isRaining = Boolean(snap.rain);
+    let chanceEn = isRaining ? "rain detected right now" : "no rain detected";
+    let chanceHi = isRaining ? "अभी बारिश हो रही है" : "अभी बारिश नहीं है";
+    if (!isRaining) {
+      if (snap.humidity > 75) {
+        chanceEn = "high rain chance";
+        chanceHi = "बारिश की संभावना ज़्यादा है";
+      } else if (snap.humidity > 60) {
+        chanceEn = "slight rain chance";
+        chanceHi = "हल्की बारिश हो सकती है";
+      }
     }
     return {
       key: "weather",
       spoken: hindi
-        ? `तापमान ${temp} डिग्री, नमी ${hum} प्रतिशत, बारिश ${rain} मिलीमीटर — ${chanceHi}।`
-        : `Temperature ${temp} degrees, humidity ${hum} percent, rain ${rain} millimetres — ${chanceEn}.`,
+        ? `तापमान ${temp} डिग्री, नमी ${hum} प्रतिशत — ${chanceHi}।`
+        : `Temperature ${temp} degrees, humidity ${hum} percent — ${chanceEn}.`,
       success: true,
     };
   }

@@ -12,15 +12,14 @@ export default function SensorHealthCard({ className }: { className?: string }) 
   const stale = farm.stale;
   const soilRaw = farm.snapshot?.soilRaw ?? (farm.soil ? Math.round(1023 - (farm.soil * 6.5)) : 540);
   const mqRaw = farm.snapshot?.mqRaw ?? 230;
-  const showRaw = settings?.showRawCalibrationValues ?? false;
+  const showRaw = farm.source === "LIVE" && Boolean(settings?.showRawCalibrationValues);
 
   // Simulate MQ-135 preheat (60 seconds after boot)
   const uptimeSec = farm.uptime ? (typeof farm.uptime === "number" ? farm.uptime : 120) : 120;
   const isMqPreheating = uptimeSec < 60;
   const mqPreheatRemain = Math.max(0, 60 - uptimeSec);
 
-  const isRaining = farm.rain;
-  const rainMmVal = (farm.snapshot?.rainMm ?? (farm.rain ? 2.5 : 0)).toFixed(1);
+  const isRaining = Boolean(farm.rain);
 
   const sensors = [
     {
@@ -62,9 +61,9 @@ export default function SensorHealthCard({ className }: { className?: string }) 
       name: "Rain Detector",
       icon: <CloudRain className="h-4 w-4 text-blue-400" />,
       status: stale ? "stale" : isRaining ? "alert" : "healthy",
-      statusLabel: stale ? "Stale" : isRaining ? "Rain Detected" : "No Rain",
-      value: isRaining ? "Wet" : "Dry",
-      raw: `Precip: ${rainMmVal}mm`,
+      statusLabel: stale ? "Stale" : isRaining ? "RAIN: DETECTED" : "RAIN: NONE",
+      value: isRaining ? "RAIN: DETECTED" : "RAIN: NONE",
+      raw: isRaining ? "DETECTED" : "NONE",
       subtext: "Digital Comparator D2",
     },
     {

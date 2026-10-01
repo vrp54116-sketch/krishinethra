@@ -27,7 +27,6 @@ export interface SensorSnapshot {
   humidity: number;
   aqi: number;
   lightLux: number;
-  rainMm: number;
   tankLevelPercent: number;
   flowRateLpm: number;
   pumpCurrentA: number;
@@ -37,7 +36,7 @@ export interface SensorSnapshot {
   soil: number; // 0-100% (mirrors soilMoistureB)
   temp: number; // °C (mirrors tempC)
   hum: number; // % (mirrors humidity)
-  rain: boolean; // boolean (rainMm > 0)
+  rain: boolean; // boolean
   pump: boolean; // boolean (running)
   mode: "AUTO" | "MANUAL";
   rssi: number | null; // WiFi signal strength
@@ -130,7 +129,6 @@ export interface SensorHistoryPoint {
   soilMoistureB: number;
   waterUsedL: number;
   tankLevelPercent?: number;
-  rainMm?: number;
   soil?: number;
   temp?: number;
   hum?: number;
