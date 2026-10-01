@@ -578,6 +578,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* main id="main-scroll" is the ONLY scrollable container */}
         <main
+          key={pathname}
           id="main-scroll"
           tabIndex={-1}
           aria-label="Main content"

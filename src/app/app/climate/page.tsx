@@ -1,10 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import type { ClimateForecastDay } from "@/lib/ai-engine";
-import { useFarm } from "@/lib/store";
+import { useFarm, useFarmStore } from "@/lib/store";
 import AdvisorCard from "@/components/climate/AdvisorCard";
 import ComfortPanel from "@/components/climate/ComfortPanel";
 import ForecastCards from "@/components/climate/ForecastCards";
@@ -12,6 +12,7 @@ import SensorRow from "@/components/climate/SensorRow";
 import PageSkeleton from "@/components/layout/PageSkeleton";
 import { fallbackForecast } from "@/components/climate/shared";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import ClimateLoading from "./loading";
 
 // V2.5 performance — code-split the Recharts history graphs.
 const HistoryGraphs = dynamic(() => import("@/components/climate/HistoryGraphs"), {
@@ -46,14 +47,41 @@ export default function ClimatePage() {
   const farm = useFarm();
   const snapshot = farm.snapshot;
 
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const s = useFarmStore.getState();
+    return !(s.hydrated && s.snapshot);
+  });
+
+  useEffect(() => {
+    const s = useFarmStore.getState();
+    if (s.hydrated && s.snapshot) {
+      setLoading(false);
+    }
+    const unsubscribe = useFarmStore.subscribe((state) => {
+      if (state.hydrated && state.snapshot) {
+        setLoading(false);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Shared forecast state: ForecastCards fetches (live or offline
   // fallback) and the advisor consumes the same days — never errors.
-  // Initial-only snapshot read: live updates flow via onForecast, not rememo.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const initial = useMemo(() => fallbackForecast(snapshot, 5), []);
+  const initial = useMemo(() => fallbackForecast(snapshot, 5), [snapshot]);
   const [forecast, setForecast] = useState<ClimateForecastDay[]>(initial);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isOffline, setIsOffline] = useState(true);
+
+  useEffect(() => {
+    if (snapshot && forecast.length === 0) {
+      setForecast(fallbackForecast(snapshot, 5));
+    }
+  }, [snapshot, forecast.length]);
+
+  if (loading) {
+    return <ClimateLoading />;
+  }
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-5">

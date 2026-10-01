@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useFarmStore } from "@/lib/store";
 import PumpHeroCard from "@/components/irrigation/PumpHeroCard";
 import AiExplainerCard from "@/components/irrigation/AiExplainerCard";
 import HistoryTable from "@/components/irrigation/HistoryTable";
@@ -9,6 +11,7 @@ import EdgeStaleBanner from "@/components/mqtt/EdgeStaleBanner";
 import PumpRunLog from "@/components/irrigation/PumpRunLog";
 import RainSkipLog from "@/components/irrigation/RainSkipLog";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import IrrigationLoading from "./loading";
 
 function Rise({
   children,
@@ -34,6 +37,29 @@ function Rise({
  * and history log — all live from the hardware contract.
  */
 export default function IrrigationPage() {
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const s = useFarmStore.getState();
+    return !(s.hydrated && s.snapshot);
+  });
+
+  useEffect(() => {
+    const s = useFarmStore.getState();
+    if (s.hydrated && s.snapshot) {
+      setLoading(false);
+    }
+    const unsubscribe = useFarmStore.subscribe((state) => {
+      if (state.hydrated && state.snapshot) {
+        setLoading(false);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return <IrrigationLoading />;
+  }
+
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-5">
       {/* 0. HARDWARE SAFETY — sensor node silent (edge-stale) */}

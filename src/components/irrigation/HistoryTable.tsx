@@ -110,7 +110,7 @@ export default function HistoryTable() {
 
   // Watch pump start/stop transitions → accurate duration + water used.
   useEffect(() => {
-    const unsub = useFarmStore.subscribe((s, prev) => {
+    const unsubscribe = useFarmStore.subscribe((s, prev) => {
       const was = prev.pump.running;
       const is = s.pump.running;
       if (!was && is) {
@@ -143,7 +143,7 @@ export default function HistoryTable() {
         });
       }
     });
-    return unsub;
+    return () => unsubscribe();
   }, []);
 
   const allRows = useMemo(() => {
