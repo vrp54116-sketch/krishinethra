@@ -54,10 +54,6 @@ export default function ClimatePage() {
   });
 
   useEffect(() => {
-    const s = useFarmStore.getState();
-    if (s.hydrated && s.snapshot) {
-      setLoading(false);
-    }
     const unsubscribe = useFarmStore.subscribe((state) => {
       if (state.hydrated && state.snapshot) {
         setLoading(false);
@@ -72,12 +68,7 @@ export default function ClimatePage() {
   const [forecast, setForecast] = useState<ClimateForecastDay[]>(initial);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isOffline, setIsOffline] = useState(true);
-
-  useEffect(() => {
-    if (snapshot && forecast.length === 0) {
-      setForecast(fallbackForecast(snapshot, 5));
-    }
-  }, [snapshot, forecast.length]);
+  const effectiveForecast = forecast.length > 0 ? forecast : initial;
 
   if (loading) {
     return <ClimateLoading />;
@@ -108,7 +99,7 @@ export default function ClimatePage() {
       <div className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-2">
         <Rise delay={0.1}>
           <ErrorBoundary name="advisor-card">
-            <AdvisorCard forecast={forecast} />
+            <AdvisorCard forecast={effectiveForecast} />
           </ErrorBoundary>
         </Rise>
         <Rise delay={0.14}>

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { Droplets, Power, ScanLine, Timer, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFarm } from "@/lib/store";

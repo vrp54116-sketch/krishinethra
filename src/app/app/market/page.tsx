@@ -1028,6 +1028,7 @@ export default function MarketPage() {
                       strokeWidth={2.5}
                       fill="url(#mandiFill)"
                       dot={{ r: 3, fill: "#22c55e", strokeWidth: 0 }}
+                      isAnimationActive={false}
                     />
                   </AreaChart>
                 </ResponsiveContainer>

@@ -133,7 +133,6 @@ export default function ReportsPage() {
   const diary = useFarmStore((s) => s.diary);
   const tasks = useFarmStore((s) => s.tasks);
   const farm = useFarm();
-  const snapshot = farm.snapshot;
 
   // Backfill 30 days of plausible history on first load so monthly views look full.
   useEffect(() => {
@@ -627,7 +626,7 @@ export default function ReportsPage() {
                     <Legend wrapperStyle={{ fontSize: 11, fontFamily: "var(--font-editorial-mono), monospace", color: "var(--ink-2)" }} />
                     <Bar dataKey="actual" stackId="w" fill="var(--moss)" radius={[0, 0, 0, 0]} name="Smart use" isAnimationActive={false} />
                     <Bar dataKey="saved" stackId="w" fill="var(--moss-soft)" radius={[0, 0, 0, 0]} name="Saved" isAnimationActive={false} />
-                    <Line type="monotone" dataKey="baseline" stroke="var(--gold)" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Manual 6 L" />
+                    <Line type="monotone" dataKey="baseline" stroke="var(--gold)" strokeWidth={1.5} strokeDasharray="4 4" dot={false} name="Manual 6 L" isAnimationActive={false} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Activity, ArrowUpRight, Cpu, Droplets, Thermometer, Wind, CloudRain } from "lucide-react";
-import { useFarm, useFarmStore } from "@/lib/store";
+import { useFarm } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export default function SensorHealthCard({ className }: { className?: string }) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Terminal, ArrowDownToLine, Trash2, CheckCircle2, Clock } from "lucide-react";
+import { Terminal, ArrowDownToLine, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { clearCommandLog, exportCommandLogCSV, getCommandLog } from "@/lib/command-logger";
 import type { CommandLogEntry } from "@/lib/types";

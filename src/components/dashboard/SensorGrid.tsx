@@ -10,9 +10,9 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useFarm, useFarmStore } from "@/lib/store";
+import { useFarm } from "@/lib/store";
 import { useT } from "@/lib/i18n";
-import { AnimatedNumber, CardHeader, Sparkline, StatusPill, type PillTone } from "./ui";
+import { AnimatedNumber, Sparkline, StatusPill, type PillTone } from "./ui";
 
 /** Pad / trim a series to exactly 24 points for the sparkline. */
 function to24(all: number[], current: number): number[] {

@@ -545,7 +545,16 @@ export default function DiaryPage() {
                   <div className="h-32 w-32 shrink-0">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={donutData} dataKey="value" nameKey="name" innerRadius={34} outerRadius={54} paddingAngle={3} stroke="none">
+                        <Pie
+                          data={donutData}
+                          dataKey="value"
+                          nameKey="name"
+                          innerRadius={34}
+                          outerRadius={54}
+                          paddingAngle={3}
+                          stroke="none"
+                          isAnimationActive={false}
+                        >
                           {donutData.map((d) => (
                             <Cell key={d.name} fill={d.hex} />
                           ))}

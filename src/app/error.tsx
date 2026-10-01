@@ -23,11 +23,11 @@ export default function RootError({
           <TriangleAlert className="h-8 w-8" />
         </div>
         <h1 className="mt-6 text-2xl font-semibold tracking-tight text-white">
-          Something wilted
+          Something went wrong.
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-[#9CA3AF]">
           This page hit an unexpected error — your farm data is safe on this
-          device. Try again, or head back to the dashboard.
+          device. Reload the page, or head back to the dashboard.
         </p>
         {error?.digest && (
           <p className="mt-3 font-mono text-[11px] text-[#9CA3AF]">
@@ -37,10 +37,19 @@ export default function RootError({
         <div className="mt-6 flex flex-col gap-2">
           <button
             type="button"
-            onClick={reset}
-            className="btn-primary-aurora flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-bold text-black"
+            onClick={() => {
+              if (typeof window !== "undefined") window.location.reload();
+            }}
+            className="btn-primary-aurora flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-bold text-black cursor-pointer"
           >
             <RotateCcw className="h-4 w-4" />
+            Reload
+          </button>
+          <button
+            type="button"
+            onClick={reset}
+            className="flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-6 py-3 text-sm font-semibold text-[#F3F4F6] transition-colors hover:border-[#34D399]/40 hover:text-white cursor-pointer"
+          >
             Try again
           </button>
           <Link

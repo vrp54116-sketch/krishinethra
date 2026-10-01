@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFarm, useFarmStore } from "@/lib/store";
-import { DEFAULT_BROKERS, topicsFor } from "@/lib/mqtt-config";
+import { DEFAULT_BROKERS } from "@/lib/mqtt-config";
 import { Card, CardHeader } from "@/components/dashboard/ui";
 import { LiquidToggle } from "@/components/ui/glass";
 import ShareFarmLink from "./ShareFarmLink";
@@ -73,14 +73,11 @@ export default function WirelessEdgeCard() {
   const [customUrl, setCustomUrl] = useState(isCustom ? brokerUrl : "");
   const [copied, setCopied] = useState(false);
 
-  const [nowSec, setNowSec] = useState(0);
+  const [nowSec, setNowSec] = useState(() => Math.floor(Date.now() / 1000));
   useEffect(() => {
-    setNowSec(Math.floor(Date.now() / 1000));
     const id = setInterval(() => setNowSec(Math.floor(Date.now() / 1000)), 1000);
     return () => clearInterval(id);
   }, []);
-
-  const topics = topicsFor(token);
   const connected = mqttStatus === "online";
   const connecting = mqttStatus === "connecting";
 

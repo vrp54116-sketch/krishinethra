@@ -2537,22 +2537,22 @@ export function useFarm(): FarmView;
 export function useFarm<T>(selector: (farm: FarmView) => T): T;
 export function useFarm<T>(selector?: (farm: FarmView) => T): T | FarmView {
   const store = useFarmStore();
-  const isLive = store.source === "LIVE";
+  const isLive = store.source === "LIVE" || store.settings?.mode === "live";
 
   const farm: FarmView = {
     source: store.source,
     isLive,
-    soil: isLive ? store.live.soil : (store.snapshot?.soil ?? store.snapshot?.soilMoistureA ?? 45),
-    temp: isLive ? store.live.temp : (store.snapshot?.temp ?? store.snapshot?.tempC ?? 28),
-    hum: isLive ? store.live.hum : (store.snapshot?.hum ?? store.snapshot?.humidity ?? 60),
-    aqi: isLive ? store.live.aqi : (store.snapshot?.aqi ?? 85),
-    rain: isLive ? store.live.rain : Boolean(store.snapshot?.rain),
-    pump: isLive ? store.live.pump : store.pump.running,
-    r2: isLive ? store.live.r2 : Boolean(store.edgeR2),
-    mode: isLive ? store.live.mode : (store.pump.mode === "auto" ? "AUTO" : "MANUAL"),
-    stale: isLive ? store.live.stale : false,
-    rssi: isLive ? store.live.rssi : (store.mqttRssi ?? store.snapshot?.rssi ?? null),
-    uptime: isLive ? store.live.uptime : (store.snapshot?.uptime ?? 0),
+    soil: isLive ? (store.live?.soil ?? store.snapshot?.soil ?? 45) : (store.snapshot?.soil ?? store.snapshot?.soilMoistureA ?? 45),
+    temp: isLive ? (store.live?.temp ?? store.snapshot?.temp ?? 28) : (store.snapshot?.temp ?? store.snapshot?.tempC ?? 28),
+    hum: isLive ? (store.live?.hum ?? store.snapshot?.hum ?? 60) : (store.snapshot?.hum ?? store.snapshot?.humidity ?? 60),
+    aqi: isLive ? (store.live?.aqi ?? store.snapshot?.aqi ?? 85) : (store.snapshot?.aqi ?? 85),
+    rain: isLive ? Boolean(store.live?.rain ?? store.snapshot?.rain) : Boolean(store.snapshot?.rain),
+    pump: isLive ? Boolean(store.live?.pump ?? store.pump.running) : store.pump.running,
+    r2: isLive ? Boolean(store.live?.r2 ?? store.edgeR2) : Boolean(store.edgeR2),
+    mode: isLive ? (store.live?.mode ?? (store.pump.mode === "auto" ? "AUTO" : "MANUAL")) : (store.pump.mode === "auto" ? "AUTO" : "MANUAL"),
+    stale: isLive ? Boolean(store.live?.stale ?? store.edgeStale) : false,
+    rssi: isLive ? (store.live?.rssi ?? store.mqttRssi ?? store.snapshot?.rssi ?? null) : (store.mqttRssi ?? store.snapshot?.rssi ?? null),
+    uptime: isLive ? (store.live?.uptime ?? store.snapshot?.uptime ?? 0) : (store.snapshot?.uptime ?? 0),
 
     zones: store.zones,
     alerts: store.alerts,

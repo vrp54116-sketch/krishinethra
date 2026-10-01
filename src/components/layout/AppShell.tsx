@@ -42,17 +42,11 @@ import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import AppToaster from "@/components/layout/AppToaster";
 import QuickActionsFAB from "@/components/layout/QuickActionsFAB";
 import LiveAnnouncer from "@/components/layout/LiveAnnouncer";
-import { AmbientBackground, LiquidButton } from "@/components/ui/glass";
+import { AmbientBackground } from "@/components/ui/glass";
 import { ThemeToggleBox, SquareToggle } from "@/components/editorial";
 import { useFocusTrap } from "@/components/ui/glass/useFocusTrap";
 import { useMounted } from "@/components/dashboard/ui";
 import { getSectionAccent } from "@/lib/theme";
-
-/** M1 Field Editorial active nav tokens */
-const ACTIVE_EDITORIAL = {
-  terra: "#C4503A",
-  terraSoft: "rgba(196, 80, 58, 0.14)",
-};
 
 /**
  * Page transition according to Animation Law Rule 9:
@@ -148,35 +142,6 @@ const MOBILE_TABS: Array<NavItem | { key: "more" }> = [
   NAV_ITEMS[9],
   { key: "more" },
 ];
-
-function HealthRing({ score, size = 44 }: { score: number; size?: number }) {
-  const strokeWidth = 4;
-  const r = (size - strokeWidth * 2) / 2;
-  const c = 2 * Math.PI * r;
-  const filled = (Math.max(0, Math.min(100, score)) / 100) * c;
-  const color = score >= 70 ? "#22C55E" : score >= 40 ? "#FBBF24" : "#FF453A";
-  return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={strokeWidth} />
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke={color}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={`${filled} ${c}`}
-          style={{ filter: `drop-shadow(0 0 6px ${color})` }}
-        />
-      </svg>
-      <span className="absolute inset-0 flex items-center justify-center text-[12px] font-bold text-white">
-        {Math.round(score)}
-      </span>
-    </div>
-  );
-}
 
 function useClock(): string {
   const [now, setNow] = useState("--:--:--");
@@ -275,7 +240,7 @@ function HealthCardInner({
             : "border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)]",
         )}
       >
-        {isLive ? "EDGE-LIVE" : "SIMULATION"}
+        {isLive ? "LIVE" : "SIMULATION"}
       </div>
     </div>
   );
@@ -298,7 +263,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const onboardingDone = useFarmStore((s) => s.onboardingDone);
   const appPinHash = useFarmStore((s) => s.appPinHash);
   const isAuthenticated = useFarmStore((s) => s.isAuthenticated);
-  const farmProfile = useFarmStore((s) => s.settings.farmProfile);
   const snapshot = useFarmStore((s) => s.snapshot);
 
   // Bypass AppShell UI for onboarding / entry routes
@@ -332,7 +296,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const lastFive = alerts.slice(0, 5);
 
   const activeItem = NAV_ITEMS.find((n) => pathname === n.href || pathname?.startsWith(n.href + "/"));
-  const pageTitle = activeItem ? t(activeItem.titleKey) : t("titles.dashboard");
   const currentAccent = getSectionAccent(pathname);
 
   const isLive = mode === "live";

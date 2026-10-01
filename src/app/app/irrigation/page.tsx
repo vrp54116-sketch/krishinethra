@@ -44,10 +44,6 @@ export default function IrrigationPage() {
   });
 
   useEffect(() => {
-    const s = useFarmStore.getState();
-    if (s.hydrated && s.snapshot) {
-      setLoading(false);
-    }
     const unsubscribe = useFarmStore.subscribe((state) => {
       if (state.hydrated && state.snapshot) {
         setLoading(false);

@@ -81,7 +81,6 @@ export function Card({
   className,
   children,
   variant = "default",
-  interactive = true,
 }: {
   className?: string;
   children: ReactNode;
@@ -184,12 +183,6 @@ export const Sparkline = memo(function Sparkline({
   data: number[];
   color?: string;
 }) {
-  const [hasAnimated, setHasAnimated] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setHasAnimated(true), 600);
-    return () => clearTimeout(t);
-  }, []);
-
   const pts = data.map((v, i) => ({ i, v }));
   const rawId = useId().replace(/[^a-zA-Z0-9]/g, "");
   const gid = `spark-${rawId}`;
@@ -209,9 +202,10 @@ export const Sparkline = memo(function Sparkline({
             stroke={color}
             strokeWidth={1.5}
             fill={`url(#${gid})`}
-            dot={(props: any) => {
+            dot={(props: { cx?: number; cy?: number; index?: number }) => {
               const { cx, cy, index } = props;
               // Render square dot only on every 6th point or last point for a clean editorial sparkline
+              if (index === undefined || cx === undefined || cy === undefined) return null;
               if (index % 6 !== 0 && index !== pts.length - 1) return null;
               return (
                 <rect
@@ -224,9 +218,7 @@ export const Sparkline = memo(function Sparkline({
                 />
               );
             }}
-            isAnimationActive={!hasAnimated}
-            animationDuration={500}
-            animationEasing="ease-in-out"
+            isAnimationActive={false}
           />
         </ComposedChart>
       </ResponsiveContainer>

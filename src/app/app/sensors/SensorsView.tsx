@@ -236,7 +236,7 @@ export default function SensorsView() {
     }
 
     // Deterministic fallback for smooth charts if store history is fresh
-    const baseTime = Date.now();
+    const baseTime = farm.snapshot?.timestamp && farm.snapshot.timestamp > 0 ? farm.snapshot.timestamp : 1774000000000;
     const fallback = Array.from({ length: 30 }).map((_, i) => {
       const t = new Date(baseTime - (30 - i) * 60 * 1000);
       return {
@@ -250,7 +250,7 @@ export default function SensorsView() {
       };
     });
     return resampleChartPoints(fallback, 60);
-  }, [sensorHistory, farm.soil, farm.temp, farm.hum, farm.aqi, farm.rain]);
+  }, [sensorHistory, farm.soil, farm.temp, farm.hum, farm.aqi, farm.rain, farm.snapshot?.timestamp]);
 
   // Calculate statistics (min, max, avg) for each metric
   const stats = useMemo(() => {

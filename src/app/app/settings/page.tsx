@@ -38,7 +38,7 @@ import BuzzerPatternTester from "@/components/alerts/BuzzerPatternTester";
 import CommandLogCard from "@/components/settings/CommandLogCard";
 import SensorCalibrationCard from "@/components/settings/SensorCalibrationCard";
 import DiagnosticsCard from "@/components/settings/DiagnosticsCard";
-import ThemeToggle, { useTheme, applyTheme } from "@/components/ui/glass/ThemeToggle";
+import ThemeToggle, { useTheme } from "@/components/ui/glass/ThemeToggle";
 
 function Rise({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   return (
@@ -1268,7 +1268,22 @@ export default function SettingsPage() {
               <button
                 key={o.id}
                 type="button"
-                onClick={() => updateSettings({ mode: o.id as "simulation" | "live" })}
+                onClick={() => {
+                  const m = o.id as "simulation" | "live";
+                  updateSettings({ mode: m });
+                  const s = useFarmStore.getState();
+                  if (m === "live") {
+                    s.setSource("LIVE");
+                    s.stopSimulation();
+                    const token = s.settings.mqttToken || "patelfarm01";
+                    const brokerUrl = s.settings.mqttBrokerUrl || "wss://broker.emqx.io:8084/mqtt";
+                    void import("@/lib/mqtt-bridge").then((b) => b.connect(token, brokerUrl));
+                  } else {
+                    s.setSource("SIM");
+                    s.startSimulation();
+                    void import("@/lib/mqtt-bridge").then((b) => b.disconnect());
+                  }
+                }}
                 aria-pressed={settings.mode === o.id}
                 className={cn(
                   "rounded-lg px-3 py-2.5 text-xs font-bold transition-all",

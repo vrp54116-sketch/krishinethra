@@ -9,7 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useFarm, useFarmStore } from "@/lib/store";
+import { useFarm } from "@/lib/store";
 import {
   AnimatedNumber,
   Sparkline,

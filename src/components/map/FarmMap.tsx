@@ -3,7 +3,6 @@
 import { motion } from "framer-motion";
 import {
   CloudRain,
-  Radio,
   Cpu,
   Droplets,
   Power,
@@ -20,7 +19,7 @@ import { useFarm } from "@/lib/store";
 
 export default function FarmMap() {
   const farm = useFarm();
-  const { soil, temp, hum, aqi, rain, pump: isPumping, mode, r2, rssi, thresholds } = farm;
+  const { soil, temp, hum, aqi, rain, pump: isPumping, mode, r2, thresholds } = farm;
   const isAuto = mode === "AUTO";
 
   const togglePump = () => {

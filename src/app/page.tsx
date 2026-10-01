@@ -27,11 +27,11 @@ import {
   RevealParagraph,
   Hairline,
   GhostChip,
-  SquareToggle,
   CreamButton,
 } from "@/components/editorial";
 import { logAnalyticsEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 
 /* --------------------------------------------------------------------------
    SIMULATOR CALCULATOR LOGIC
@@ -78,18 +78,17 @@ export default function MarketingLandingPage() {
   );
 
   // Date formatted for header MetaBar
-  const [todayDate, setTodayDate] = useState("26 SEP 2026");
-  useEffect(() => {
+  const [todayDate] = useState(() => {
     try {
       const now = new Date();
       const d = now.getDate();
       const m = now.toLocaleString("en-US", { month: "short" }).toUpperCase();
       const y = now.getFullYear();
-      setTodayDate(`${d} ${m} ${y}`);
+      return `${d} ${m} ${y}`;
     } catch {
-      /* ignore */
+      return "26 SEP 2026";
     }
-  }, []);
+  });
 
   // Step 01: Live Sensor Telemetry ticking
   const [soilMoisture, setSoilMoisture] = useState(64.0);
@@ -161,7 +160,8 @@ export default function MarketingLandingPage() {
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-[var(--bg)] text-[var(--ink)] overflow-x-hidden selection:bg-[var(--terra-soft)] selection:text-[var(--ink)]">
+    <ErrorBoundary name="MarketingLandingPage">
+      <div className="relative min-h-screen w-full bg-[var(--bg)] text-[var(--ink)] overflow-x-hidden selection:bg-[var(--terra-soft)] selection:text-[var(--ink)]">
       {/* Floating Navigation */}
       <FloatingNav
         logoText="KrishiNethra"
@@ -1500,5 +1500,6 @@ Stop watering guesses. Start growing data.`}
         </footer>
       </main>
     </div>
+    </ErrorBoundary>
   );
 }

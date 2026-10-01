@@ -6,6 +6,7 @@ import ServiceWorkerRegister from "@/components/pwa/ServiceWorkerRegister";
 import DemoSeedBoot from "@/components/pwa/DemoSeedBoot";
 import { AlertPipelineListener } from "@/lib/notifications";
 import { AmbientBackground } from "@/components/ui/glass";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import "./globals.css";
 // V2.1 liquid glass system — imported after globals so its tokens/utilities
 // (e.g. --glass-blur: 20px) win the cascade over the legacy glass helpers.
@@ -125,7 +126,9 @@ export default function RootLayout({
       </head>
       <body className="min-h-full bg-[var(--bg)] font-sans text-[var(--text)] antialiased">
         <AmbientBackground />
-        {children}
+        <ErrorBoundary name="Root">
+          {children}
+        </ErrorBoundary>
         <AppToaster />
         <AlertPipelineListener />
         <ServiceWorkerRegister />

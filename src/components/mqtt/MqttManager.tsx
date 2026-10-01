@@ -57,8 +57,8 @@ export default function MqttManager() {
             description: "ESP32 edge node connected over MQTT.",
           });
         }
-      } else if (inLive && !fresh) {
-        // Disconnected or stale (>=5s) → Fallback to SIMULATION
+      } else if (inLive && !fresh && s.settings.mode !== "live") {
+        // Disconnected or stale (>=5s) and not manually set to live → Fallback to SIMULATION
         s.setSource("SIM");
         s.updateSettings({ mode: "simulation" });
         s.stopLivePolling();

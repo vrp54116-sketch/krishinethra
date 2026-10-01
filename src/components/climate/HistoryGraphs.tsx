@@ -11,7 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import { cn } from "@/lib/utils";
-import { useFarm, useFarmStore } from "@/lib/store";
+import { useFarm } from "@/lib/store";
 import { Card, CardHeader } from "@/components/dashboard/ui";
 import { buildTwelveHourSeries } from "./shared";
 

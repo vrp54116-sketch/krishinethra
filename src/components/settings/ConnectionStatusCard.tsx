@@ -11,9 +11,8 @@ export default function ConnectionStatusCard({ className }: { className?: string
   const mqttStatus = useFarmStore((s) => s.mqttStatus);
   const mqttConnected = mqttStatus === "online";
 
-  const [now, setNow] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    setNow(Date.now());
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
