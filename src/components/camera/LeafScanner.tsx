@@ -1,786 +1,802 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  BookOpen,
-  ChevronDown,
+  AlertTriangle,
+  Camera,
+  CheckCircle2,
   FlaskConical,
   History,
-  RotateCcw,
+  MessageCircle,
+  Plus,
+  RefreshCw,
   ScanLine,
-  SprayCan,
+  ShieldAlert,
+  Sparkles,
   Sprout,
   Upload,
-  Camera,
-  Images,
 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useFarmStore } from "@/lib/store";
-import { uid } from "@/lib/simulation-engine";
+import { useFarm, useFarmStore } from "@/lib/store";
 import {
-  analyzeLeaf,
-  type LeafAnalysisResult,
-  type LeafSampleId,
-} from "@/lib/ai-engine";
-import type { DiseaseScan } from "@/lib/types";
-import { StatusPill, useMounted } from "@/components/dashboard/ui";
-import { LEAF_SAMPLES, sampleMeta } from "./LeafSamples";
-import PhoneCamera from "./PhoneCamera";
-import { takePendingCapture } from "./field-capture";
+  classifyLeafImage,
+  computeDiagnosis,
+  getOrLoadModel,
+  type DiagnosisData,
+  type StoredLeafScan,
+} from "@/lib/tf-leaf-detector";
 
-/* ------------------------------------------------------------------ */
-/* Helpers                                                              */
-/* ------------------------------------------------------------------ */
+const STORAGE_KEY = "krishinethra_leaf_scans_v1";
 
-const SCAN_MS = 2500;
-
-export function diseaseDot(disease: string): string {
+export function diseaseDotColor(disease: string): string {
   const d = disease.toLowerCase();
   if (d.includes("healthy")) return "#22c55e";
-  if (d.includes("spot")) return "#a16207";
-  if (d.includes("rust")) return "#ea580c";
-  if (d.includes("nutrient") || d.includes("water stress")) return "#eab308";
-  if (d.includes("aphid") || d.includes("pest")) return "#a855f7";
+  if (d.includes("early blight")) return "#ea580c";
+  if (d.includes("late blight")) return "#ef4444";
+  if (d.includes("leaf mold")) return "#eab308";
   return "#38bdf8";
 }
 
-function severityTone(
-  severity: string,
-): "good" | "warn" | "bad" | "info" {
-  if (severity === "none") return "good";
-  if (severity === "mild") return "info";
-  if (severity === "medium") return "warn";
-  return "bad";
-}
-
-function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function formatScanDate(ts: number): string {
-  const d = new Date(ts);
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-  ];
-  const hh = d.getHours();
-  const h12 = hh % 12 === 0 ? 12 : hh % 12;
-  const ap = hh < 12 ? "AM" : "PM";
-  return `${d.getDate()} ${months[d.getMonth()]} · ${h12}:${String(d.getMinutes()).padStart(2, "0")} ${ap}`;
-}
-
-interface DisplayResult {
-  key: string;
-  disease: string;
-  confidence: number;
-  severity: DiseaseScan["severity"];
-  affectedPercent: number;
-  severityGrid: number[][];
-  treatmentNatural: string[];
-  treatmentChemical: string[];
-  imageName: string;
-  storedId: string | null;
-}
-
-function HeatCell({ v, delay }: { v: number; delay: number }) {
-  return (
-    <motion.span
-      initial={{ opacity: 0, scale: 0.5 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay, duration: 0.25 }}
-      className={cn(
-        "aspect-square rounded-[4px]",
-        v === 2 && "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.7)]",
-        v === 1 && "bg-amber-400/90",
-        v === 0 && "bg-emerald-500/70",
-      )}
-    />
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* LeafScanner                                                          */
-/* ------------------------------------------------------------------ */
-
 export default function LeafScanner() {
-  const mounted = useMounted();
-  const scans = useFarmStore((s) => s.scans);
-  const addScan = useFarmStore((s) => s.addScan);
-  const addDiary = useFarmStore((s) => s.addDiary);
+  const router = useRouter();
+  const farm = useFarm();
   const addSprayPlan = useFarmStore((s) => s.addSprayPlan);
 
-  const [source, setSource] = useState<"sample" | "upload" | "camera">("sample");
-  const [sampleId, setSampleId] = useState<LeafSampleId>("healthy");
-  const [uploadUrl, setUploadUrl] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string>("Uploaded leaf photo");
-  const uploadCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const cameraCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [cameraUrl, setCameraUrl] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  // Model loading state
+  const [modelStatus, setModelStatus] = useState<"loading" | "ready" | "error">("loading");
 
+  // Scanner states
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
-  const scanTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [fresh, setFresh] = useState<DisplayResult | null>(null);
-  const [openScanId, setOpenScanId] = useState<string | null>(null);
-  const [chemOpen, setChemOpen] = useState(false);
+  const [rejectionMessage, setRejectionMessage] = useState<string | null>(null);
+  const [diagnosis, setDiagnosis] = useState<DiagnosisData | null>(null);
+  const [history, setHistory] = useState<StoredLeafScan[]>([]);
+  const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
 
-  useEffect(
-    () => () => {
-      if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
-    },
-    [],
-  );
+  // Single-frame camera capture states
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
 
-  // A frame captured on the "Phone/Laptop Camera" tab waits in the
-  // field-capture slot — adopt it so SCAN works immediately after switching.
+  // Hidden file input
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // 1. MODEL LOADING: on page mount load with tf.loadLayersModel('/model/model.json')
   useEffect(() => {
-    const p = takePendingCapture();
-    if (p) {
-      cameraCanvasRef.current = p.canvas;
-      queueMicrotask(() => {
-        setCameraUrl(p.dataUrl);
-        setSource("camera");
-        setFresh(null);
-        setOpenScanId(null);
-        setChemOpen(false);
+    let isMounted = true;
+    getOrLoadModel()
+      .then(() => {
+        if (isMounted) setModelStatus("ready");
+      })
+      .catch((err) => {
+        console.error("Failed to load leaf disease model:", err);
+        if (isMounted) setModelStatus("error");
       });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Load history from localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          setHistory(parsed.slice(0, 10));
+        }
+      }
+    } catch (e) {
+      console.error("Failed to parse leaf scan history from localStorage", e);
     }
   }, []);
 
-  const activeSample = sampleMeta(sampleId);
-
-  const pickSample = (id: LeafSampleId) => {
-    if (scanning) return;
-    setSource("sample");
-    setSampleId(id);
-    setFresh(null);
-    setOpenScanId(null);
-    setChemOpen(false);
+  // Save history to localStorage
+  const saveToHistory = (scan: StoredLeafScan) => {
+    setHistory((prev) => {
+      const updated = [scan, ...prev.filter((item) => item.id !== scan.id)].slice(0, 10);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.error("Failed to write leaf scan history to localStorage", e);
+      }
+      return updated;
+    });
   };
 
-  /* Real photo in: FileReader → data URL → Image → analysis canvas. */
-  const handleFile = (file: File | undefined) => {
-    if (!file || scanning) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please choose an image file", {
-        description: "JPG or PNG leaf photos work best.",
+  // Helper to create small thumbnail
+  const createThumbnail = (canvas: HTMLCanvasElement): string => {
+    try {
+      const thumb = document.createElement("canvas");
+      thumb.width = 160;
+      thumb.height = 160;
+      const ctx = thumb.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(canvas, 0, 0, 160, 160);
+        return thumb.toDataURL("image/jpeg", 0.7);
+      }
+    } catch {
+      // fallback
+    }
+    return canvas.toDataURL("image/jpeg", 0.6);
+  };
+
+  // Run real analysis on 224x224 canvas
+  const analyzeImageCanvas = async (sourceCanvas: HTMLCanvasElement, fullDataUrl: string) => {
+    setScanning(true);
+    setRejectionMessage(null);
+    setDiagnosis(null);
+    setSelectedHistoryId(null);
+
+    try {
+      // 4. CLASSIFY + REJECT: on scan, draw image to 224x224 canvas tensor (normalize /255, expandDims), run model.predict
+      const result = await classifyLeafImage(sourceCanvas);
+
+      // Rejection check:
+      // "If top class is 'Not A Leaf' OR top confidence < 0.60 → show a red card:
+      // 'This does not look like a leaf. Please upload a clear photo of ONE tomato leaf on a plain background.' and stop."
+      if (result.isRejected) {
+        setRejectionMessage(
+          "This does not look like a leaf. Please upload a clear photo of ONE tomato leaf on a plain background."
+        );
+        const scanRecord: StoredLeafScan = {
+          id: `scan_${Date.now()}`,
+          thumbnail: createThumbnail(sourceCanvas),
+          date: new Date().toLocaleDateString("en-IN", {
+            day: "numeric",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          timestamp: Date.now(),
+          className: result.className,
+          confidence: result.confidence,
+          severity: "Low",
+          spreadRisk: "Low",
+          naturalTreatment: "",
+          chemicalFallback: null,
+        };
+        saveToHistory(scanRecord);
+        setSelectedHistoryId(scanRecord.id);
+        toast.error("Leaf not recognized", {
+          description: "Please provide a clear single tomato leaf photo.",
+        });
+        return;
+      }
+
+      // Valid diagnosis
+      const diag = computeDiagnosis(result.className, result.confidence, farm.temp, farm.hum);
+      setDiagnosis(diag);
+
+      // 7. Save to localStorage (last 10 scans)
+      const thumbnail = createThumbnail(sourceCanvas);
+      const scanRecord: StoredLeafScan = {
+        id: `scan_${Date.now()}`,
+        thumbnail,
+        date: new Date().toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        timestamp: Date.now(),
+        className: diag.disease,
+        confidence: diag.confidence,
+        severity: diag.severity,
+        spreadRisk: diag.spreadRisk,
+        naturalTreatment: diag.naturalTreatment,
+        chemicalFallback: diag.chemicalFallback,
+      };
+
+      saveToHistory(scanRecord);
+      setSelectedHistoryId(scanRecord.id);
+
+      toast.success(`Diagnosis: ${diag.disease}`, {
+        description: `Confidence ${Math.round(diag.confidence * 100)}% · Severity: ${diag.severity}`,
+      });
+    } catch (err) {
+      console.error("Leaf analysis error:", err);
+      toast.error("Analysis failed", {
+        description: "An error occurred during TensorFlow inference.",
+      });
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  // Handle uploaded file (jpg/png)
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!/\.(jpe?g|png)$/i.test(file.name) || !["image/jpeg", "image/png"].includes(file.type)) {
+      toast.error("Invalid file type", {
+        description: "Please upload a JPG or PNG leaf image.",
       });
       return;
     }
+
     const reader = new FileReader();
     reader.onload = () => {
       const url = reader.result as string;
       const img = new Image();
       img.onload = () => {
-        const max = 480;
-        const scale = Math.min(1, max / Math.max(img.width, img.height));
-        const c = document.createElement("canvas");
-        c.width = Math.max(1, Math.round(img.width * scale));
-        c.height = Math.max(1, Math.round(img.height * scale));
-        const ctx = c.getContext("2d", { willReadFrequently: true });
-        if (!ctx) {
-          toast.error("Could not process that photo");
-          return;
+        const canvas = document.createElement("canvas");
+        canvas.width = 224;
+        canvas.height = 224;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, 224, 224);
+          setPreviewUrl(url);
+          void analyzeImageCanvas(canvas, url);
         }
-        ctx.drawImage(img, 0, 0, c.width, c.height);
-        uploadCanvasRef.current = c;
-        setUploadUrl(url);
-        setFileName(file.name);
-        setSource("upload");
-        setFresh(null);
-        setOpenScanId(null);
-        setChemOpen(false);
-        toast.success("Photo loaded — press SCAN", {
-          description: "Real pixel analysis will run on your leaf.",
-        });
       };
-      img.onerror = () => toast.error("Could not read that image");
+      img.onerror = () => {
+        toast.error("Could not load image");
+      };
       img.src = url;
     };
-    reader.onerror = () => toast.error("Could not read that file");
     reader.readAsDataURL(file);
+
+    // Reset input
+    e.target.value = "";
   };
 
-  /* Field-camera frame in: PhoneCamera hands back a ready canvas. */
-  const handleCameraCapture = (canvas: HTMLCanvasElement, dataUrl: string) => {
-    if (scanning) return;
-    cameraCanvasRef.current = canvas;
-    setCameraUrl(dataUrl);
-    setSource("camera");
-    setFresh(null);
-    setOpenScanId(null);
-    setChemOpen(false);
-    toast.success("Leaf captured — press SCAN", {
-      description: "Analysis runs on-device, image never uploads.",
-    });
-  };
+  // Start single-frame camera capture
+  const startCamera = async () => {
+    setCameraLoading(true);
 
-  const handleScan = () => {
-    if (scanning) return;
-    if (source === "upload" && !uploadCanvasRef.current) {
-      toast.error("Upload a leaf photo first");
-      return;
-    }
-    if (source === "camera" && !cameraCanvasRef.current) {
-      toast.error("Capture a leaf photo first", {
-        description: "Point your phone camera at a leaf and tap Capture.",
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error("Camera API not supported on this browser.");
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 640 },
+          height: { ideal: 640 },
+        },
+        audio: false,
       });
-      return;
+
+      mediaStreamRef.current = stream;
+      const video = document.createElement("video");
+      video.autoplay = true;
+      video.playsInline = true;
+      video.muted = true;
+      video.srcObject = stream;
+      await new Promise<void>((resolve, reject) => {
+        video.onloadeddata = () => resolve();
+        video.onerror = () => reject(new Error("Could not read a frame from the camera."));
+      });
+      await video.play();
+      const canvas = document.createElement("canvas");
+      canvas.width = 224;
+      canvas.height = 224;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) throw new Error("Could not initialize image capture.");
+      ctx.drawImage(video, 0, 0, 224, 224);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+      stopCameraStream();
+      setPreviewUrl(dataUrl);
+      void analyzeImageCanvas(canvas, dataUrl);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Camera access denied.";
+      toast.error("Camera unavailable", {
+        description: msg,
+      });
+    } finally {
+      stopCameraStream();
+      setCameraLoading(false);
     }
-    setScanning(true);
-    setFresh(null);
-    setOpenScanId(null);
-    setChemOpen(false);
-    /* Pre-mint the scan id so the heatmap is deterministic from the id. */
-    const seed = uid("scan");
-    scanTimerRef.current = setTimeout(() => {
-      try {
-        const analysis: LeafAnalysisResult =
-          source === "upload" || source === "camera"
-            ? analyzeLeaf({
-                canvas:
-                  source === "upload"
-                    ? uploadCanvasRef.current
-                    : cameraCanvasRef.current,
-                seed,
-              })
-            : analyzeLeaf({ sampleId, seed });
-        const imageName =
-          source === "upload"
-            ? fileName
-            : source === "camera"
-              ? "Field capture (phone camera)"
-              : `${activeSample.name} sample`;
-        const storedId = addScan({
-          id: seed,
-          source: source === "camera" ? "upload" : source,
-          imageName,
-          disease: analysis.disease,
-          confidence: analysis.confidence,
-          severity: analysis.severity,
-          affectedPercent: analysis.affectedPercent,
-          severityGrid: analysis.severityGrid,
-          treatmentNatural: analysis.treatmentNatural,
-          treatmentChemical: analysis.treatmentChemical,
-          resolved: false,
-        });
-        setFresh({ ...analysis, key: seed, imageName, storedId });
-        toast.success(`Scan complete — ${analysis.disease}`, {
-          description: `${Math.round(analysis.confidence * 100)}% confidence · ${analysis.severity} severity.`,
-        });
-      } catch {
-        toast.error("Scan failed — try again");
-      } finally {
-        setScanning(false);
-      }
-    }, SCAN_MS);
   };
 
-  const opened: DiseaseScan | undefined = openScanId
-    ? scans.find((s) => s.id === openScanId)
-    : undefined;
-
-  const display: DisplayResult | null = opened
-    ? {
-        key: opened.id,
-        disease: opened.disease,
-        confidence: opened.confidence,
-        severity: opened.severity,
-        affectedPercent: opened.affectedPercent,
-        severityGrid: opened.severityGrid,
-        treatmentNatural: opened.treatmentNatural,
-        treatmentChemical: opened.treatmentChemical,
-        imageName: opened.imageName,
-        storedId: opened.id,
-      }
-    : fresh;
-
-  const handleSaveDiary = () => {
-    if (!display) return;
-    addDiary({
-      type: "disease",
-      details:
-        `Leaf scan — ${display.disease} (${display.severity}, ` +
-        `${display.affectedPercent}% affected, ${Math.round(display.confidence * 100)}% confidence) ` +
-        `on "${display.imageName}". Natural plan: ${display.treatmentNatural[0] ?? "neem-oil schedule"}.`,
-      zone: "C",
-      ...(display.storedId ? { scanId: display.storedId } : {}),
-    });
-    toast.success("Saved to Farm Diary", {
-      description: "Scan summary filed under disease notes.",
-    });
+  // Stop camera stream tracks
+  const stopCameraStream = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
   };
 
-  const handleSprayPlan = () => {
-    if (!display) return;
+  // Clean up camera on unmount
+  useEffect(() => {
+    return () => {
+      stopCameraStream();
+    };
+  }, []);
+
+  // Action: Add to Spray Plan
+  const handleAddToSprayPlan = () => {
+    if (!diagnosis) return;
+
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const steps = [
+      {
+        day: 1,
+        action: `Natural treatment: ${diagnosis.naturalTreatment}`,
+        done: false,
+      },
+      {
+        day: 3,
+        action: "Inspect foliage for disease spread or new lesions",
+        done: false,
+      },
+      {
+        day: 5,
+        action: `Repeat application: ${diagnosis.naturalTreatment}`,
+        done: false,
+      },
+      ...(diagnosis.chemicalFallback
+        ? [
+            {
+              day: 7,
+              action: `Chemical emergency fallback: ${diagnosis.chemicalFallback}`,
+              done: false,
+            },
+          ]
+        : []),
+    ];
+
     addSprayPlan({
-      disease: display.disease,
-      zone: "C",
-      startDate: todayISO(),
-      steps: [
-        {
-          day: 1,
-          action: `Neem oil 5 ml/L evening spray for ${display.disease} — coat both leaf sides`,
-          done: false,
-        },
-        {
-          day: 3,
-          action: `Inspect leaves — compare spread with scan (${display.affectedPercent}% affected)`,
-          done: false,
-        },
-        { day: 5, action: "Repeat neem-oil spray in the cool evening hours", done: false },
-        {
-          day: 7,
-          action: `Review spread — escalate to chemical (${display.treatmentChemical[0] ?? "officer advice"}) only if worse`,
-          done: false,
-        },
-        {
-          day: 10,
-          action: "Final check — close the plan if new leaves look clean",
-          done: false,
-        },
-      ],
+      disease: diagnosis.disease,
+      zone: "Zone A",
+      startDate: todayISO,
+      steps,
     });
-    toast.success("7-day spray plan created", {
-      description: "Day 1 neem today — track it in the Spray Planner.",
+
+    toast.success("Added to Spray Plan", {
+      description: `Plan created for ${diagnosis.disease}. Check Spray Planner for schedule.`,
     });
   };
 
-  const handleNewScan = () => {
-    if (scanning) return;
-    setFresh(null);
-    setOpenScanId(null);
-    setChemOpen(false);
+  // Action: Ask KrishiGPT about this
+  const handleAskKrishiGPT = () => {
+    if (!diagnosis) return;
+    const query = `Tell me more about ${diagnosis.disease} on tomato plants and how to stop it spreading`;
+    router.push(`/assistant?q=${encodeURIComponent(query)}`);
   };
 
-  const PreviewArt =
-    source === "upload" && uploadUrl ? (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={uploadUrl} alt="Uploaded leaf" className="h-full w-full object-cover" />
-    ) : source === "camera" && cameraUrl ? (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={cameraUrl} alt="Field-captured leaf" className="h-full w-full object-cover" />
-    ) : (
-      <activeSample.Component />
-    );
+  // Click-to-reopen a history item
+  const handleReopenHistory = (item: StoredLeafScan) => {
+    setSelectedHistoryId(item.id);
+    setPreviewUrl(item.thumbnail);
+    const isRejected = item.className === "Not A Leaf" || item.confidence < 0.6;
+    setRejectionMessage(isRejected
+      ? "This does not look like a leaf. Please upload a clear photo of ONE tomato leaf on a plain background."
+      : null);
 
-  const previewTitle =
-    source === "upload"
-      ? "Your photo"
-      : source === "camera"
-        ? "Field capture"
-        : activeSample.name;
+    // Reconstruct diagnosis from item
+    setDiagnosis(isRejected ? null : computeDiagnosis(item.className, item.confidence, farm.temp, farm.hum));
 
-  const SOURCE_TABS = [
-    { id: "camera" as const, label: "Phone/Laptop Camera", icon: Camera },
-    { id: "upload" as const, label: "Upload", icon: Upload },
-    { id: "sample" as const, label: "Samples", icon: Images },
-  ];
+    toast.info(`Reopened: ${item.className}`, {
+      description: `Scanned on ${item.date}`,
+    });
+  };
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_300px]">
-      {/* ============ LEFT: source + gallery + scanner + result ============ */}
-      <div className="min-w-0 space-y-4">
-        {/* Single hidden file picker shared by every upload button */}
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => handleFile(e.target.files?.[0])}
-        />
-        {/* Source selector */}
-        <div className="grid grid-cols-3 gap-1 rounded-2xl border border-white/10 bg-black/40 p-1">
-          {SOURCE_TABS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => {
-                if (scanning) return;
-                setSource(id);
-                setFresh(null);
-                setOpenScanId(null);
-                setChemOpen(false);
-              }}
-              aria-pressed={source === id}
-              className={cn(
-                "flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[11px] font-extrabold transition-all sm:text-xs",
-                source === id
-                  ? "bg-emerald-500 text-black shadow-[0_0_14px_rgba(34,197,94,0.4)]"
-                  : "text-zinc-400 hover:bg-white/5 hover:text-white",
-              )}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              <span className="truncate">{label}</span>
-            </button>
-          ))}
-        </div>
+    <div className="mx-auto w-full max-w-4xl space-y-6">
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+        className="hidden"
+        onChange={handleFileUpload}
+      />
 
-        {/* Field-camera hint */}
-        <div className="flex items-start gap-3 rounded-2xl border border-emerald-400/30 bg-emerald-500/[0.07] p-4">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300">
-            <Camera className="h-4 w-4" />
-          </span>
-          <p className="text-xs leading-relaxed text-emerald-100/70">
-            Point your phone camera at a leaf and tap Capture — analysis runs
-            on-device, image never uploads.
+      {/* Model Loading Spinner / Error Banner */}
+      {modelStatus === "loading" && (
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-8 text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-3 border-emerald-500/20 border-t-emerald-400" />
+          <p className="mt-3 text-sm font-bold text-emerald-300">Loading AI model…</p>
+          <p className="mt-1 text-xs text-zinc-400">Loading TensorFlow.js weights for real on-device diagnosis</p>
+        </div>
+      )}
+
+      {modelStatus === "error" && (
+        <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-5 text-center">
+          <AlertTriangle className="mx-auto h-7 w-7 text-red-400 mb-2" />
+          <h4 className="text-base font-bold text-red-200">Model unavailable — check your connection</h4>
+          <p className="mt-1 text-xs text-red-300/80">
+            Could not fetch neural network weights from /model/model.json. Scan buttons are disabled.
           </p>
         </div>
+      )}
 
-        {/* Phone / laptop camera capture */}
-        {source === "camera" && (
-          <div className="card-surface rounded-2xl p-4 sm:p-5">
-            <PhoneCamera onCapture={handleCameraCapture} disabled={scanning} />
+      {/* ============================================================ */}
+      {/* 2. SCANNER CONTROLS & PREVIEW TILE                          */}
+      {/* Keeps ONLY: [Upload Image], [Capture Frame], preview tile    */}
+      {/* ============================================================ */}
+      <div className="card-surface rounded-2xl border border-white/10 p-5 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
+          <div>
+            <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
+              <ScanLine className="h-5 w-5 text-emerald-400" />
+              Real Leaf Disease Doctor
+            </h2>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Powered by on-device TensorFlow.js · Analyzes 5 tomato leaf conditions
+            </p>
           </div>
-        )}
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-mono font-bold",
+                modelStatus === "ready"
+                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                  : modelStatus === "loading"
+                    ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                    : "bg-red-500/15 text-red-300 border border-red-500/30"
+              )}
+            >
+              <span
+                className={cn(
+                  "h-2 w-2 rounded-full",
+                  modelStatus === "ready" ? "bg-emerald-400 animate-pulse" : modelStatus === "loading" ? "bg-amber-400" : "bg-red-400"
+                )}
+              />
+              {modelStatus === "ready" ? "AI MODEL ONLINE" : modelStatus === "loading" ? "MODEL LOADING" : "OFFLINE"}
+            </span>
+          </div>
+        </div>
 
-        {/* Sample gallery */}
-        {source === "sample" && (
-        <div className="card-surface rounded-2xl p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-bold text-white">Sample gallery</h3>
-            <span className="text-[11px] text-zinc-500">pick one, or upload below</span>
-          </div>
-          <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
-            {LEAF_SAMPLES.map(({ id, name, hint, Component }) => {
-              const active = source === "sample" && sampleId === id;
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => pickSample(id)}
-                  aria-pressed={active}
-                  className={cn(
-                    "group overflow-hidden rounded-xl border text-left transition-all active:scale-[0.97]",
-                    active
-                      ? "border-emerald-400/70 shadow-[0_0_18px_rgba(34,197,94,0.4)]"
-                      : "border-white/10 hover:border-emerald-500/40",
-                  )}
-                >
-                  <span className="block aspect-square">
-                    <Component />
-                  </span>
-                  <span
-                    className={cn(
-                      "block px-2 py-1.5",
-                      active ? "bg-emerald-500/15" : "bg-black/40",
-                    )}
-                  >
-                    <span className="block truncate text-[11px] font-bold text-white">
-                      {name}
-                    </span>
-                    <span className="block truncate text-[10px] text-zinc-500">
-                      {hint}
-                    </span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Upload */}
+        {/* Buttons Row: [Upload Image] (jpg/png) & [Capture Frame] (getUserMedia) */}
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={scanning}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-3 text-sm font-bold text-zinc-200 transition-all hover:border-emerald-500/50 hover:text-emerald-200 disabled:opacity-50"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={modelStatus !== "ready" || scanning || cameraLoading}
+            className="flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-extrabold text-emerald-200 transition-all hover:bg-emerald-500/20 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Upload className="h-4 w-4" />
-            {uploadUrl ? `Photo ready: ${fileName}` : "Upload a real leaf photo"}
+            Upload Image (JPG / PNG)
+          </button>
+
+          <button
+            type="button"
+            onClick={startCamera}
+            disabled={modelStatus !== "ready" || scanning || cameraLoading}
+            className="flex items-center justify-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm font-extrabold text-sky-200 transition-all hover:bg-sky-500/20 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {cameraLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+            {cameraLoading ? "Capturing frame…" : "Capture Frame"}
           </button>
         </div>
-        )}
 
-        {/* Upload panel */}
-        {source === "upload" && !uploadUrl && (
-          <div className="card-surface rounded-2xl p-4 sm:p-5">
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={scanning}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-6 text-sm font-bold text-zinc-200 transition-all hover:border-emerald-500/50 hover:text-emerald-200 disabled:opacity-50"
-            >
-              <Upload className="h-4 w-4" />
-              Upload a real leaf photo
-            </button>
+        {/* Preview Tile */}
+        <div className="mt-5">
+          <div className="flex items-center justify-between text-xs font-bold text-zinc-400 mb-2">
+            <span>Leaf Preview Tile</span>
+            {previewUrl && (
+              <span className="text-emerald-400 font-mono text-[11px]">224 × 224 Tensor Ready</span>
+            )}
           </div>
-        )}
-        {source === "upload" && uploadUrl && (
-          <div className="card-surface rounded-2xl p-4 sm:p-5">
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={scanning}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-bold text-zinc-200 transition-all hover:border-emerald-500/40 hover:text-emerald-200 disabled:opacity-50"
-            >
-              <Upload className="h-4 w-4" />
-              Choose a different photo
-            </button>
-          </div>
-        )}
 
-        {/* Preview + SCAN */}
-        <div className="card-surface rounded-2xl p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-bold text-white">
-              {previewTitle}
-            </h3>
-            <StatusPill tone={source === "sample" ? "good" : "info"}>
-              {source === "sample" ? "simulated" : "real pixels"}
-            </StatusPill>
-          </div>
-          <div className="relative mx-auto mt-3 aspect-square w-full max-w-72 overflow-hidden rounded-2xl border border-white/10">
-            {PreviewArt}
-            {/* laser sweep */}
-            <AnimatePresence>
-              {scanning && (
-                <motion.div
-                  className="absolute inset-0"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <div className="absolute inset-0 bg-emerald-500/10" />
-                  <motion.div
-                    className="absolute inset-x-0 h-10 bg-gradient-to-b from-transparent via-emerald-400/80 to-transparent shadow-[0_0_24px_rgba(34,197,94,0.9)]"
-                    initial={{ top: "-15%" }}
-                    animate={{ top: ["-15%", "105%", "-15%"] }}
-                    transition={{ duration: SCAN_MS / 1000, ease: "easeInOut" }}
-                  />
-                  <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-emerald-300/70" />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-          {scanning ? (
-            <p className="mt-3 animate-pulse text-center text-sm font-bold text-emerald-300">
-              Analyzing… Running vision model…
-            </p>
-          ) : (
-            <button
-              type="button"
-              onClick={handleScan}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-extrabold text-black shadow-[0_0_20px_rgba(34,197,94,0.4)] transition-all hover:bg-emerald-400 active:scale-[0.98]"
-            >
-              <ScanLine className="h-4 w-4" /> SCAN LEAF
-            </button>
-          )}
-        </div>
+          <div className="relative mx-auto aspect-square w-full max-w-sm overflow-hidden rounded-2xl border-2 border-dashed border-white/15 bg-black/40 flex items-center justify-center">
+            {previewUrl ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={previewUrl}
+                  alt="Scanned tomato leaf preview"
+                  className="h-full w-full object-cover"
+                />
 
-        {/* Result */}
-        <AnimatePresence mode="wait">
-          {display && (
-            <motion.div
-              key={display.key}
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.3 }}
-              className="card-surface space-y-4 rounded-2xl border-emerald-500/25 p-4 sm:p-5"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">
-                    Diagnosis · {display.imageName}
-                  </p>
-                  <h3 className="mt-1 text-xl font-extrabold text-white">
-                    {display.disease}
-                  </h3>
-                </div>
-                <StatusPill tone={severityTone(display.severity)}>
-                  {display.severity === "none" ? "healthy" : display.severity}
-                </StatusPill>
-              </div>
-
-              {/* confidence */}
-              <div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-zinc-400">Confidence</span>
-                  <span className="font-mono font-extrabold text-emerald-300">
-                    {Math.round(display.confidence * 100)}%
-                  </span>
-                </div>
-                <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-white/10">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.round(display.confidence * 100)}%` }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
-                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300 shadow-[0_0_12px_rgba(34,197,94,0.6)]"
-                  />
-                </div>
-                <p className="mt-1.5 text-xs text-zinc-500">
-                  {display.affectedPercent}% leaf area affected
-                </p>
-              </div>
-
-              {/* severity heatmap */}
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">
-                  Severity heatmap · 8×6
-                </p>
-                <div className="mt-2 grid grid-cols-8 gap-1">
-                  {display.severityGrid.flatMap((row, r) =>
-                    row.map((v, c) => (
-                      <HeatCell key={`${r}-${c}`} v={v} delay={(r * 8 + c) * 0.018} />
-                    )),
-                  )}
-                </div>
-                <div className="mt-1.5 flex gap-3 text-[10px] text-zinc-500">
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-sm bg-emerald-500/70" /> healthy
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-sm bg-amber-400/90" /> watch
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <span className="h-2 w-2 rounded-sm bg-red-500" /> affected
-                  </span>
-                </div>
-              </div>
-
-              {/* natural treatment */}
-              <div className="rounded-2xl border border-emerald-500/25 bg-emerald-500/[0.06] p-4">
-                <p className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-emerald-300">
-                  <Sprout className="h-4 w-4" /> Natural treatment · first choice
-                </p>
-                <ul className="mt-2 space-y-1.5">
-                  {display.treatmentNatural.map((t) => (
-                    <li key={t} className="flex gap-2 text-sm leading-relaxed text-emerald-50/90">
-                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" />
-                      {t}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* chemical accordion */}
-              <div className="overflow-hidden rounded-2xl border border-amber-500/25">
-                <button
-                  type="button"
-                  onClick={() => setChemOpen((v) => !v)}
-                  aria-expanded={chemOpen}
-                  className="flex w-full items-center gap-2 bg-amber-500/[0.07] px-4 py-3 text-left text-sm font-extrabold text-amber-200 transition-colors hover:bg-amber-500/[0.12]"
-                >
-                  <FlaskConical className="h-4 w-4 shrink-0" />
-                  <span className="flex-1">If severity increases — chemical options</span>
-                  <ChevronDown
-                    className={cn("h-4 w-4 transition-transform", chemOpen && "rotate-180")}
-                  />
-                </button>
-                <AnimatePresence initial={false}>
-                  {chemOpen && (
+                {/* Laser scan animation when actively analyzing */}
+                <AnimatePresence>
+                  {scanning && (
                     <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.25 }}
+                      className="absolute inset-0"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
                     >
-                      <div className="space-y-3 bg-black/30 p-4">
-                        <ul className="space-y-1.5">
-                          {display.treatmentChemical.map((t) => (
-                            <li key={t} className="flex gap-2 text-sm leading-relaxed text-zinc-200">
-                              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
-                              {t}
-                            </li>
-                          ))}
-                        </ul>
-                        <p className="rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2.5 text-xs font-bold leading-relaxed text-red-200">
-                          Consult agricultural officer before chemical use.
-                        </p>
-                      </div>
+                      <div className="absolute inset-0 bg-emerald-500/10" />
+                      <motion.div
+                        className="absolute inset-x-0 h-8 bg-gradient-to-b from-transparent via-emerald-400/80 to-transparent shadow-[0_0_24px_rgba(34,197,94,0.9)]"
+                        initial={{ top: "-10%" }}
+                        animate={{ top: ["-10%", "105%", "-10%"] }}
+                        transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+                      />
+                      <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-emerald-300/80 shadow-[0_0_8px_rgba(52,211,153,1)]" />
                     </motion.div>
                   )}
                 </AnimatePresence>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-6 text-center text-zinc-500">
+                <Sprout className="h-12 w-12 text-zinc-600 mb-2" />
+                <p className="text-sm font-semibold text-zinc-400">No Leaf Selected</p>
+                <p className="mt-1 text-xs text-zinc-500 max-w-xs">
+                  Upload a photo or tap Capture Frame to analyze your tomato plant for disease with TensorFlow.js.
+                </p>
               </div>
+            )}
+          </div>
 
-              {/* actions */}
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                <button
-                  type="button"
-                  onClick={handleSaveDiary}
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-3 py-2.5 text-xs font-extrabold text-emerald-200 transition-all hover:bg-emerald-500/20 active:scale-[0.98]"
-                >
-                  <BookOpen className="h-4 w-4" /> Save to Farm Diary
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSprayPlan}
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-sky-500/40 bg-sky-500/10 px-3 py-2.5 text-xs font-extrabold text-sky-200 transition-all hover:bg-sky-500/20 active:scale-[0.98]"
-                >
-                  <SprayCan className="h-4 w-4" /> Create Spray Plan
-                </button>
-                <button
-                  type="button"
-                  onClick={handleNewScan}
-                  className="flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-xs font-extrabold text-zinc-200 transition-all hover:border-white/25 active:scale-[0.98]"
-                >
-                  <RotateCcw className="h-4 w-4" /> New Scan
-                </button>
-              </div>
-            </motion.div>
+          {scanning && (
+            <p className="mt-3 text-center text-xs font-bold text-emerald-300 animate-pulse flex items-center justify-center gap-2">
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+              Running TensorFlow.js neural network inference…
+            </p>
           )}
-        </AnimatePresence>
+        </div>
       </div>
 
-      {/* ============ RIGHT: scan history ============ */}
-      <aside className="card-surface h-fit rounded-2xl p-4 sm:p-5 lg:sticky lg:top-20">
-        <h3 className="flex items-center gap-1.5 text-sm font-bold text-white">
-          <History className="h-4 w-4 text-emerald-300" /> Scan history
-          <span className="ml-auto rounded-full bg-white/5 px-2 py-0.5 font-mono text-[11px] text-zinc-400">
-            {scans.length}
+      {/* ============================================================ */}
+      {/* 4 & 5. RESULT CARDS (Hidden until a scan finishes)           */}
+      {/* Rejection Card OR Diagnosis Card                             */}
+      {/* ============================================================ */}
+      <AnimatePresence mode="wait">
+        {/* REJECTION CARD: Red Card when Not A Leaf or confidence < 0.60 */}
+        {rejectionMessage && !scanning && (
+          <motion.div
+            key="rejection"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.3 }}
+            className="rounded-2xl border-2 border-red-500/80 bg-red-950/70 p-6 text-red-100 shadow-[0_0_30px_rgba(239,68,68,0.25)]"
+          >
+            <div className="flex items-start gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-500/20 text-red-400 shadow-inner">
+                <ShieldAlert className="h-6 w-6" />
+              </span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-extrabold text-red-200 uppercase tracking-wider">
+                    Invalid Leaf Photo
+                  </h3>
+                  <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-mono font-bold text-red-300 border border-red-500/30">
+                    SCAN REJECTED
+                  </span>
+                </div>
+                <p className="text-sm font-semibold leading-relaxed text-red-50">
+                  {rejectionMessage}
+                </p>
+                <p className="text-xs text-red-300/80">
+                  The model did not find a tomato leaf with sufficient confidence (&ge; 60%). Ensure good lighting and a single leaf in focus.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* DIAGNOSIS CARD: Valid Leaf Disease Result */}
+        {diagnosis && !rejectionMessage && !scanning && (
+          <motion.div
+            key="diagnosis"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.3 }}
+            className="card-surface rounded-2xl border border-emerald-500/30 p-5 sm:p-6 space-y-5"
+          >
+            {/* Header: Common Name & Severity Badge */}
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/10 pb-4">
+              <div className="space-y-1">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5" /> AI Plant Disease Diagnosis
+                </span>
+                <h3 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                  <span
+                    className="h-3.5 w-3.5 rounded-full shrink-0"
+                    style={{ backgroundColor: diseaseDotColor(diagnosis.disease) }}
+                  />
+                  {diagnosis.disease}
+                </h3>
+              </div>
+
+              {/* Severity: confidence <70 Low, 70-85 Medium, >85 High */}
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Severity</span>
+                <span
+                  className={cn(
+                    "mt-0.5 rounded-full px-3 py-1 text-xs font-mono font-black uppercase tracking-wider border",
+                    diagnosis.severity === "Low"
+                      ? "bg-sky-500/15 text-sky-300 border-sky-500/30"
+                      : diagnosis.severity === "Medium"
+                        ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                        : "bg-red-500/20 text-red-300 border-red-500/40 shadow-[0_0_12px_rgba(239,68,68,0.4)]"
+                  )}
+                >
+                  {diagnosis.severity} Severity
+                </span>
+              </div>
+            </div>
+
+            {/* Confidence Percentage with Progress Bar */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-zinc-400">Confidence Score</span>
+                <span className="font-mono font-black text-emerald-300 text-sm">
+                  {Math.round(diagnosis.confidence * 100)}%
+                </span>
+              </div>
+              <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/10">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.round(diagnosis.confidence * 100)}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-emerald-400 to-sky-400 shadow-[0_0_12px_rgba(34,197,94,0.6)]"
+                />
+              </div>
+              <p className="text-[11px] text-zinc-500">
+                Severity rule: &lt;70% Low · 70–85% Medium · &gt;85% High
+              </p>
+            </div>
+
+            {/* Spread Risk from LIVE Store Values */}
+            <div className="rounded-xl border border-white/10 bg-black/40 p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                  Live Farm Spread Risk
+                </span>
+                <span
+                  className={cn(
+                    "rounded-md px-2.5 py-0.5 text-xs font-mono font-extrabold uppercase",
+                    diagnosis.spreadRisk === "High"
+                      ? "bg-red-500/20 text-red-300 border border-red-500/40"
+                      : diagnosis.spreadRisk === "No risk"
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                        : "bg-sky-500/20 text-sky-300 border border-sky-500/40"
+                  )}
+                >
+                  {diagnosis.spreadRisk}
+                </span>
+              </div>
+              <p className="mt-2 text-xs text-zinc-300 leading-relaxed font-medium">
+                {diagnosis.spreadRiskReason}
+              </p>
+              <div className="mt-2 flex items-center gap-4 text-[11px] text-zinc-400 font-mono">
+                <span>Live Temp: <strong className="text-zinc-200">{farm.temp.toFixed(1)}°C</strong></span>
+                <span>Live Humidity: <strong className="text-zinc-200">{farm.hum.toFixed(0)}%</strong></span>
+              </div>
+            </div>
+
+            {/* Treatment Block with NATURAL FIRST */}
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <Sprout className="h-4 w-4 text-emerald-400" />
+                <h4 className="text-xs font-black uppercase tracking-wider text-emerald-300">
+                  Natural Treatment (First Choice)
+                </h4>
+              </div>
+              <p className="text-sm font-semibold leading-relaxed text-emerald-100">
+                {diagnosis.naturalTreatment}
+              </p>
+            </div>
+
+            {/* Chemical Fallback Line (Only when severity High) */}
+            {diagnosis.chemicalFallback && (
+              <div className="rounded-xl border border-amber-500/40 bg-amber-500/[0.08] p-4 space-y-1">
+                <div className="flex items-center gap-2 text-amber-300">
+                  <FlaskConical className="h-4 w-4 text-amber-400" />
+                  <h4 className="text-xs font-black uppercase tracking-wider">
+                    High Severity Chemical Fallback
+                  </h4>
+                </div>
+                <p className="text-sm font-semibold text-amber-100">
+                  {diagnosis.chemicalFallback}
+                </p>
+              </div>
+            )}
+
+            {/* Three Prevention Bullets */}
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                Agronomic Prevention Rules
+              </h4>
+              <ul className="space-y-1.5 text-xs text-zinc-300 font-medium">
+                {diagnosis.prevention.map((bullet) => (
+                  <li key={bullet} className="flex items-center gap-2">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                    <span>{bullet}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* 6. ACTION BUTTONS */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleAddToSprayPlan}
+                className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-extrabold text-black shadow-[0_0_20px_rgba(34,197,94,0.4)] transition-all hover:bg-emerald-400 active:scale-[0.98]"
+              >
+                <Plus className="h-4 w-4" /> Add to Spray Plan
+              </button>
+
+              <button
+                type="button"
+                onClick={handleAskKrishiGPT}
+                className="flex items-center justify-center gap-2 rounded-xl border border-sky-500/40 bg-sky-500/10 px-4 py-3 text-sm font-extrabold text-sky-200 transition-all hover:bg-sky-500/20 active:scale-[0.98]"
+              >
+                <MessageCircle className="h-4 w-4" /> Ask KrishiGPT about this
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ============================================================ */}
+      {/* 7. HISTORY: Last 10 scans saved to localStorage               */}
+      {/* Grid under the scanner with click-to-reopen                   */}
+      {/* ============================================================ */}
+      <div className="card-surface rounded-2xl border border-white/10 p-5 sm:p-6 space-y-4">
+        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
+            <History className="h-4 w-4 text-emerald-400" />
+            Scan History
+          </h3>
+          <span className="font-mono text-xs text-zinc-400">
+            {history.length} / 10 scans
           </span>
-        </h3>
-        {scans.length === 0 ? (
-          <p className="mt-3 rounded-xl border border-dashed border-white/10 p-4 text-center text-xs leading-relaxed text-zinc-500">
-            No scans yet. Run your first leaf scan — it will be saved here.
-          </p>
+        </div>
+
+        {history.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-white/10 p-8 text-center text-xs text-zinc-500">
+            No scans recorded yet. Upload a leaf photo or capture a frame from your camera to diagnose tomato diseases.
+          </div>
         ) : (
-          <ul className="mt-3 max-h-[560px] space-y-2 overflow-y-auto pr-0.5">
-            {scans.map((s) => {
-              const active = display?.storedId === s.id || display?.key === s.id;
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            {history.map((item) => {
+              const active = selectedHistoryId === item.id;
               return (
-                <li key={s.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setOpenScanId(s.id);
-                      setFresh(null);
-                      setChemOpen(false);
-                    }}
-                    className={cn(
-                      "flex w-full items-center gap-2.5 rounded-xl border p-2.5 text-left transition-all active:scale-[0.98]",
-                      active
-                        ? "border-emerald-400/60 bg-emerald-500/10"
-                        : "border-white/5 bg-black/30 hover:border-emerald-500/30",
-                    )}
-                  >
-                    <span
-                      className="h-8 w-8 shrink-0 rounded-full border border-white/10"
-                      style={{
-                        background: `radial-gradient(circle at 35% 35%, ${diseaseDot(s.disease)}, #0b120d 75%)`,
-                      }}
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => handleReopenHistory(item)}
+                  className={cn(
+                    "group flex flex-col overflow-hidden rounded-xl border text-left transition-all active:scale-[0.97]",
+                    active
+                      ? "border-emerald-400 bg-emerald-500/10 shadow-[0_0_16px_rgba(34,197,94,0.3)]"
+                      : "border-white/10 bg-black/40 hover:border-emerald-500/40"
+                  )}
+                >
+                  <div className="relative aspect-square w-full overflow-hidden bg-black/60">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.thumbnail}
+                      alt={item.className}
+                      className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-xs font-bold text-white">
-                        {s.disease}
+                    <span
+                      className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full border border-black/50"
+                      style={{ backgroundColor: diseaseDotColor(item.className) }}
+                    />
+                  </div>
+                  <div className="p-2 space-y-1">
+                    <p className="truncate text-xs font-bold text-white">
+                      {item.className}
+                    </p>
+                    <div className="flex items-center justify-between text-[10px] text-zinc-400">
+                      <span className="font-mono">{Math.round(item.confidence * 100)}%</span>
+                      <span
+                        className={cn(
+                          "font-bold uppercase",
+                          item.severity === "High" ? "text-red-400" : item.severity === "Medium" ? "text-amber-400" : "text-sky-400"
+                        )}
+                      >
+                        {item.severity}
                       </span>
-                      <span className="mt-0.5 block text-[11px] text-zinc-500">
-                        {Math.round(s.confidence * 100)}% ·{" "}
-                        {mounted ? formatScanDate(s.timestamp) : "--"}
-                      </span>
-                    </span>
-                    <StatusPill tone={severityTone(s.severity)}>
-                      {s.severity === "none" ? "ok" : s.severity}
-                    </StatusPill>
-                  </button>
-                </li>
+                    </div>
+                    <p className="truncate text-[9px] text-zinc-500">
+                      {item.date}
+                    </p>
+                  </div>
+                </button>
               );
             })}
-          </ul>
+          </div>
         )}
-      </aside>
+      </div>
     </div>
   );
 }

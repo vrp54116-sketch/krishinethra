@@ -24,6 +24,8 @@ const nextConfig: NextConfig = {
       { source: "/dashboard/:path+", destination: "/app/dashboard/:path+", permanent: true },
       { source: "/camera", destination: "/app/camera", permanent: true },
       { source: "/camera/:path+", destination: "/app/camera/:path+", permanent: true },
+      { source: "/leaf-scanner", destination: "/app/camera", permanent: true },
+      { source: "/leaf-scanner/:path+", destination: "/app/camera/:path+", permanent: true },
       { source: "/irrigation", destination: "/app/irrigation", permanent: true },
       { source: "/irrigation/:path+", destination: "/app/irrigation/:path+", permanent: true },
       { source: "/climate", destination: "/app/climate", permanent: true },

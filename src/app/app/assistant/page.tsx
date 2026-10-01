@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   ArrowUpRight,
@@ -70,9 +70,19 @@ function getSpeechRecognition(): (new () => SpeechRec) | null {
  * reads answers aloud; action chips (pump / links / follow-ups) work inline.
  */
 export default function AssistantPage() {
+  return (
+    <Suspense fallback={null}>
+      <AssistantInner />
+    </Suspense>
+  );
+}
+
+function AssistantInner() {
   const t = useT();
   const router = useRouter();
   const mounted = useMounted();
+  const searchParams = useSearchParams();
+  const queryParam = searchParams?.get("q") ?? searchParams?.get("query") ?? "";
 
   const chat = useFarmStore((s) => s.chat);
   const settings = useFarmStore((s) => s.settings);
@@ -80,12 +90,18 @@ export default function AssistantPage() {
   const setPumpManual = useFarmStore((s) => s.setPumpManual);
   const updateSettings = useFarmStore((s) => s.updateSettings);
 
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(queryParam);
   const [typing, setTyping] = useState(false);
   const [listening, setListening] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const recRef = useRef<SpeechRec | null>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (queryParam) {
+      setInput(queryParam);
+    }
+  }, [queryParam]);
 
   const speak = (text: string, lang: string) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;

@@ -1,0 +1,1 @@
+{"tfjsVersion":"1.7.4","tmVersion":"2.4.17","packageVersion":"0.8.4-alpha2","packageName":"@teachablemachine/image","timeStamp":"2026-10-01T13:14:08.630Z","userMetadata":{},"modelName":"tm-my-image-model","labels":["Tomato Early Blight","Tomato Late Blight","Tomato Leaf Mold","Tomato Healthy","Not A Leaf"],"imageSize":224}
