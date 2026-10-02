@@ -7,7 +7,9 @@ import type { ClimateForecastDay } from "@/lib/ai-engine";
 import { useFarm, useFarmStore } from "@/lib/store";
 import AdvisorCard from "@/components/climate/AdvisorCard";
 import ComfortPanel from "@/components/climate/ComfortPanel";
+import DiseaseRiskMatrix from "@/components/climate/DiseaseRiskMatrix";
 import ForecastCards from "@/components/climate/ForecastCards";
+import SprayWindows from "@/components/climate/SprayWindows";
 import SensorRow from "@/components/climate/SensorRow";
 import PageSkeleton from "@/components/layout/PageSkeleton";
 import { fallbackForecast } from "@/components/climate/shared";
@@ -108,6 +110,18 @@ export default function ClimatePage() {
           </ErrorBoundary>
         </Rise>
       </div>
+
+      <Rise delay={0.16}>
+        <ErrorBoundary name="spray-windows">
+          <SprayWindows />
+        </ErrorBoundary>
+      </Rise>
+
+      <Rise delay={0.18}>
+        <ErrorBoundary name="disease-risk-matrix">
+          <DiseaseRiskMatrix />
+        </ErrorBoundary>
+      </Rise>
 
       {/* 4. HISTORY GRAPHS */}
       <Rise delay={0.18}>

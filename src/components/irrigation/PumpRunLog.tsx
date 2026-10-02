@@ -86,7 +86,7 @@ export default function PumpRunLog({ className }: { className?: string }) {
           time: "09:30",
           mode: "Auto",
           duration: "0s (Skipped)",
-          trigger: "Rain Sensor Active (2.1 mm)",
+          trigger: "Rain Sensor Active",
           result: "Rain-Skip Saved 14L",
           success: true,
         },

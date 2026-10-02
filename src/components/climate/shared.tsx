@@ -56,7 +56,7 @@ export interface ClimatePoint {
   humidity: number;
   aqi: number;
   lightLux: number;
-  rainMm: number;
+  rain: boolean;
   pressureHpa: number;
 }
 
@@ -135,13 +135,6 @@ export function buildTwelveHourSeries(
       ? snapshot.lightLux
       : Math.max(0, Math.round(lightForHour(hour) + wobble(41, 26)));
 
-    // Rain: dry history, ramping into the live value at the tail.
-    const rainVal = snapshot.rain ? 2.5 : 0;
-    const rainMm =
-      isLive || frac > 0.94
-        ? rainVal * (isLive ? 1 : (frac - 0.94) / 0.06)
-        : 0;
-
     out.push({
       timestamp: Math.round(ts),
       label: hourLabel(ts),
@@ -149,7 +142,7 @@ export function buildTwelveHourSeries(
       humidity,
       aqi,
       lightLux,
-      rainMm: Math.round(rainMm * 10) / 10,
+      rain: isLive && snapshot.rain,
       pressureHpa: isLive
         ? currentPressure(snapshot)
         : pressureHpaFor(tempC, humidity, hour),
@@ -210,19 +203,12 @@ export function fallbackForecast(
         90,
       ),
     );
-    const rainMm =
-      rainProb > 62
-        ? Math.round((4 + hash01(d * 53 + 11) * 8) * 10) / 10
-        : rainProb > 42
-          ? Math.round((0.8 + hash01(d * 59 + 13) * 2.4) * 10) / 10
-          : 0;
     const code =
-      rainMm > 5 ? 61 : rainProb > 45 ? 3 : rainMm > 0 ? 80 : tMax > 36 ? 0 : 2;
+      rainProb > 62 ? 61 : rainProb > 45 ? 3 : tMax > 36 ? 0 : 2;
     out.push({
       date: iso,
       tMax,
       tMin,
-      rainMm,
       rainProb,
       code,
       windKph: Math.round((5 + hash01(d * 67 + 15) * 9) * 10) / 10,

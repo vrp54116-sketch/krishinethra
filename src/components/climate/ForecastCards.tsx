@@ -15,7 +15,6 @@ interface OpenMeteoDaily {
   temperature_2m_max: number[];
   temperature_2m_min: number[];
   precipitation_probability_max?: Array<number | null>;
-  precipitation_sum?: number[];
   weathercode: number[];
   windspeed_10m_max?: number[];
 }
@@ -95,7 +94,7 @@ export default function ForecastCards({
         const url =
           `https://api.open-meteo.com/v1/forecast?latitude=${lat}` +
           `&longitude=${lon}` +
-          `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,weathercode,windspeed_10m_max` +
+          `&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode,windspeed_10m_max` +
           `&timezone=Asia%2FKolkata&forecast_days=5`;
         const res = await fetch(url, { signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -108,7 +107,6 @@ export default function ForecastCards({
           date: t,
           tMax: Number(daily.temperature_2m_max?.[i] ?? snapshot.tempC),
           tMin: Number(daily.temperature_2m_min?.[i] ?? snapshot.tempC - 8),
-          rainMm: Number(daily.precipitation_sum?.[i] ?? 0),
           rainProb: Number(daily.precipitation_probability_max?.[i] ?? 0),
           code: Number(daily.weathercode?.[i] ?? 2),
           windKph:
@@ -258,7 +256,7 @@ export default function ForecastCards({
             ))
           : days.map((d, i) => {
               const { label, Icon } = weatherForCode(d.code);
-              const wet = d.rainMm > 5 || d.rainProb > 60;
+              const wet = d.rainProb > 60;
               return (
                 <div
                   key={d.date}
@@ -303,11 +301,6 @@ export default function ForecastCards({
                     )}
                   >
                     ☂ {Math.round(d.rainProb)}%
-                    {d.rainMm > 0 && (
-                      <span className="ml-1 font-medium text-zinc-400">
-                        · {d.rainMm.toFixed(1)}mm
-                      </span>
-                    )}
                   </p>
                 </div>
               );

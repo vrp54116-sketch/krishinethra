@@ -899,8 +899,6 @@ export interface ClimateForecastDay {
   date: string;
   tMax: number;
   tMin: number;
-  /** Expected precipitation sum in mm. */
-  rainMm: number;
   /** Max precipitation probability 0–100. */
   rainProb: number;
   /** WMO weathercode. */
@@ -938,7 +936,7 @@ export interface ClimateAdvice {
  * - heat stress if temp > 35 (shade net + evening irrigation)
  * - frost if temp < 10
  * - fungus risk if humidity > 80 (airflow, avoid evening watering)
- * - rain expected tomorrow > 5mm (skip irrigation → /irrigation)
+ * - rain is forecast tomorrow at a probability above 50% (skip irrigation → /irrigation)
  * - high AQI > 150 (sensitive crops warning)
  * - best spray window (wind < 10, no rain 24h, evening → /spray)
  */

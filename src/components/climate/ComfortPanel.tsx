@@ -1,224 +1,106 @@
 "use client";
 
-import { useState } from "react";
-import { CheckCircle2, ChevronDown, Sprout, TriangleAlert } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useFarm } from "@/lib/store";
-import { Card, CardHeader, StatusPill } from "@/components/dashboard/ui";
-import { CROP_PROFILES, currentPressure, type CropId } from "./shared";
+import { useMemo } from "react";
+import { Sprout } from "lucide-react";
+import { Card, CardHeader } from "@/components/dashboard/ui";
+import { useFarm, useFarmStore } from "@/lib/store";
 
-function ComfortBar({
-  min,
-  max,
-  idealMin,
-  idealMax,
-  value,
-  unit,
-  invert,
-}: {
-  min: number;
-  max: number;
-  idealMin: number;
-  idealMax: number;
+type Factor = {
+  key: string;
+  label: string;
   value: number;
   unit: string;
-  /** For AQI: ideal zone starts at min (lower is better). */
-  invert?: boolean;
-}) {
-  const pct = (v: number) =>
-    Math.max(0, Math.min(100, ((v - min) / (max - min)) * 100));
-  const inside = value >= idealMin && value <= idealMax;
-  return (
-    <div>
-      <div className="relative h-2.5 overflow-hidden rounded-full bg-white/[0.07]">
-        <div
-          className={cn(
-            "absolute inset-y-0 rounded-full",
-            inside
-              ? "bg-emerald-500/70 shadow-[0_0_10px_rgba(34,197,94,0.5)]"
-              : "bg-emerald-500/30",
-          )}
-          style={{
-            left: `${pct(idealMin)}%`,
-            width: `${Math.max(2, pct(idealMax) - pct(idealMin))}%`,
-          }}
-        />
-        <div
-          className={cn(
-            "absolute top-1/2 h-4 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-black",
-            inside
-              ? "bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)]"
-              : "bg-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.9)]",
-          )}
-          style={{ left: `${pct(value)}%` }}
-        />
-      </div>
-      <div className="mt-1 flex items-center justify-between text-[10px] tabular-nums">
-        <span className="text-zinc-600">
-          {min}
-          {unit}
-        </span>
-        <span className={cn("font-semibold", inside ? "text-emerald-300" : "text-amber-300")}>
-          ideal {idealMin}–{idealMax}
-          {unit} · now {value.toFixed(invert ? 0 : 1)}
-          {unit}
-        </span>
-        <span className="text-zinc-600">
-          {max}
-          {unit}+
-        </span>
-      </div>
-    </div>
-  );
+  optimal: [number, number];
+  tolerable: [number, number];
+  weight: number;
+};
+
+function outsideDistance(value: number, [low, high]: [number, number]) {
+  return value < low ? low - value : value > high ? value - high : 0;
+}
+
+function penalty(factor: Factor) {
+  const distance = outsideDistance(factor.value, factor.optimal);
+  const [tolLow, tolHigh] = factor.tolerable;
+  const [idealLow, idealHigh] = factor.optimal;
+  const scale = Math.max(idealLow - tolLow, tolHigh - idealHigh, 1);
+  if (factor.key === "aqi") return factor.weight * Math.min(1, distance / 150);
+  return factor.weight * Math.min(1, distance / scale);
 }
 
 export default function ComfortPanel() {
   const farm = useFarm();
-  const [cropId, setCropId] = useState<CropId>("tomato");
-
-  const profile =
-    CROP_PROFILES.find((c) => c.id === cropId) ?? CROP_PROFILES[0];
-  const pressure = currentPressure(farm.snapshot);
-
-  const rows = [
-    {
-      key: "temp",
-      label: "Temperature",
-      min: 0,
-      max: 45,
-      idealMin: profile.temp[0],
-      idealMax: profile.temp[1],
-      value: farm.temp,
-      unit: "°C",
-      decimals: 1,
-    },
-    {
-      key: "humidity",
-      label: "Humidity",
-      min: 0,
-      max: 100,
-      idealMin: profile.humidity[0],
-      idealMax: profile.humidity[1],
-      value: farm.hum,
-      unit: "%",
-      decimals: 1,
-    },
-    {
-      key: "soil",
-      label: "Soil moisture",
-      min: 0,
-      max: 100,
-      idealMin: profile.soil[0],
-      idealMax: profile.soil[1],
-      value: farm.soil,
-      unit: "%",
-      decimals: 1,
-    },
-    {
-      key: "aqi",
-      label: "Air quality",
-      min: 0,
-      max: 300,
-      idealMin: 0,
-      idealMax: profile.aqiMax,
-      value: farm.aqi,
-      unit: "",
-      decimals: 0,
-      invert: true,
-    },
+  const mode = useFarmStore((s) => s.settings.mode);
+  const factors: Factor[] = [
+    { key: "temp", label: "Temperature", value: farm.temp, unit: "°C", optimal: [18, 27], tolerable: [10, 35], weight: 35 },
+    { key: "humidity", label: "Humidity", value: farm.hum, unit: "%", optimal: [60, 80], tolerable: [40, 90], weight: 25 },
+    { key: "soil", label: "Soil moisture", value: farm.soil, unit: "%", optimal: [30, 75], tolerable: [0, 100], weight: 25 },
+    { key: "aqi", label: "Air quality", value: farm.aqi, unit: " AQI", optimal: [0, 150], tolerable: [0, 300], weight: 15 },
   ];
 
-  const insideCount = rows.filter(
-    (r) => snapshotFor(r.key) >= r.idealMin && snapshotFor(r.key) <= r.idealMax,
-  ).length;
+  const { score, worst } = useMemo(() => {
+    const scored = factors.map((factor) => ({ factor, penalty: penalty(factor) }));
+    return {
+      score: Math.round(100 - scored.reduce((sum, item) => sum + item.penalty, 0)),
+      worst: scored.reduce((a, b) => (b.penalty > a.penalty ? b : a)),
+    };
+  }, [farm.temp, farm.hum, farm.soil, farm.aqi]);
 
-  function snapshotFor(key: string): number {
-    if (key === "temp") return farm.temp;
-    if (key === "humidity") return farm.hum;
-    if (key === "soil") return farm.soil;
-    return farm.aqi;
-  }
-
-  const allGood = insideCount === rows.length;
+  const outside = outsideDistance(worst.factor.value, worst.factor.optimal);
+  const delta = outside.toFixed(worst.factor.key === "aqi" ? 0 : 1);
+  const reason = outside === 0
+    ? "All measured factors are inside their optimal bands."
+    : worst.factor.key === "temp" && farm.temp > 35
+      ? `${delta}°C above happy zone → blossom-drop risk`
+      : worst.factor.key === "temp" && farm.temp < 10
+        ? `${delta}°C below happy zone → cold stress risk`
+        : `${delta}${worst.factor.unit} ${worst.factor.value < worst.factor.optimal[0] ? "below" : "above"} happy zone → ${worst.factor.label.toLowerCase()} stress risk`;
 
   return (
     <Card className="h-full">
       <CardHeader
-        title="Crop Comfort Panel"
-        subtitle="Is the live climate inside your crop's happy zone?"
-        action={
-          <div className="relative">
-            <select
-              value={cropId}
-              onChange={(e) => setCropId(e.target.value as CropId)}
-              className="appearance-none rounded-xl border border-emerald-500/30 bg-black/60 py-2 pl-3 pr-9 text-xs font-bold text-white outline-none transition-colors focus:border-emerald-400/60"
-              aria-label="Select crop"
-            >
-              {CROP_PROFILES.map((c) => (
-                <option key={c.id} value={c.id} className="bg-[#0a120c]">
-                  {c.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-300" />
-          </div>
-        }
+        title="Crop Comfort"
+        subtitle="Tomato comfort score from current sensor readings"
+        action={<span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 text-[9px] font-extrabold tracking-wider text-emerald-200">SCIENCE-RULES • LIVE DATA</span>}
       />
-
-      <div className="mb-3 flex items-center gap-2">
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300">
-          <Sprout className="h-5 w-5" />
-        </span>
+      <div className="mb-4 flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300"><Sprout className="h-5 w-5" /></span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-extrabold text-white">{profile.label}</p>
-          <p className="truncate text-[11px] text-zinc-500">
-            Pressure {pressure.toFixed(1)} hPa · live field readings
-          </p>
+          <p className="text-sm font-extrabold text-white">Tomato · {mode === "live" ? "LIVE telemetry" : "SIMULATION"}</p>
+          <p className="text-[11px] text-zinc-500">{reason}</p>
         </div>
-        <StatusPill tone={allGood ? "good" : "warn"}>
-          {insideCount}/{rows.length} ideal
-        </StatusPill>
+        <strong className="text-2xl tabular-nums text-white">{score}<span className="text-sm text-zinc-500">/100</span></strong>
       </div>
 
-      <div className="space-y-4">
-        {rows.map((r) => {
-          const inside =
-            snapshotFor(r.key) >= r.idealMin && snapshotFor(r.key) <= r.idealMax;
+      <div className="mb-4">
+        <div
+          className="relative h-4 rounded-full border border-white/10"
+          style={{ background: "linear-gradient(90deg, #ef4444 0%, #ef4444 35%, #22c55e 35%, #22c55e 70%, #ef4444 70%, #ef4444 100%)" }}
+          role="meter"
+          aria-label="Crop comfort score"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={score}
+        >
+          <span className="absolute -top-1.5 h-7 w-1.5 rounded-full border border-white bg-white shadow-[0_0_10px_rgba(255,255,255,0.85)]" style={{ left: `${score}%`, transform: "translateX(-50%)" }} />
+        </div>
+        <div className="mt-1 flex justify-between text-[9px] font-bold uppercase tracking-widest text-zinc-500"><span>Stress</span><span>Comfort</span><span>Stress</span></div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        {factors.map((factor) => {
+          const value = factor.value;
+          const distance = outsideDistance(value, factor.optimal);
           return (
-            <div
-              key={r.key}
-              className="rounded-xl border border-white/5 bg-black/30 p-3"
-            >
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="text-xs font-bold text-zinc-200">{r.label}</p>
-                {inside ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-300">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> In zone
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-300">
-                    <TriangleAlert className="h-3.5 w-3.5" /> Outside
-                  </span>
-                )}
-              </div>
-              <ComfortBar
-                min={r.min}
-                max={r.max}
-                idealMin={r.idealMin}
-                idealMax={r.idealMax}
-                value={Math.max(r.min, Math.min(r.max, snapshotFor(r.key)))}
-                unit={r.unit}
-                invert={r.invert}
-              />
+            <div key={factor.key} className="rounded-xl border border-white/5 bg-black/30 px-3 py-2">
+              <p className="text-[10px] font-bold text-zinc-500">{factor.label}</p>
+              <p className="mt-0.5 text-sm font-extrabold tabular-nums text-white">{value.toFixed(factor.key === "aqi" ? 0 : 1)}{factor.unit}</p>
+              <p className="text-[9px] text-zinc-600">Optimal {factor.key === "aqi" ? "<150" : `${factor.optimal[0]}–${factor.optimal[1]}${factor.unit}`}{distance > 0 ? ` · −${penalty(factor).toFixed(1)} pts` : " · in zone"}</p>
             </div>
           );
         })}
       </div>
-
-      <p className="mt-3 rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2.5 text-xs leading-relaxed text-zinc-300">
-        <span className="font-bold text-emerald-200">Agronomist note — </span>
-        {profile.note}
-      </p>
+      <p className="mt-3 text-[10px] text-zinc-500">Thresholds: FAO tomato agro-requirements; ICAR-IIHR guidelines</p>
     </Card>
   );
 }

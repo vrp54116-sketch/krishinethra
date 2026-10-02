@@ -284,7 +284,7 @@ export default function SensorsView() {
   const activeMetric = METRICS.find((m) => m.key === selectedMetric) || METRICS[0];
 
   const handleExportCSV = () => {
-    const headers = ["Timestamp", "Time", "SoilMoisture_%", "Temp_C", "Humidity_%", "AQI", "Rain_mm"];
+    const headers = ["Timestamp", "Time", "SoilMoisture_%", "Temp_C", "Humidity_%", "AQI", "RainDetected"];
     const rows = chartData.map((d) => [
       d.timestamp,
       `"${d.time}"`,

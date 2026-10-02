@@ -80,7 +80,7 @@ export interface SensorSnapshot {
   humidity: number;         // % relative humidity (DHT22)
   aqi: number;              // unitless air-quality index (MQ-135 mapped)
   lightLux: number;         // lux ambient light
-  rainMm: number;           // mm rainfall for this sample window
+  rain: boolean;            // true while the rain sensor detects rain
   tankLevelPercent: number; // % water tank level (HC-SR04 mapped)
   flowRateLpm: number;      // L/min instantaneous flow (0 when pump off)
   pumpCurrentA: number;     // A pump current draw (0 when pump off)
@@ -96,7 +96,7 @@ export interface SensorSnapshot {
 | `humidity`         | number | % RH    | 0…100      | DHT22 humidity |
 | `aqi`              | number | index   | 0…500      | MQ-135 (analog → index map) |
 | `lightLux`         | number | lux     | 0…100000   | ambient light / LDR (or fixed curve) |
-| `rainMm`           | number | mm      | 0…100      | rain gauge / analog rain sensor |
+| `rain`             | boolean| —       | true/false | rain gauge / analog rain sensor threshold |
 | `tankLevelPercent` | number | %       | 0…100      | HC-SR04 distance → % |
 | `flowRateLpm`      | number | L/min   | 0…10       | flow meter (0 when pump off) |
 | `pumpCurrentA`     | number | A       | 0…10       | current sensor (0 when pump off) |
@@ -112,7 +112,7 @@ Example gateway payload:
   "humidity": 62.5,
   "aqi": 85,
   "lightLux": 640,
-  "rainMm": 0,
+  "rain": false,
   "tankLevelPercent": 78,
   "flowRateLpm": 0.4,
   "pumpCurrentA": 0.25,

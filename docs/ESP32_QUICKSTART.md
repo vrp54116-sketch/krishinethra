@@ -50,7 +50,7 @@ Board settings: **ESP32 Dev Module**, default partition, 115200 baud monitor.
 | `tankLevelPercent` | HC-SR04 TRIG / ECHO | **GPIO 5** / **GPIO 18** | 5 V (VCC) | ECHO is 5 V → divide to 3V3 (1 kΩ + 2 kΩ) before GPIO 18 |
 | `aqi` | MQ-135 AO | **GPIO 32** (ADC1) | 5 V | pre-heat ≥ 5 min; map against your clean-air baseline |
 | `lightLux` | LDR divider midpoint | **GPIO 36** (ADC1, input-only) | 3V3 via LDR→3V3, 10 kΩ→GND | brighter = higher reading |
-| `rainMm` | Rain module AO | **GPIO 33** (ADC1) | 3V3/5 V per module | wetter = lower reading; omit → reports `0` |
+| `rain` | Rain module AO | **GPIO 33** (ADC1) | 3V3/5 V per module | `true` when the calibrated wet threshold is crossed |
 | pump relay | Relay IN | **GPIO 23** | 5 V coil supply | active-HIGH; pump on `HIGH` |
 | pan servo | SG90 signal (pan) | **GPIO 13** | 5 V external | `POST /servo {"axis":"pan"}` |
 | tilt servo | SG90 signal (tilt) | **GPIO 12** | 5 V external | `POST /servo {"axis":"tilt"}` |
@@ -74,8 +74,8 @@ Board settings: **ESP32 Dev Module**, default partition, 115200 baud monitor.
 3. **MQ-135:** after warm-up in clean air, note raw and set
    `AIR_CLEAN_RAW`; AQI ≈ `map(raw, CLEAN..SMOKY, 60..300)`.
 4. **LDR:** note dark vs daylight raw; lux ≈ `map(raw, DARK..BRIGHT, 0..900)`.
-5. **Rain:** note dry raw (`RAIN_DRY_RAW`); rain mm ≈ small puddle proxy
-   `map(DRY..WET, 0..5)` — it is a coarse indicator, and that is fine.
+5. **Rain:** note dry and wet raw readings, then set a threshold between them.
+   Report a boolean `rain` flag when the calibrated wet threshold is crossed.
 
 ---
 
@@ -196,7 +196,7 @@ void handleSensors() {
   int lux = (int)clampf((ldr - LDR_DARK) * 900.0 / (LDR_BRIGHT - LDR_DARK), 0, 900);
 
   int rainRaw = analogRead(RAIN_PIN);
-  float rainMm = clampf((RAIN_DRY_RAW - rainRaw) * 5.0 / (RAIN_DRY_RAW - RAIN_WET_RAW), 0, 25);
+  bool isRaining = rainRaw < RAIN_WET_THRESHOLD;
 
   StaticJsonDocument<384> doc;
   doc["timestamp"] = (unsigned long long)0;  // no RTC/NTP: app stamps arrival; set via NTP below if wanted
@@ -204,7 +204,7 @@ void handleSensors() {
   doc["humidity"] = roundf(h * 10) / 10;
   doc["aqi"] = aqi;
   doc["lightLux"] = lux;
-  doc["rainMm"] = roundf(rainMm * 10) / 10;
+  doc["rain"] = isRaining;
   doc["tankLevelPercent"] = roundf(tankPct * 100) / 100;
   doc["flowRateLpm"] = pumpOn ? 0.4 : 0;
   doc["pumpCurrentA"] = pumpOn ? 0.25 : 0;

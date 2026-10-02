@@ -64,7 +64,7 @@ export default function RainSkipLog({ className }: { className?: string }) {
       id: "rs-4",
       date: "Tuesday",
       time: "11:20",
-      rainDetected: "4.2 mm",
+      rainDetected: "RAIN: DETECTED",
       action: "Midday Top-up Skipped",
       waterSaved: "8 Liters",
       active: false,

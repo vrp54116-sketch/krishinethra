@@ -107,7 +107,7 @@ function RainBanner() {
     const lon = location?.longitude ?? 72.57;
     const url =
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}` +
-      `&longitude=${lon}&daily=precipitation_sum,precipitation_probability_max` +
+      `&longitude=${lon}&daily=precipitation_probability_max` +
       `&timezone=Asia%2FKolkata&forecast_days=3`;
     fetch(url, { signal: ctrl.signal })
       .then((r) => {
@@ -121,7 +121,6 @@ function RainBanner() {
           date: daily.time[1],
           tMax: 0,
           tMin: 0,
-          rainMm: Number(daily.precipitation_sum?.[1] ?? 0),
           rainProb: Number(daily.precipitation_probability_max?.[1] ?? 0),
           code: 61,
         });
@@ -149,7 +148,7 @@ function RainBanner() {
     );
   }
 
-  if (tomorrow && (tomorrow.rainMm > 0 || tomorrow.rainProb > 50)) {
+  if (tomorrow && tomorrow.rainProb > 50) {
     return (
       <div className="flex items-start gap-3 rounded-2xl border border-amber-400/40 bg-amber-500/[0.08] p-4">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-300">
