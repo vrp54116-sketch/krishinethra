@@ -7,7 +7,6 @@ import {
   AlertTriangle,
   Camera,
   CheckCircle2,
-  Clock,
   FlaskConical,
   History,
   MessageCircle,
@@ -79,7 +78,17 @@ export default function LeafScanner() {
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<LeafClassification | null>(null);
   const [rejection, setRejection] = useState<string | null>(null);
-  const [history, setHistory] = useState<StoredScanItem[]>([]);
+  const [history, setHistory] = useState<StoredScanItem[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed.slice(0, 10);
+      }
+    } catch {}
+    return [];
+  });
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
 
   // Single-frame camera capture state
@@ -111,21 +120,6 @@ export default function LeafScanner() {
     return () => {
       isMounted = false;
     };
-  }, []);
-
-  // Load history from localStorage (last 10 scans)
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          setHistory(parsed.slice(0, 10));
-        }
-      }
-    } catch (e) {
-      console.error("Failed to load leaf scan history from localStorage", e);
-    }
   }, []);
 
   // Save scan to history (last 10 scans in localStorage)
@@ -464,14 +458,20 @@ export default function LeafScanner() {
       steps,
     });
 
-    toast.success("Added to spray plan");
+    toast.success("Added to spray plan", {
+      description: `Plan created for ${result.friendly}.`,
+      action: {
+        label: "Open /spray",
+        onClick: () => router.push("/app/spray"),
+      },
+    });
   };
 
   // [Ask KrishiGPT about this] button handler
   const handleAskKrishiGPT = () => {
     if (!result) return;
     const query = `Tell me more about ${result.friendly} on tomato and how to stop it spreading`;
-    router.push(`/assistant?q=${encodeURIComponent(query)}`);
+    router.push(`/app/assistant?q=${encodeURIComponent(query)}`);
   };
 
   // Click reopens that result card from history
@@ -721,169 +721,215 @@ export default function LeafScanner() {
           </motion.div>
         )}
 
-        {/* DIAGNOSIS CARD: Valid Leaf Disease Result */}
-        {result && !rejection && !scanning && (
-          <motion.div
-            key="diagnosis"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.3 }}
-            className="card-surface rounded-2xl border border-emerald-500/30 p-5 sm:p-6 space-y-5"
-          >
-            {/* Header: Friendly Name Big + Scientific Name Italic */}
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/10 pb-4">
-              <div className="space-y-1">
-                <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-1.5">
-                  <Sparkles className="h-3.5 w-3.5" /> AI Plant Disease Diagnosis
-                </span>
-                <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
+        {/* DIAGNOSIS CARD: Valid Leaf Disease or Healthy Result */}
+        {result && !rejection && !scanning && (() => {
+          const isHealthy =
+            result.label === "Tomato___healthy" ||
+            result.friendly.toLowerCase().includes("healthy");
+
+          return (
+            <motion.div
+              key="diagnosis"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.3 }}
+              className={cn(
+                "card-surface rounded-2xl border p-4 sm:p-6 space-y-5",
+                isHealthy
+                  ? "border-emerald-500/50 bg-emerald-950/20 shadow-[0_0_30px_rgba(34,197,94,0.15)]"
+                  : "border-emerald-500/30"
+              )}
+            >
+              {/* Header: Friendly Name Big + Scientific Name Italic + Severity/Health Pill */}
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-white/10 pb-4">
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-1.5">
+                    {isHealthy ? (
+                      <>
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> Healthy Plant Verified
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-3.5 w-3.5 text-emerald-400" /> AI Plant Disease Diagnosis
+                      </>
+                    )}
+                  </span>
+                  <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
+                    <span
+                      className="h-3.5 w-3.5 rounded-full shrink-0"
+                      style={{ backgroundColor: diseaseDotColor(result.friendly) }}
+                    />
+                    {result.friendly}
+                  </h3>
+                  {result.scientific && result.scientific !== "-" && (
+                    <p className="text-sm italic font-medium text-emerald-300/80">
+                      {result.scientific}
+                    </p>
+                  )}
+                </div>
+
+                {/* Health/Severity Badge */}
+                <div className="flex flex-col sm:items-end">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+                    {isHealthy ? "Condition" : "Severity"}
+                  </span>
                   <span
-                    className="h-3.5 w-3.5 rounded-full shrink-0"
-                    style={{ backgroundColor: diseaseDotColor(result.friendly) }}
+                    className={cn(
+                      "mt-0.5 inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-mono font-black uppercase tracking-wider border",
+                      isHealthy
+                        ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-[0_0_12px_rgba(34,197,94,0.3)]"
+                        : result.severity === "Low"
+                          ? "bg-sky-500/15 text-sky-300 border-sky-500/30"
+                          : result.severity === "Medium"
+                            ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                            : "bg-red-500/20 text-red-300 border-red-500/40 shadow-[0_0_12px_rgba(239,68,68,0.4)]"
+                    )}
+                  >
+                    {isHealthy ? "Optimal Health" : `${result.severity} Severity`}
+                  </span>
+                </div>
+              </div>
+
+              {/* Confidence Percentage with Progress Bar */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-zinc-400">Confidence Score</span>
+                  <span className="font-mono font-black text-emerald-300 text-sm">
+                    {Math.round(result.confidence * 100)}%
+                  </span>
+                </div>
+                <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/10">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.round(result.confidence * 100)}%` }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-emerald-400 to-sky-400 shadow-[0_0_12px_rgba(34,197,94,0.6)]"
                   />
-                  {result.friendly}
-                </h3>
-                {result.scientific && result.scientific !== "-" && (
-                  <p className="text-sm italic font-medium text-emerald-300/80">
-                    {result.scientific}
+                </div>
+                <p className="text-[11px] text-zinc-500">
+                  {isHealthy
+                    ? "Healthy leaf signature confirmed across all 11 neural network classes."
+                    : "Severity rule: <70% Low · 70–85% Medium · >85% High"}
+                </p>
+              </div>
+
+              {/* SPREAD RISK line computed from LIVE store temp/hum */}
+              <div className="rounded-xl border border-white/10 bg-black/40 p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                    {isHealthy ? "Farm Pathogen Risk" : "Live Farm Spread Risk"}
+                  </span>
+                  <span
+                    className={cn(
+                      "rounded-md px-2.5 py-0.5 text-xs font-mono font-extrabold uppercase",
+                      isHealthy || result.spreadRisk === "none"
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                        : result.spreadRisk === "High"
+                          ? "bg-red-500/20 text-red-300 border border-red-500/40"
+                          : "bg-sky-500/20 text-sky-300 border border-sky-500/40"
+                    )}
+                  >
+                    {isHealthy || result.spreadRisk === "none" ? "No Risk" : result.spreadRisk}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-zinc-200 leading-relaxed font-semibold">
+                  {isHealthy
+                    ? "Crop foliage is healthy. No active pathogen infection or spread risk. Keep up regular scouting."
+                    : result.spreadRiskText}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-3 sm:gap-4 text-[11px] text-zinc-400 font-mono">
+                  <span>Live Temp: <strong className="text-zinc-200">{farm.temp.toFixed(1)}°C</strong></span>
+                  <span>Live Humidity: <strong className="text-zinc-200">{farm.hum.toFixed(0)}%</strong></span>
+                </div>
+              </div>
+
+              {/* Treatment block: NATURAL FIRST box (green), CHEMICAL FALLBACK box (amber/slate), PREVENTION list */}
+              <div className="space-y-3">
+                {/* Natural First Box (Green) */}
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.08] p-4 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <Sprout className="h-4 w-4 text-emerald-400" />
+                    <h4 className="text-xs font-black uppercase tracking-wider text-emerald-300">
+                      {isHealthy ? "Plant Care & Maintenance (First Choice)" : "Natural Treatment (First Choice)"}
+                    </h4>
+                  </div>
+                  <p className="text-sm font-semibold leading-relaxed text-emerald-100">
+                    {result.natural}
                   </p>
+                </div>
+
+                {/* Chemical Fallback Box */}
+                <div
+                  className={cn(
+                    "rounded-xl border p-4 space-y-1.5",
+                    isHealthy
+                      ? "border-white/10 bg-white/[0.03]"
+                      : "border-amber-500/40 bg-amber-500/[0.08]"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "flex items-center gap-2",
+                      isHealthy ? "text-zinc-400" : "text-amber-300"
+                    )}
+                  >
+                    <FlaskConical className="h-4 w-4" />
+                    <h4 className="text-xs font-black uppercase tracking-wider">
+                      {isHealthy ? "Chemical Intervention" : "Chemical Fallback (Safety-Period Specified)"}
+                    </h4>
+                  </div>
+                  <p
+                    className={cn(
+                      "text-sm font-semibold",
+                      isHealthy ? "text-zinc-300" : "text-amber-100"
+                    )}
+                  >
+                    {isHealthy
+                      ? "None required. Maintain clean organic cultivation and avoid unnecessary chemical sprays."
+                      : result.chemical}
+                  </p>
+                </div>
+
+                {/* Prevention Bullet List */}
+                {result.prevention && result.prevention.length > 0 && (
+                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                      {isHealthy ? "Agronomic Best Practices" : "Agronomic Prevention Rules"}
+                    </h4>
+                    <ul className="space-y-1.5 text-xs text-zinc-300 font-medium">
+                      {result.prevention.map((bullet) => (
+                        <li key={bullet} className="flex items-center gap-2">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                          <span>{bullet}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </div>
 
-              {/* Severity: confidence <70 Low, 70-85 Medium, >85 High */}
-              <div className="flex flex-col items-end">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Severity</span>
-                <span
-                  className={cn(
-                    "mt-0.5 rounded-full px-3 py-1 text-xs font-mono font-black uppercase tracking-wider border",
-                    result.severity === "Low"
-                      ? "bg-sky-500/15 text-sky-300 border-sky-500/30"
-                      : result.severity === "Medium"
-                        ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
-                        : "bg-red-500/20 text-red-300 border-red-500/40 shadow-[0_0_12px_rgba(239,68,68,0.4)]"
-                  )}
+              {/* ACTION BUTTONS: [Add to Spray Plan] and [Ask KrishiGPT about this] */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleAddToSprayPlan}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-extrabold text-black shadow-[0_0_20px_rgba(34,197,94,0.4)] transition-all hover:bg-emerald-400 active:scale-[0.98]"
                 >
-                  {result.severity} Severity
-                </span>
-              </div>
-            </div>
+                  <Plus className="h-4 w-4" /> Add to Spray Plan
+                </button>
 
-            {/* Confidence Percentage with Progress Bar */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-zinc-400">Confidence Score</span>
-                <span className="font-mono font-black text-emerald-300 text-sm">
-                  {Math.round(result.confidence * 100)}%
-                </span>
-              </div>
-              <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/10">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.round(result.confidence * 100)}%` }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-emerald-400 to-sky-400 shadow-[0_0_12px_rgba(34,197,94,0.6)]"
-                />
-              </div>
-              <p className="text-[11px] text-zinc-500">
-                Severity rule: &lt;70% Low · 70–85% Medium · &gt;85% High
-              </p>
-            </div>
-
-            {/* SPREAD RISK line computed from LIVE store temp/hum */}
-            <div className="rounded-xl border border-white/10 bg-black/40 p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                  Live Farm Spread Risk
-                </span>
-                <span
-                  className={cn(
-                    "rounded-md px-2.5 py-0.5 text-xs font-mono font-extrabold uppercase",
-                    result.spreadRisk === "High"
-                      ? "bg-red-500/20 text-red-300 border border-red-500/40"
-                      : result.spreadRisk === "none"
-                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                        : "bg-sky-500/20 text-sky-300 border border-sky-500/40"
-                  )}
+                <button
+                  type="button"
+                  onClick={handleAskKrishiGPT}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-sky-500/40 bg-sky-500/10 px-4 py-3 text-sm font-extrabold text-sky-200 transition-all hover:bg-sky-500/20 active:scale-[0.98]"
                 >
-                  {result.spreadRisk === "none" ? "No Risk" : result.spreadRisk}
-                </span>
+                  <MessageCircle className="h-4 w-4" /> Ask KrishiGPT about this
+                </button>
               </div>
-              <p className="mt-2 text-sm text-zinc-200 leading-relaxed font-semibold">
-                {result.spreadRiskText}
-              </p>
-              <div className="mt-2 flex items-center gap-4 text-[11px] text-zinc-400 font-mono">
-                <span>Live Temp: <strong className="text-zinc-200">{farm.temp.toFixed(1)}°C</strong></span>
-                <span>Live Humidity: <strong className="text-zinc-200">{farm.hum.toFixed(0)}%</strong></span>
-              </div>
-            </div>
-
-            {/* Treatment block: NATURAL FIRST box (green), CHEMICAL FALLBACK box (amber), PREVENTION list */}
-            <div className="space-y-3">
-              {/* Natural First Box (Green) */}
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.08] p-4 space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <Sprout className="h-4 w-4 text-emerald-400" />
-                  <h4 className="text-xs font-black uppercase tracking-wider text-emerald-300">
-                    Natural Treatment (First Choice)
-                  </h4>
-                </div>
-                <p className="text-sm font-semibold leading-relaxed text-emerald-100">
-                  {result.natural}
-                </p>
-              </div>
-
-              {/* Chemical Fallback Box (Amber, with safety-period text) */}
-              <div className="rounded-xl border border-amber-500/40 bg-amber-500/[0.08] p-4 space-y-1.5">
-                <div className="flex items-center gap-2 text-amber-300">
-                  <FlaskConical className="h-4 w-4 text-amber-400" />
-                  <h4 className="text-xs font-black uppercase tracking-wider">
-                    Chemical Fallback (Safety-Period Specified)
-                  </h4>
-                </div>
-                <p className="text-sm font-semibold text-amber-100">
-                  {result.chemical}
-                </p>
-              </div>
-
-              {/* Prevention Bullet List */}
-              {result.prevention && result.prevention.length > 0 && (
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                    Agronomic Prevention Rules
-                  </h4>
-                  <ul className="space-y-1.5 text-xs text-zinc-300 font-medium">
-                    {result.prevention.map((bullet) => (
-                      <li key={bullet} className="flex items-center gap-2">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                        <span>{bullet}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            {/* ACTION BUTTONS: [Add to Spray Plan] and [Ask KrishiGPT about this] */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handleAddToSprayPlan}
-                className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-extrabold text-black shadow-[0_0_20px_rgba(34,197,94,0.4)] transition-all hover:bg-emerald-400 active:scale-[0.98]"
-              >
-                <Plus className="h-4 w-4" /> Add to Spray Plan
-              </button>
-
-              <button
-                type="button"
-                onClick={handleAskKrishiGPT}
-                className="flex items-center justify-center gap-2 rounded-xl border border-sky-500/40 bg-sky-500/10 px-4 py-3 text-sm font-extrabold text-sky-200 transition-all hover:bg-sky-500/20 active:scale-[0.98]"
-              >
-                <MessageCircle className="h-4 w-4" /> Ask KrishiGPT about this
-              </button>
-            </div>
-          </motion.div>
-        )}
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* ============================================================ */}

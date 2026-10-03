@@ -53,8 +53,8 @@ export type ClassLabel = (typeof CLASS_LABELS)[number];
 export const DISEASE_INFO: Record<string, DiseaseInfoItem> = {
   Tomato___healthy: {
     friendly: "Healthy Leaf",
-    scientific: "-",
-    natural: "No action needed. Continue current care.",
+    scientific: "Solanum lycopersicum",
+    natural: "No action needed. Continue current care, regular scouting, and balanced irrigation.",
     chemical: "None required",
     prevention: [
       "Keep 60 cm spacing",
@@ -202,7 +202,7 @@ export const DISEASE_INFO: Record<string, DiseaseInfoItem> = {
   },
   Tomato___Tomato_Yellow_Leaf_Curl_Virus: {
     friendly: "Yellow Leaf Curl Virus (TYLCV)",
-    scientific: "TYLCV",
+    scientific: "Tomato yellow leaf curl virus (TYLCV)",
     natural:
       "NO CURE — remove plant; yellow sticky traps + neem for whitefly vector",
     chemical: "None effective against viruses",
@@ -397,6 +397,7 @@ export async function classifyLeafImage(
   // Visual foliage / plant tissue ratio check as a guardrail against non-leaf objects (shoes, boots, faces)
   // that a lightweight model might otherwise assign an arbitrary class:
   let plantPixelCount = 0;
+  let greenPixelCount = 0;
   let totalSampled = 0;
   try {
     const imgData = ctx.getImageData(0, 0, 224, 224).data;
@@ -405,16 +406,20 @@ export async function classifyLeafImage(
       const g = imgData[i + 1];
       const b = imgData[i + 2];
       totalSampled++;
-      const isGreen = g > 35 && g > r * 0.85 && g > b * 1.1;
+      const isGreen = (g > 35 && g > r * 0.95 && g > b * 1.05) || (g > 50 && g >= r && g > b);
       const isBlightFoliage = g > 25 && r > 30 && g + r > b * 1.8 && Math.abs(r - g) < 80;
+      if (isGreen) greenPixelCount++;
       if (isGreen || isBlightFoliage) plantPixelCount++;
     }
   } catch {
     // ignore
   }
 
+  const greenRatio = totalSampled > 0 ? greenPixelCount / totalSampled : 0.5;
   const plantRatio = totalSampled > 0 ? plantPixelCount / totalSampled : 0.5;
-  const isVisualNonLeaf = plantRatio < 0.06;
+  // Non-leaf objects (shoes, sneakers, walls, clothes) lack green foliage (< 3.5%).
+  // Genuine tomato leaves (even with heavy lesions) contain substantial green leaf tissue (> 10%).
+  const isVisualNonLeaf = greenRatio < 0.035 || plantRatio < 0.06;
 
   const rawLabel = labels[maxIdx] || "Not A Leaf";
   const rawConf = maxProb;

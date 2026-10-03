@@ -105,7 +105,6 @@ export default function SprayWindows() {
   useEffect(() => {
     let active = true;
     const controller = new AbortController();
-    setFailed(false);
     const refreshClock = () => setNow(Date.now());
     refreshClock();
     const clock = window.setInterval(refreshClock, 60_000);
@@ -163,7 +162,7 @@ export default function SprayWindows() {
       {failed && !hourly ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/20 bg-amber-500/5 px-3 py-3">
           <p className="text-sm text-amber-100">Hourly forecast unavailable. Check the connection to Open-Meteo.</p>
-          <button type="button" onClick={() => setRetry((value) => value + 1)} className="rounded-lg border border-amber-300/30 px-3 py-1.5 text-xs font-bold text-amber-100 hover:bg-amber-300/10">Retry forecast</button>
+          <button type="button" onClick={() => { setFailed(false); setRetry((value) => value + 1); }} className="rounded-lg border border-amber-300/30 px-3 py-1.5 text-xs font-bold text-amber-100 hover:bg-amber-300/10">Retry forecast</button>
         </div>
       ) : !hourly ? (
         <p className="animate-pulse rounded-xl bg-white/5 px-3 py-3 text-sm text-zinc-400">Loading live hourly forecast…</p>

@@ -174,7 +174,7 @@ function LogoBlock({ className }: { className?: string }) {
         KrishiNethra
       </span>
       <span className="shrink-0 font-editorial-mono text-[10px] font-bold text-[var(--ink-3)] uppercase tracking-[0.12em]">
-        SYSTEM VER 5.0.0
+        SYSTEM VER 5.1.0
       </span>
     </div>
   );

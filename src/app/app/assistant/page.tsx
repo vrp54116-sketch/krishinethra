@@ -142,27 +142,29 @@ export default function AssistantPage() {
   const language = useFarmStore((state) => state.settings.language);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState(query);
+  const [prevQuery, setPrevQuery] = useState(query);
+  if (query !== prevQuery) {
+    setPrevQuery(query);
+    setInput(query);
+  }
   const [typing, setTyping] = useState(false);
   const [listening, setListening] = useState(false);
-  const [eli5, setEli5] = useState(false);
-  const [readAloud, setReadAloud] = useState(false);
+  const [eli5, setEli5] = useState(() => (typeof window !== "undefined" ? localStorage.getItem("krishigpt-eli5") === "true" : false));
+  const [readAloud, setReadAloud] = useState(() => (typeof window !== "undefined" ? localStorage.getItem("krishigpt-read-aloud") === "true" : false));
   const [activeSpeech, setActiveSpeech] = useState<string | null>(null);
-  const [hasRecognition, setHasRecognition] = useState(false);
-  const [farmContext, setFarmContext] = useState<FarmContext | null>(null);
+  const [hasRecognition] = useState(() => Boolean(recognitionConstructor()));
+  const [farmContext, setFarmContext] = useState<FarmContext | null>(() => (typeof window !== "undefined" ? currentFarmContext() : null));
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const interimRef = useRef("");
 
   useEffect(() => {
-    setFarmContext(currentFarmContext());
-    setHasRecognition(Boolean(recognitionConstructor()));
-    setEli5(localStorage.getItem("krishigpt-eli5") === "true");
-    setReadAloud(localStorage.getItem("krishigpt-read-aloud") === "true");
-  }, []);
-
-  useEffect(() => {
-    if (query) setInput(query);
+    if (query && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.style.height = "auto";
+      inputRef.current.style.height = `${Math.min(inputRef.current.scrollHeight, 160)}px`;
+    }
   }, [query]);
 
   useEffect(() => {
