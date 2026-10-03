@@ -38,7 +38,7 @@ function formatTime(ts: number): string {
   }
 }
 
-export function buildAlertText(input: {
+function buildAlertText(input: {
   level?: string;
   title?: string;
   message?: string;

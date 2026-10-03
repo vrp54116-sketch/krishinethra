@@ -12,6 +12,7 @@ import PumpRunLog from "@/components/irrigation/PumpRunLog";
 import RainSkipLog from "@/components/irrigation/RainSkipLog";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import IrrigationLoading from "./loading";
+import CostBenefitCalculator from "@/components/irrigation/CostBenefitCalculator";
 
 function Rise({
   children,
@@ -102,6 +103,12 @@ export default function IrrigationPage() {
       <Rise delay={0.22}>
         <ErrorBoundary name="HistoryTable">
           <HistoryTable />
+        </ErrorBoundary>
+      </Rise>
+
+      <Rise delay={0.26}>
+        <ErrorBoundary name="CostBenefitCalculator">
+          <CostBenefitCalculator />
         </ErrorBoundary>
       </Rise>
     </div>

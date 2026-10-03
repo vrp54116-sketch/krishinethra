@@ -600,12 +600,14 @@ interface FarmState {
   hydrated: boolean;
   // Landing / onboarding surface (mirrored with settings.language).
   language: LanguageCode;
+  eli5Mode: boolean;
   isAuthenticated: boolean;
   /** True once the 5-step wizard has been completed. Forces routing. */
   onboardingDone: boolean;
   /** Hashed optional 4-digit app PIN (null = no PIN). */
   appPinHash: string | null;
   setLanguage: (lang: LanguageCode) => void;
+  setEli5Mode: (enabled: boolean) => void;
   unlock: () => void;
   lock: () => void;
   setOnboardingDone: (done: boolean) => void;
@@ -1257,6 +1259,7 @@ export const useFarmStore = create<FarmState>()(
     (set, get) => ({
       hydrated: false,
       language: "en",
+      eli5Mode: false,
       isAuthenticated: false,
       onboardingDone: false,
       appPinHash: null,
@@ -1265,6 +1268,7 @@ export const useFarmStore = create<FarmState>()(
           language,
           settings: { ...s.settings, language },
         })),
+      setEli5Mode: (eli5Mode) => set({ eli5Mode }),
       unlock: () => set({ isAuthenticated: true }),
       lock: () => set({ isAuthenticated: false }),
       setOnboardingDone: (done) => set({ onboardingDone: done }),
@@ -2599,4 +2603,3 @@ export function useFarm<T>(selector?: (farm: FarmView) => T): T | FarmView {
 export function farmCmd(cmd: string): void {
   useFarmStore.getState().farmCmd(cmd);
 }
-

@@ -250,6 +250,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const hydrated = useFarmStore((s) => s.hydrated);
   const language = useFarmStore((s) => s.settings.language);
   const setLanguage = useFarmStore((s) => s.setLanguage);
+  const eli5Mode = useFarmStore((s) => s.eli5Mode);
+  const setEli5Mode = useFarmStore((s) => s.setEli5Mode);
   const mode = useFarmStore((s) => s.settings.mode);
   const farmHealthScore = useFarmStore((s) => s.farmHealthScore);
   const alerts = useFarmStore((s) => s.alerts);
@@ -435,6 +437,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <InstallAppButton />
 
             {/* Language dropdown */}
+            <button
+              type="button"
+              onClick={() => setEli5Mode(!eli5Mode)}
+              aria-pressed={eli5Mode}
+              aria-label="Toggle simple farm language"
+              className={cn(
+                "inline-flex items-center gap-1 px-2 py-1.5 font-editorial-mono text-[11px] font-bold border transition-colors",
+                eli5Mode
+                  ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-300"
+                  : "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink-2)] hover:text-[var(--ink)]",
+              )}
+            >
+              ELI5 {eli5Mode ? "ON" : "OFF"}
+            </button>
             <div className="relative">
               <button
                 type="button"

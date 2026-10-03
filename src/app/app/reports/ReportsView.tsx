@@ -56,6 +56,8 @@ import {
 } from "@/lib/report-export";
 import ShareFarmLink from "@/components/mqtt/ShareFarmLink";
 import DemoTourButton from "@/components/mqtt/DemoTourButton";
+import CostBenefitCalculator from "@/components/irrigation/CostBenefitCalculator";
+import TruthPanel from "@/components/reports/TruthPanel";
 
 function Rise({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   return (
@@ -343,6 +345,8 @@ export default function ReportsPage() {
     <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-5">
       {/* Screen UI (hidden when printing) */}
       <div className="no-print space-y-4 sm:space-y-5">
+        <CostBenefitCalculator />
+        <TruthPanel />
         {/* Period selector + exports */}
         <Rise>
           <Card>

@@ -14,6 +14,7 @@ import EdgeAiStatusBanners from "@/components/dashboard/EdgeAiStatusBanners";
 import AiAgentReasoning from "@/components/dashboard/AiAgentReasoning";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { cn } from "@/lib/utils";
+import OfflineResilienceCard from "@/components/dashboard/OfflineResilienceCard";
 
 /**
  * /dashboard — KrishiNethra Command Center.
@@ -120,6 +121,9 @@ export default function DashboardPage() {
         <ErrorBoundary name="QuickActions">
           <QuickActions />
         </ErrorBoundary>
+      </div>
+      <div className="col-span-12 md:col-span-4 h-full">
+        <OfflineResilienceCard />
       </div>
     </div>
   );
