@@ -237,7 +237,7 @@ function TaskCard({ task, today }: { task: Task; today: string }) {
             {prio.label}
           </span>
           <span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-bold text-zinc-300">
-            {task.source === "ai" ? "🤖 AI" : "✍️ Manual"}
+            {task.sourceBadge ?? (task.source === "ai" ? "🤖 AI" : "✍️ Manual")}
           </span>
           {task.zone && (
             <span className="inline-flex items-center gap-0.5 rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-300">

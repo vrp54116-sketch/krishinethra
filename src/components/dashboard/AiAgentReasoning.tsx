@@ -3,7 +3,7 @@
 import { memo, useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Brain, Sparkles, ShieldAlert, CloudRain, CheckCircle2, AlertTriangle } from "lucide-react";
-import { useFarm } from "@/lib/store";
+import { useFarm, useFarmStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 interface ReasoningState {
@@ -15,6 +15,7 @@ interface ReasoningState {
 
 export default memo(function AiAgentReasoning({ className }: { className?: string }) {
   const farm = useFarm();
+  const reasoningLogs = useFarmStore((s) => s.reasoningLogs) ?? [];
   const manualRemaining = farm.manualRemainingSec;
 
   const [elapsedSec, setElapsedSec] = useState(0);
@@ -210,7 +211,7 @@ export default memo(function AiAgentReasoning({ className }: { className?: strin
       </div>
 
       {/* Reasoning Display as Mono Log Lines with Timestamps */}
-      <div className="mt-3 space-y-1.5 min-h-[56px] flex flex-col justify-center text-xs">
+      <div className="mt-3 space-y-2 min-h-[56px] flex flex-col justify-center text-xs">
         <div className="flex items-start gap-2">
           <span className="text-[var(--ink-3)] shrink-0 font-mono">[{nowStamp}]</span>
           {isLocked && (
@@ -226,6 +227,14 @@ export default memo(function AiAgentReasoning({ className }: { className?: strin
           <span className="text-[var(--ink-3)]">↳</span>
           <span>{currentReasoning.rule}</span>
         </div>
+
+        {/* Dynamic Appended Reasoning Logs (e.g. LEAF SCAN) */}
+        {reasoningLogs.slice(0, 5).map((log, idx) => (
+          <div key={idx} className="flex items-start gap-2 border-t border-[var(--line)]/40 pt-1.5 text-[11px] text-[var(--ink)] font-mono">
+            <span className="text-[var(--moss)] shrink-0">●</span>
+            <span className="break-all">{log}</span>
+          </div>
+        ))}
       </div>
 
       {/* Footer live status bar */}

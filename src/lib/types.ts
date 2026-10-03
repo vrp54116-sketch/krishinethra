@@ -97,6 +97,7 @@ export interface Task {
   dueDate: string;
   done: boolean;
   source: "ai" | "manual";
+  sourceBadge?: string;
   /** Optional zone tag, e.g. "A" | "B" | "C". */
   zone?: string;
   /** Timestamp (ms) when the task was marked done. */

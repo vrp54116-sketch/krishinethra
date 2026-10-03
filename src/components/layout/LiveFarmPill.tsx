@@ -132,7 +132,7 @@ export default function LiveFarmPill({ className }: { className?: string } = {})
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              router.push("/app/camera");
+              router.push("/leaf-scanner");
             }}
             aria-label={t("dashboard.scanLeaf")}
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-none border border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink-2)] hover:text-[var(--ink)] hover:border-[var(--ink-3)] transition-colors cursor-pointer"

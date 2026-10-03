@@ -690,9 +690,11 @@ interface FarmState {
   setPumpMode: (mode: PumpState["mode"]) => void;
   /** Start a timed run while STAYING in schedule mode (fired by a slot). */
   startScheduledRun: (durationSec: number) => void;
+  reasoningLogs: string[];
+  addReasoningLog: (line: string) => void;
   addAlert: (
     alert: Omit<Alert, "id" | "timestamp" | "read"> &
-      Partial<Pick<Alert, "id" | "timestamp" | "read">>,
+      Partial<Pick<Alert, "id" | "timestamp" | "read">> & { dedupe?: boolean },
   ) => string;
   markAlertsRead: () => void;
   markAlertRead: (id: string) => void;
@@ -1236,6 +1238,7 @@ function freshFarmState(now: number) {
     chat: seedChat(now),
     farmHealthScore,
     simRunning: false,
+    reasoningLogs: ["[SYSTEM] Jal-Supervisor autonomous surveillance active"],
     panAngle: 90,
     tiltAngle: 90,
     dailySummaries: seedDailySummaries(
@@ -1686,6 +1689,11 @@ export const useFarmStore = create<FarmState>()(
         }
       },
 
+      addReasoningLog: (line) =>
+        set((s) => ({
+          reasoningLogs: [line, ...(s.reasoningLogs ?? [])].slice(0, 50),
+        })),
+
       addAlert: (alert) => {
         const now = alert.timestamp ?? Date.now();
         const currentBucket = Math.floor(now / (10 * 60 * 1000));
@@ -1700,16 +1708,18 @@ export const useFarmStore = create<FarmState>()(
         };
         let alertId = full.id;
         set((s) => {
-          // Dedupe by (type/title + 10-minute bucket)
-          const dup = s.alerts.find(
-            (a) =>
-              a.title === full.title &&
-              (Math.floor(a.timestamp / (10 * 60 * 1000)) === currentBucket ||
-                now - a.timestamp < ALERT_DEDUP_WINDOW_MS),
-          );
-          if (dup) {
-            alertId = dup.id;
-            return s;
+          if (alert.dedupe !== false) {
+            // Dedupe by (type/title + 10-minute bucket)
+            const dup = s.alerts.find(
+              (a) =>
+                a.title === full.title &&
+                (Math.floor(a.timestamp / (10 * 60 * 1000)) === currentBucket ||
+                  now - a.timestamp < ALERT_DEDUP_WINDOW_MS),
+            );
+            if (dup) {
+              alertId = dup.id;
+              return s;
+            }
           }
           return { alerts: [full, ...s.alerts].slice(0, 100) };
         });
@@ -1741,17 +1751,6 @@ export const useFarmStore = create<FarmState>()(
         };
         set((s) => {
           const scans = [full, ...s.scans];
-          const extras: Alert[] = [];
-          // Disease found → alert + diary entry so everything updates live.
-          if (full.severity !== "none" && full.disease.toLowerCase() !== "healthy") {
-            const alert = diseaseAlert(full.disease, full.severity, undefined, full.timestamp);
-            const dup = [...s.alerts, ...extras].some(
-              (a) =>
-                a.title === alert.title &&
-                full.timestamp - a.timestamp < ALERT_DEDUP_WINDOW_MS,
-            );
-            if (!dup) extras.push(alert);
-          }
           const diaryEntry: DiaryEntry = {
             id: uid("diary"),
             date: todayISO(),
@@ -1762,7 +1761,6 @@ export const useFarmStore = create<FarmState>()(
           const unresolved = scans.filter((x) => !x.resolved).length;
           return {
             scans,
-            alerts: [...extras, ...s.alerts].slice(0, 100),
             diary: [diaryEntry, ...s.diary],
             farmHealthScore: computeFarmHealthScore(s.snapshot, s.zones, unresolved),
           };
@@ -1804,6 +1802,7 @@ export const useFarmStore = create<FarmState>()(
           dueDate: task.dueDate,
           done: task.done ?? false,
           source: task.source ?? "manual",
+          ...(task.sourceBadge ? { sourceBadge: task.sourceBadge } : {}),
           ...(task.zone ? { zone: task.zone } : {}),
           ...(task.completedAt !== undefined ? { completedAt: task.completedAt } : {}),
         };
@@ -2548,6 +2547,8 @@ export interface FarmView {
   setPumpMode: (mode: "manual" | "auto" | "schedule") => void;
   setEdgeR2: (on: boolean) => void;
   sendEdgeBuzz: () => void;
+  reasoningLogs: string[];
+  addReasoningLog: (line: string) => void;
 }
 
 /**
@@ -2597,6 +2598,8 @@ export function useFarm<T>(selector?: (farm: FarmView) => T): T | FarmView {
     setPumpMode: store.setPumpMode,
     setEdgeR2: store.setEdgeR2,
     sendEdgeBuzz: store.sendEdgeBuzz,
+    reasoningLogs: store.reasoningLogs ?? [],
+    addReasoningLog: store.addReasoningLog,
   };
 
   return selector ? selector(farm) : farm;

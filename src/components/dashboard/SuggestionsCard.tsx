@@ -101,7 +101,7 @@ function evaluateRules(): SuggestionRule[] {
       title: "Fungal watch — humidity above 85%",
       message: `Relative humidity is ${hum.toFixed(1)}%. Inspect crop foliage for downy mildew and leaf spot.`,
       actionLabel: "Crop Doctor",
-      actionHref: "/app/camera",
+      actionHref: "/leaf-scanner",
       icon: Bug,
       badgeTone: "bg-[#FBBF24]/15 text-[#FBBF24]",
       borderTone: "border-[#FBBF24]/30",

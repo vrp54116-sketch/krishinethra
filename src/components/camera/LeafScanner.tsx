@@ -66,6 +66,10 @@ export default function LeafScanner() {
   const router = useRouter();
   const farm = useFarm();
   const addSprayPlan = useFarmStore((s) => s.addSprayPlan);
+  const addAlert = useFarmStore((s) => s.addAlert);
+  const addTask = useFarmStore((s) => s.addTask);
+  const addReasoningLog = useFarmStore((s) => s.addReasoningLog);
+  const addScan = useFarmStore((s) => s.addScan);
 
   // Model loading state
   const [modelStatus, setModelStatus] = useState<"loading" | "ready" | "error">("loading");
@@ -238,6 +242,65 @@ export default function LeafScanner() {
 
       saveToHistory(record);
       setSelectedHistoryId(record.id);
+
+      const conf = Math.round(classification.confidence * 100);
+      const isHealthy =
+        classification.label === "Tomato___healthy" ||
+        classification.friendly.toLowerCase().includes("healthy");
+      const nowStamp = new Date().toLocaleTimeString("en-GB", { hour12: false });
+
+      if (isHealthy) {
+        // 2. On healthy scan: append reasoning line "[time] LEAF SCAN → healthy, no action" (no alert, no task).
+        addReasoningLog(`[${nowStamp}] LEAF SCAN → healthy, no action`);
+      } else {
+        // 1. On every completed scan with a disease (not healthy, not Not-A-Leaf):
+        // push an alert "Disease detected: <friendly> (<conf>% confidence) — open Leaf Scanner for treatment";
+        // create a task "Apply treatment: <natural line>" with due date today and source badge "🍅 Leaf Scan";
+        // append an AI Agent Reasoning log line "[time] LEAF SCAN → <friendly> conf <conf>% → treatment task created".
+        const alertText = `Disease detected: ${classification.friendly} (${conf}% confidence) — open Leaf Scanner for treatment`;
+        addAlert({
+          level: "warning",
+          title: alertText,
+          message: alertText,
+          read: false,
+          dedupe: false,
+        });
+
+        const todayISO = new Date().toISOString().slice(0, 10);
+        addTask({
+          title: `Apply treatment: ${classification.natural}`,
+          priority: "high",
+          dueDate: todayISO,
+          done: false,
+          source: "ai",
+          sourceBadge: "🍅 Leaf Scan",
+        });
+
+        addReasoningLog(
+          `[${nowStamp}] LEAF SCAN → ${classification.friendly} conf ${conf}% → treatment task created`,
+        );
+      }
+
+      // Record to store scans so farm health and daily summaries reflect it
+      addScan({
+        source: "upload",
+        imageName: `leaf_scan_${Date.now()}.jpg`,
+        disease: classification.friendly,
+        confidence: classification.confidence,
+        severity: (classification.severity.toLowerCase() as "none" | "mild" | "medium" | "severe") || "medium",
+        affectedPercent: isHealthy ? 0 : Math.max(10, Math.round(classification.confidence * 40)),
+        severityGrid: [
+          [0, 0, 1, 1, 0, 0, 0, 0],
+          [0, 1, 2, 1, 0, 0, 0, 0],
+          [0, 1, 2, 2, 1, 0, 0, 0],
+          [0, 0, 1, 2, 1, 0, 0, 0],
+          [0, 0, 0, 1, 1, 0, 0, 0],
+          [0, 0, 0, 0, 0, 0, 0, 0],
+        ],
+        treatmentNatural: [classification.natural],
+        treatmentChemical: [classification.chemical],
+        resolved: isHealthy,
+      });
 
       toast.success(`Diagnosis: ${classification.friendly}`, {
         description: `Confidence ${Math.round(classification.confidence * 100)}% · Severity: ${classification.severity}`,

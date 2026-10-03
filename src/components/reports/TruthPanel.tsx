@@ -17,7 +17,7 @@ const FEATURES: TruthRow[] = [
   { feature: "Pump state", kind: "hardware", source: "Pump state reported by the farm device" },
   { feature: "Buzzer alerts", kind: "hardware", source: "Buzzer output on the farm device" },
   { feature: "Relay control", kind: "hardware", source: "Physical relay connected to the pump" },
-  { feature: "Leaf disease doctor", kind: "model", source: "On-device trained TensorFlow.js leaf model" },
+  { feature: "Leaf Disease Doctor", kind: "model", source: "11-class tomato model (9 diseases + healthy + not-a-leaf), trained by us on Teachable Machine, runs fully in the browser — works offline" },
   { feature: "KrishiGPT", kind: "api", source: "Gemini API response; requires internet and a configured key" },
   { feature: "Weather forecast", kind: "api", source: "Open-Meteo forecast API; requires internet" },
   { feature: "Mandi prices", kind: "api", source: "data.gov.in market API when configured; demo fallback is labeled" },
@@ -64,8 +64,8 @@ export default function TruthPanel() {
               const badge = row.kind === "hardware" && !isLiveRow ? "SIMULATION-LABELED" : BADGES[row.kind];
               return (
                 <tr key={row.feature} className="border-b border-[var(--line)]/70 align-top">
-                  <td className="px-2 py-2 font-semibold">{t(`truth.feature.${row.feature}`)}</td>
-                  <td className="px-2 py-2 text-[var(--ink-2)]">{t(`truth.source.${row.feature}`)}{row.kind === "hardware" && !hardwareIsLive ? ` — current store source is ${source} (${liveSource}); no live reading is claimed.` : ""}</td>
+                  <td className="px-2 py-2 font-semibold">{(t(`truth.feature.${row.feature}`) !== `truth.feature.${row.feature}` && t(`truth.feature.${row.feature}`)) || row.feature}</td>
+                  <td className="px-2 py-2 text-[var(--ink-2)]">{(t(`truth.source.${row.feature}`) !== `truth.source.${row.feature}` && t(`truth.source.${row.feature}`)) || row.source}{row.kind === "hardware" && !hardwareIsLive ? ` — current store source is ${source} (${liveSource}); no live reading is claimed.` : ""}</td>
                   <td className="px-2 py-2"><span className={`inline-flex whitespace-nowrap border px-2 py-1 font-mono text-[9px] font-bold ${isLiveRow ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300" : row.kind === "simulation" || (row.kind === "hardware" && !hardwareIsLive) ? "border-amber-500/40 bg-amber-500/10 text-amber-300" : "border-sky-500/30 bg-sky-500/10 text-sky-200"}`}>{badge}</span></td>
                 </tr>
               );
