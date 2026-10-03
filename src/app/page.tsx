@@ -233,7 +233,7 @@ export default function MarketingLandingPage() {
         <div className="relative z-10 pt-12 pb-2">
           <MetaBar
             items={[
-              `${todayDate} • AHMEDABAD, IN • SYSTEM VER 4.0.0`,
+              `${todayDate} • AHMEDABAD, IN • SYSTEM VER 5.0.0`,
             ]}
             scrollText="SCROLL TO EXPLORE"
           />
@@ -1285,7 +1285,7 @@ Stop watering guesses. Start growing data.`}
             <div className="lg:col-span-4 border-r-2 border-[var(--moss)] pr-4 flex flex-col items-start lg:items-end justify-center font-editorial-mono text-xs uppercase tracking-[0.14em] text-[var(--ink-2)]">
               <span>№ KN-2026-EARLY-ACCESS</span>
               <span className="text-[var(--moss)] font-bold mt-1">BATCH 04 // OPEN</span>
-              <span className="text-[var(--ink-3)] mt-1">BUILD V4.0.0-PROD</span>
+              <span className="text-[var(--ink-3)] mt-1">BUILD V5.0.0-PROD</span>
             </div>
           </div>
 
@@ -1496,6 +1496,7 @@ Stop watering guesses. Start growing data.`}
             </span>
             <span>DEPLOYED ON VERCEL • MQTT EDGE</span>
             <span>© 2026 KRISHINETHRA AI</span>
+            <span className="rounded-full border border-[var(--line)] px-3 py-1 font-bold text-[var(--ink)]">v5.0.0 • BRC Edition</span>
           </div>
         </footer>
       </main>
