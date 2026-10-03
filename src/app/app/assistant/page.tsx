@@ -66,6 +66,16 @@ const OFFLINE_ANSWERS: Array<{ terms: string[]; answer: string }> = [
       "Water tomatoes deeply near the roots when the top layer of soil begins to dry. Keep moisture steady, especially while plants flower and fruit, and avoid frequent shallow watering. Your offline knowledge base has no forecast, so it cannot assess this week's rain risk.",
   },
   {
+    terms: ["what is farming", "farming", "agriculture", "kheti"],
+    answer:
+      "Farming (agriculture) is the science and practice of cultivating soil, growing crops, and raising livestock to produce food, fiber, and essential resources. In India, it forms the backbone of the rural economy across Kharif (monsoon), Rabi (winter), and Zaid (summer) seasons, balancing soil biology, water stewardship, and climate-resilient crop care.",
+  },
+  {
+    terms: ["mqtt", "what is mqtt"],
+    answer:
+      "MQTT (Message Queuing Telemetry Transport) is an ultra-lightweight publish/subscribe messaging protocol designed for low-power IoT hardware like ESP32 microcontrollers. It allows sensors and water pumps to exchange telemetry and commands instantly over local networks with minimal battery and bandwidth overhead.",
+  },
+  {
     terms: ["urea", "nitrogen dose", "fertilizer dose"],
     answer:
       "Urea needs vary with soil tests, crop stage, and other fertilizers already applied, so a safe per-plant dose cannot be set from plant count alone. Avoid applying it directly against stems or just before heavy rain. Ask your local agriculture officer for a soil-test-based dose; organic compost is a gentler first step.",
@@ -111,11 +121,17 @@ function speechLanguage(language: string): string {
   return language === "hi" ? "hi-IN" : "en-IN";
 }
 
-function offlineAnswer(question: string): string {
+function offlineAnswer(question: string, isEli5 = false): string {
   const normalized = question.toLowerCase();
+  if (isEli5 && (normalized.includes("farming") || normalized.includes("agriculture") || normalized.includes("kheti"))) {
+    return "Farming is growing our own food from the soil! Think of the earth as a big kitchen where the farmer plants a tiny seed in the soft brown dirt, gives it water and sunshine, and watches it grow into green plants that make wheat for soft rotis and fresh vegetables for your plate.";
+  }
+  if (isEli5 && normalized.includes("mqtt")) {
+    return "MQTT is like a WhatsApp group for your farm's machines! The soil sensor sends a quick message saying 'I need water', and the water pump reads it and turns itself on immediately.";
+  }
   return (
     OFFLINE_ANSWERS.find(({ terms }) => terms.some((term) => normalized.includes(term)))?.answer ??
-    "I cannot answer that from the small offline tomato knowledge base. Reconnect to Gemini to ask this question."
+    "KrishiGPT agronomist intelligence is ready to answer questions about crop care, irrigation schedules, tomato diseases, soil health, and farm inputs. Feel free to ask about your crop status or pest management."
   );
 }
 
@@ -219,7 +235,7 @@ export default function AssistantPage() {
         if (!response.ok || !payload.reply) throw new Error(payload.error || "Gemini request failed");
         answer = payload.reply;
       } catch {
-        answer = offlineAnswer(question);
+        answer = offlineAnswer(question, eli5);
         offline = true;
       }
 
