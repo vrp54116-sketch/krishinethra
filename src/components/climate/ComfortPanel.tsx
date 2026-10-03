@@ -19,8 +19,13 @@ function outsideDistance(value: number, [low, high]: [number, number]) {
   return value < low ? low - value : value > high ? value - high : 0;
 }
 
+function factorDistance(factor: Factor) {
+  if (factor.key === "aqi" && factor.value >= 150) return factor.value - 149;
+  return outsideDistance(factor.value, factor.optimal);
+}
+
 function penalty(factor: Factor) {
-  const distance = outsideDistance(factor.value, factor.optimal);
+  const distance = factorDistance(factor);
   const [tolLow, tolHigh] = factor.tolerable;
   const [idealLow, idealHigh] = factor.optimal;
   const scale = Math.max(idealLow - tolLow, tolHigh - idealHigh, 1);
@@ -35,7 +40,7 @@ export default function ComfortPanel() {
     { key: "temp", label: "Temperature", value: farm.temp, unit: "°C", optimal: [18, 27], tolerable: [10, 35], weight: 35 },
     { key: "humidity", label: "Humidity", value: farm.hum, unit: "%", optimal: [60, 80], tolerable: [40, 90], weight: 25 },
     { key: "soil", label: "Soil moisture", value: farm.soil, unit: "%", optimal: [30, 75], tolerable: [0, 100], weight: 25 },
-    { key: "aqi", label: "Air quality", value: farm.aqi, unit: " AQI", optimal: [0, 150], tolerable: [0, 300], weight: 15 },
+    { key: "aqi", label: "Air quality", value: farm.aqi, unit: " AQI", optimal: [0, 149.999], tolerable: [0, 300], weight: 15 },
   ];
 
   const { score, worst } = useMemo(() => {
@@ -46,7 +51,7 @@ export default function ComfortPanel() {
     };
   }, [farm.temp, farm.hum, farm.soil, farm.aqi]);
 
-  const outside = outsideDistance(worst.factor.value, worst.factor.optimal);
+  const outside = factorDistance(worst.factor);
   const delta = outside.toFixed(worst.factor.key === "aqi" ? 0 : 1);
   const reason = outside === 0
     ? "All measured factors are inside their optimal bands."
@@ -60,7 +65,7 @@ export default function ComfortPanel() {
     <Card className="h-full">
       <CardHeader
         title="Crop Comfort"
-        subtitle="Tomato comfort score from current sensor readings"
+        subtitle="Temperature comfort zone plus a weighted score from four live factors"
         action={<span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2.5 py-1 text-[9px] font-extrabold tracking-wider text-emerald-200">SCIENCE-RULES • LIVE DATA</span>}
       />
       <div className="mb-4 flex items-center gap-3">
@@ -75,22 +80,22 @@ export default function ComfortPanel() {
       <div className="mb-4">
         <div
           className="relative h-4 rounded-full border border-white/10"
-          style={{ background: "linear-gradient(90deg, #ef4444 0%, #ef4444 35%, #22c55e 35%, #22c55e 70%, #ef4444 70%, #ef4444 100%)" }}
+          style={{ background: "linear-gradient(90deg, #ef4444 0%, #ef4444 40%, #22c55e 40%, #22c55e 60%, #ef4444 60%, #ef4444 100%)" }}
           role="meter"
-          aria-label="Crop comfort score"
+          aria-label="Tomato temperature comfort zone"
           aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={score}
+          aria-valuemax={45}
+          aria-valuenow={farm.temp}
         >
-          <span className="absolute -top-1.5 h-7 w-1.5 rounded-full border border-white bg-white shadow-[0_0_10px_rgba(255,255,255,0.85)]" style={{ left: `${score}%`, transform: "translateX(-50%)" }} />
+          <span className="absolute -top-1.5 h-7 w-1.5 rounded-full border border-white bg-white shadow-[0_0_10px_rgba(255,255,255,0.85)]" style={{ left: `${Math.max(0, Math.min(100, (farm.temp / 45) * 100))}%`, transform: "translateX(-50%)" }} />
         </div>
-        <div className="mt-1 flex justify-between text-[9px] font-bold uppercase tracking-widest text-zinc-500"><span>Stress</span><span>Comfort</span><span>Stress</span></div>
+        <div className="mt-1 flex justify-between text-[9px] font-bold tabular-nums text-zinc-500"><span>0°C · cold stress</span><span>18–27°C · optimal</span><span>45°C · heat stress</span></div>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         {factors.map((factor) => {
           const value = factor.value;
-          const distance = outsideDistance(value, factor.optimal);
+          const distance = factorDistance(factor);
           return (
             <div key={factor.key} className="rounded-xl border border-white/5 bg-black/30 px-3 py-2">
               <p className="text-[10px] font-bold text-zinc-500">{factor.label}</p>

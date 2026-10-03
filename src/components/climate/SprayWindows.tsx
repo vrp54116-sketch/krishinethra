@@ -19,6 +19,21 @@ type HourlyForecast = {
 
 type SprayWindow = { start: number; end: number };
 
+function isHourlyForecast(value: unknown): value is HourlyForecast {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Partial<HourlyForecast>;
+  return Array.isArray(data.time) &&
+    Array.isArray(data.temperature_2m) &&
+    Array.isArray(data.relative_humidity_2m) &&
+    Array.isArray(data.wind_speed_10m) &&
+    Array.isArray(data.precipitation_probability) &&
+    data.time.length === data.temperature_2m.length &&
+    data.time.length === data.relative_humidity_2m.length &&
+    data.time.length === data.wind_speed_10m.length &&
+    data.time.length === data.precipitation_probability.length &&
+    data.time.every((time) => typeof time === "string");
+}
+
 function parseTime(value: string) {
   return new Date(/(?:Z|[+-]\d\d:\d\d)$/.test(value) ? value : `${value}:00+05:30`).getTime();
 }
@@ -36,12 +51,9 @@ function dayLabel(timestamp: number, now: number) {
 function timeLabel(timestamp: number) {
   return new Intl.DateTimeFormat("en-IN", {
     timeZone: "Asia/Kolkata",
-    weekday: "short",
-    day: "numeric",
-    month: "short",
     hour: "2-digit",
     minute: "2-digit",
-    hour12: false,
+    hourCycle: "h23",
   }).format(new Date(timestamp));
 }
 
@@ -59,7 +71,10 @@ function qualifyingWindows(hourly: HourlyForecast, now: number, aqi: number): Sp
   if (aqi >= 150) return windows;
   for (let i = 0; i + 2 < hourly.time.length; i++) {
     const start = parseTime(hourly.time[i]);
-    const end = parseTime(hourly.time[i + 2]) + 60 * 60 * 1000;
+    const secondHour = parseTime(hourly.time[i + 1]);
+    const thirdHour = parseTime(hourly.time[i + 2]);
+    if (!Number.isFinite(start) || secondHour - start !== 60 * 60 * 1000 || thirdHour - secondHour !== 60 * 60 * 1000) continue;
+    const end = thirdHour + 60 * 60 * 1000;
     if (start < now || end > limit) continue;
     const qualifies = [i, i + 1, i + 2].every((hour) =>
       Number.isFinite(hourly.temperature_2m[hour]) &&
@@ -85,30 +100,48 @@ export default function SprayWindows() {
   const [hourly, setHourly] = useState<HourlyForecast | null>(null);
   const [now, setNow] = useState(0);
   const [failed, setFailed] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
+    setFailed(false);
     const refreshClock = () => setNow(Date.now());
     refreshClock();
     const clock = window.setInterval(refreshClock, 60_000);
+    const timeout = window.setTimeout(() => controller.abort(), 12_000);
     void (async () => {
       try {
-        const cached = localStorage.getItem(CACHE_KEY);
-        if (cached) {
-          const entry = JSON.parse(cached) as { fetchedAt: number; hourly: HourlyForecast };
-          if (Date.now() - entry.fetchedAt < CACHE_MS && Array.isArray(entry.hourly?.time)) {
-            if (active) setHourly(entry.hourly);
-            return;
+        let cached: string | null = null;
+        try {
+          cached = localStorage.getItem(CACHE_KEY);
+        } catch {
+          // Continue with a live request if browser storage is unavailable.
+        }
+        if (cached && retry === 0) {
+          try {
+            const entry = JSON.parse(cached) as { fetchedAt?: number; hourly?: unknown };
+            const age = Date.now() - Number(entry.fetchedAt);
+            if (Number.isFinite(age) && age >= 0 && age < CACHE_MS && isHourlyForecast(entry.hourly)) {
+              if (active) setHourly(entry.hourly);
+              return;
+            }
+          } catch {
+            // Replace malformed cache data with a fresh forecast request.
           }
         }
-        const response = await fetch(FORECAST_URL);
+        const response = await fetch(FORECAST_URL, { signal: controller.signal });
         if (!response.ok) throw new Error(`Open-Meteo HTTP ${response.status}`);
         const json = await response.json() as { hourly?: HourlyForecast };
         const data = json.hourly;
         if (!data || !Array.isArray(data.time) || !Array.isArray(data.temperature_2m) ||
             !Array.isArray(data.relative_humidity_2m) || !Array.isArray(data.wind_speed_10m) ||
             !Array.isArray(data.precipitation_probability)) throw new Error("Hourly forecast fields are missing");
-        localStorage.setItem(CACHE_KEY, JSON.stringify({ fetchedAt: Date.now(), hourly: data }));
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({ fetchedAt: Date.now(), hourly: data }));
+        } catch {
+          // The forecast remains usable for this page even when it cannot be cached.
+        }
         if (active) setHourly(data);
       } catch {
         if (active) setFailed(true);
@@ -116,9 +149,11 @@ export default function SprayWindows() {
     })();
     return () => {
       active = false;
+      controller.abort();
       window.clearInterval(clock);
+      window.clearTimeout(timeout);
     };
-  }, []);
+  }, [retry]);
 
   const windows = useMemo(() => hourly && now ? qualifyingWindows(hourly, now, aqi) : [], [hourly, now, aqi]);
 
@@ -126,7 +161,10 @@ export default function SprayWindows() {
     <Card>
       <CardHeader title="Safe spray windows" subtitle="Three consecutive forecast hours · Ahmedabad · Open-Meteo" />
       {failed && !hourly ? (
-        <p className="rounded-xl border border-amber-400/20 bg-amber-500/5 px-3 py-3 text-sm text-amber-100">Hourly forecast unavailable. Check the connection to Open-Meteo and reload.</p>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/20 bg-amber-500/5 px-3 py-3">
+          <p className="text-sm text-amber-100">Hourly forecast unavailable. Check the connection to Open-Meteo.</p>
+          <button type="button" onClick={() => setRetry((value) => value + 1)} className="rounded-lg border border-amber-300/30 px-3 py-1.5 text-xs font-bold text-amber-100 hover:bg-amber-300/10">Retry forecast</button>
+        </div>
       ) : !hourly ? (
         <p className="animate-pulse rounded-xl bg-white/5 px-3 py-3 text-sm text-zinc-400">Loading live hourly forecast…</p>
       ) : aqi >= 150 ? (
@@ -137,7 +175,7 @@ export default function SprayWindows() {
         <div className="flex flex-wrap gap-2">
           {windows.map((window) => (
             <span key={window.start} className="rounded-full border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-xs font-bold tabular-nums text-emerald-100">
-              {dayLabel(window.start, now)} {timeLabel(window.start)}–{new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(window.end))} · {countdown(window.start, now)}
+              {dayLabel(window.start, now)} {timeLabel(window.start)}–{timeLabel(window.end)} · {countdown(window.start, now)}
             </span>
           ))}
         </div>
