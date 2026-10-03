@@ -112,6 +112,8 @@ const NAV_ITEMS: NavItem[] = [
 const PAGE_STAMPS: Record<string, string> = {
   "/app/dashboard": "DASHBOARD // LIVE MONITORING",
   "/app/camera": "CAMERA // LEAF SCANNER",
+  "/leaf-scanner": "LEAF SCANNER // REAL TOMATO DOCTOR",
+  "/app/leaf-scanner": "LEAF SCANNER // REAL TOMATO DOCTOR",
   "/app/irrigation": "IRRIGATION // FLOW CONTROL",
   "/app/climate": "CLIMATE // AGRI-WEATHER",
   "/app/sensors": "SENSORS // TELEMETRY & HEALTH",

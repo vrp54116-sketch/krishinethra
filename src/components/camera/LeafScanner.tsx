@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   Camera,
   CheckCircle2,
+  Clock,
   FlaskConical,
   History,
   MessageCircle,
@@ -22,22 +23,43 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFarm, useFarmStore } from "@/lib/store";
 import {
+  loadModel,
   classifyLeafImage,
-  computeDiagnosis,
-  getOrLoadModel,
-  type DiagnosisData,
-  type StoredLeafScan,
-} from "@/lib/tf-leaf-detector";
+  DISEASE_INFO,
+  REJECTION_MESSAGE,
+  type LeafClassification,
+} from "@/lib/leaf-model";
 
-const STORAGE_KEY = "krishinethra_leaf_scans_v1";
+const STORAGE_KEY = "krishinethra_leaf_scans_v2";
 
-export function diseaseDotColor(disease: string): string {
-  const d = disease.toLowerCase();
-  if (d.includes("healthy")) return "#22c55e";
-  if (d.includes("early blight")) return "#ea580c";
-  if (d.includes("late blight")) return "#ef4444";
-  if (d.includes("leaf mold")) return "#eab308";
-  return "#38bdf8";
+export interface StoredScanItem {
+  id: string;
+  thumbnail: string; // 96px dataURL
+  date: string;
+  timestamp: number;
+  label: string;
+  friendly: string;
+  scientific: string;
+  confidence: number;
+  severity: "Low" | "Medium" | "High";
+  spreadRisk: "High" | "Low" | "none";
+  spreadRiskText: string;
+  natural: string;
+  chemical: string;
+  prevention: string[];
+  isRejected: boolean;
+  rejectionMessage: string | null;
+}
+
+export function diseaseDotColor(name: string): string {
+  const d = name.toLowerCase();
+  if (d.includes("healthy")) return "#22c55e"; // green
+  if (d.includes("virus")) return "#ef4444"; // red
+  if (d.includes("spider")) return "#f97316"; // orange
+  if (d.includes("mold")) return "#eab308"; // yellow
+  if (d.includes("blight")) return "#f43f5e"; // rose
+  if (d.includes("spot")) return "#a855f7"; // purple
+  return "#38bdf8"; // sky
 }
 
 export default function LeafScanner() {
@@ -51,27 +73,34 @@ export default function LeafScanner() {
   // Scanner states
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
-  const [rejectionMessage, setRejectionMessage] = useState<string | null>(null);
-  const [diagnosis, setDiagnosis] = useState<DiagnosisData | null>(null);
-  const [history, setHistory] = useState<StoredLeafScan[]>([]);
+  const [result, setResult] = useState<LeafClassification | null>(null);
+  const [rejection, setRejection] = useState<string | null>(null);
+  const [history, setHistory] = useState<StoredScanItem[]>([]);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string | null>(null);
 
-  // Single-frame camera capture states
+  // Single-frame camera capture state
   const [cameraLoading, setCameraLoading] = useState(false);
   const mediaStreamRef = useRef<MediaStream | null>(null);
 
   // Hidden file input
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // 1. MODEL LOADING: on page mount load with tf.loadLayersModel('/model/model.json')
+  // 1. On mount show spinner "Loading AI model…" via loadModel();
+  // if null show honest error card "Model unavailable — check that public/model files exist"
+  // and disable scan buttons.
   useEffect(() => {
     let isMounted = true;
-    getOrLoadModel()
-      .then(() => {
-        if (isMounted) setModelStatus("ready");
+    loadModel()
+      .then((m) => {
+        if (!isMounted) return;
+        if (m) {
+          setModelStatus("ready");
+        } else {
+          setModelStatus("error");
+        }
       })
       .catch((err) => {
-        console.error("Failed to load leaf disease model:", err);
+        console.error("Leaf model loading error:", err);
         if (isMounted) setModelStatus("error");
       });
 
@@ -80,7 +109,7 @@ export default function LeafScanner() {
     };
   }, []);
 
-  // Load history from localStorage
+  // Load history from localStorage (last 10 scans)
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -91,14 +120,14 @@ export default function LeafScanner() {
         }
       }
     } catch (e) {
-      console.error("Failed to parse leaf scan history from localStorage", e);
+      console.error("Failed to load leaf scan history from localStorage", e);
     }
   }, []);
 
-  // Save history to localStorage
-  const saveToHistory = (scan: StoredLeafScan) => {
+  // Save scan to history (last 10 scans in localStorage)
+  const saveToHistory = (item: StoredScanItem) => {
     setHistory((prev) => {
-      const updated = [scan, ...prev.filter((item) => item.id !== scan.id)].slice(0, 10);
+      const updated = [item, ...prev.filter((i) => i.id !== item.id)].slice(0, 10);
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       } catch (e) {
@@ -108,98 +137,113 @@ export default function LeafScanner() {
     });
   };
 
-  // Helper to create small thumbnail
-  const createThumbnail = (canvas: HTMLCanvasElement): string => {
+  // Generate 96px thumbnail dataURL as requested
+  const create96pxThumbnail = (sourceCanvas: HTMLCanvasElement): string => {
     try {
       const thumb = document.createElement("canvas");
-      thumb.width = 160;
-      thumb.height = 160;
+      thumb.width = 96;
+      thumb.height = 96;
       const ctx = thumb.getContext("2d");
       if (ctx) {
-        ctx.drawImage(canvas, 0, 0, 160, 160);
-        return thumb.toDataURL("image/jpeg", 0.7);
+        ctx.drawImage(sourceCanvas, 0, 0, 96, 96);
+        return thumb.toDataURL("image/jpeg", 0.85);
       }
     } catch {
       // fallback
     }
-    return canvas.toDataURL("image/jpeg", 0.6);
+    return sourceCanvas.toDataURL("image/jpeg", 0.7);
   };
 
   // Run real analysis on 224x224 canvas
-  const analyzeImageCanvas = async (sourceCanvas: HTMLCanvasElement, fullDataUrl: string) => {
+  const analyzeCanvas = async (sourceCanvas: HTMLCanvasElement) => {
     setScanning(true);
-    setRejectionMessage(null);
-    setDiagnosis(null);
+    setRejection(null);
+    setResult(null);
     setSelectedHistoryId(null);
 
     try {
-      // 4. CLASSIFY + REJECT: on scan, draw image to 224x224 canvas tensor (normalize /255, expandDims), run model.predict
-      const result = await classifyLeafImage(sourceCanvas);
+      const classification = await classifyLeafImage(sourceCanvas, farm.temp, farm.hum);
 
-      // Rejection check:
-      // "If top class is 'Not A Leaf' OR top confidence < 0.60 → show a red card:
-      // 'This does not look like a leaf. Please upload a clear photo of ONE tomato leaf on a plain background.' and stop."
-      if (result.isRejected) {
-        setRejectionMessage(
-          "This does not look like a leaf. Please upload a clear photo of ONE tomato leaf on a plain background."
-        );
-        const scanRecord: StoredLeafScan = {
+      if (!classification) {
+        toast.error("Analysis failed", {
+          description: "Model unavailable — check that public/model files exist",
+        });
+        setModelStatus("error");
+        return;
+      }
+
+      const thumbnail96 = create96pxThumbnail(sourceCanvas);
+      const scanDate = new Date().toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+
+      // REJECTION RULE: if label === "Not A Leaf" OR confidence < 0.60
+      if (classification.isRejected) {
+        setRejection(REJECTION_MESSAGE);
+        setResult(null);
+
+        const record: StoredScanItem = {
           id: `scan_${Date.now()}`,
-          thumbnail: createThumbnail(sourceCanvas),
-          date: new Date().toLocaleDateString("en-IN", {
-            day: "numeric",
-            month: "short",
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
+          thumbnail: thumbnail96,
+          date: scanDate,
           timestamp: Date.now(),
-          className: result.className,
-          confidence: result.confidence,
-          severity: "Low",
-          spreadRisk: "Low",
-          naturalTreatment: "",
-          chemicalFallback: null,
+          label: classification.label,
+          friendly: classification.friendly,
+          scientific: classification.scientific,
+          confidence: classification.confidence,
+          severity: classification.severity,
+          spreadRisk: classification.spreadRisk,
+          spreadRiskText: classification.spreadRiskText,
+          natural: classification.natural,
+          chemical: classification.chemical,
+          prevention: classification.prevention,
+          isRejected: true,
+          rejectionMessage: REJECTION_MESSAGE,
         };
-        saveToHistory(scanRecord);
-        setSelectedHistoryId(scanRecord.id);
+
+        saveToHistory(record);
+        setSelectedHistoryId(record.id);
+
         toast.error("Leaf not recognized", {
-          description: "Please provide a clear single tomato leaf photo.",
+          description: "Please upload a clear photo of ONE tomato leaf.",
         });
         return;
       }
 
-      // Valid diagnosis
-      const diag = computeDiagnosis(result.className, result.confidence, farm.temp, farm.hum);
-      setDiagnosis(diag);
+      // Valid leaf diagnosis
+      setRejection(null);
+      setResult(classification);
 
-      // 7. Save to localStorage (last 10 scans)
-      const thumbnail = createThumbnail(sourceCanvas);
-      const scanRecord: StoredLeafScan = {
+      const record: StoredScanItem = {
         id: `scan_${Date.now()}`,
-        thumbnail,
-        date: new Date().toLocaleDateString("en-IN", {
-          day: "numeric",
-          month: "short",
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        thumbnail: thumbnail96,
+        date: scanDate,
         timestamp: Date.now(),
-        className: diag.disease,
-        confidence: diag.confidence,
-        severity: diag.severity,
-        spreadRisk: diag.spreadRisk,
-        naturalTreatment: diag.naturalTreatment,
-        chemicalFallback: diag.chemicalFallback,
+        label: classification.label,
+        friendly: classification.friendly,
+        scientific: classification.scientific,
+        confidence: classification.confidence,
+        severity: classification.severity,
+        spreadRisk: classification.spreadRisk,
+        spreadRiskText: classification.spreadRiskText,
+        natural: classification.natural,
+        chemical: classification.chemical,
+        prevention: classification.prevention,
+        isRejected: false,
+        rejectionMessage: null,
       };
 
-      saveToHistory(scanRecord);
-      setSelectedHistoryId(scanRecord.id);
+      saveToHistory(record);
+      setSelectedHistoryId(record.id);
 
-      toast.success(`Diagnosis: ${diag.disease}`, {
-        description: `Confidence ${Math.round(diag.confidence * 100)}% · Severity: ${diag.severity}`,
+      toast.success(`Diagnosis: ${classification.friendly}`, {
+        description: `Confidence ${Math.round(classification.confidence * 100)}% · Severity: ${classification.severity}`,
       });
     } catch (err) {
-      console.error("Leaf analysis error:", err);
+      console.error("Leaf inference error:", err);
       toast.error("Analysis failed", {
         description: "An error occurred during TensorFlow inference.",
       });
@@ -232,11 +276,11 @@ export default function LeafScanner() {
         if (ctx) {
           ctx.drawImage(img, 0, 0, 224, 224);
           setPreviewUrl(url);
-          void analyzeImageCanvas(canvas, url);
+          void analyzeCanvas(canvas);
         }
       };
       img.onerror = () => {
-        toast.error("Could not load image");
+        toast.error("Could not load image file");
       };
       img.src = url;
     };
@@ -246,8 +290,8 @@ export default function LeafScanner() {
     e.target.value = "";
   };
 
-  // Start single-frame camera capture
-  const startCamera = async () => {
+  // Start single-frame camera capture via getUserMedia
+  const startCameraCapture = async () => {
     setCameraLoading(true);
 
     try {
@@ -270,56 +314,60 @@ export default function LeafScanner() {
       video.playsInline = true;
       video.muted = true;
       video.srcObject = stream;
+
       await new Promise<void>((resolve, reject) => {
         video.onloadeddata = () => resolve();
-        video.onerror = () => reject(new Error("Could not read a frame from the camera."));
+        video.onerror = () => reject(new Error("Could not read frame from camera."));
       });
       await video.play();
+
       const canvas = document.createElement("canvas");
       canvas.width = 224;
       canvas.height = 224;
       const ctx = canvas.getContext("2d", { willReadFrequently: true });
-      if (!ctx) throw new Error("Could not initialize image capture.");
+      if (!ctx) throw new Error("Could not initialize image capture context.");
+
       ctx.drawImage(video, 0, 0, 224, 224);
       const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
-      stopCameraStream();
+
+      // Stop camera stream tracks immediately after capturing single frame
+      stopCamera();
+
       setPreviewUrl(dataUrl);
-      void analyzeImageCanvas(canvas, dataUrl);
+      void analyzeCanvas(canvas);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Camera access denied.";
       toast.error("Camera unavailable", {
         description: msg,
       });
     } finally {
-      stopCameraStream();
+      stopCamera();
       setCameraLoading(false);
     }
   };
 
-  // Stop camera stream tracks
-  const stopCameraStream = () => {
+  const stopCamera = () => {
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
     }
   };
 
-  // Clean up camera on unmount
   useEffect(() => {
     return () => {
-      stopCameraStream();
+      stopCamera();
     };
   }, []);
 
-  // Action: Add to Spray Plan
+  // [Add to Spray Plan] button handler
   const handleAddToSprayPlan = () => {
-    if (!diagnosis) return;
+    if (!result) return;
 
     const todayISO = new Date().toISOString().slice(0, 10);
     const steps = [
       {
         day: 1,
-        action: `Natural treatment: ${diagnosis.naturalTreatment}`,
+        action: `Natural treatment: ${result.natural}`,
         done: false,
       },
       {
@@ -327,54 +375,86 @@ export default function LeafScanner() {
         action: "Inspect foliage for disease spread or new lesions",
         done: false,
       },
-      {
-        day: 5,
-        action: `Repeat application: ${diagnosis.naturalTreatment}`,
-        done: false,
-      },
-      ...(diagnosis.chemicalFallback
+      ...(result.chemical &&
+      result.chemical !== "None required" &&
+      result.chemical !== "None effective against viruses"
         ? [
             {
               day: 7,
-              action: `Chemical emergency fallback: ${diagnosis.chemicalFallback}`,
+              action: `Chemical emergency fallback: ${result.chemical}`,
               done: false,
             },
           ]
-        : []),
+        : [
+            {
+              day: 5,
+              action: `Repeat application: ${result.natural}`,
+              done: false,
+            },
+          ]),
     ];
 
     addSprayPlan({
-      disease: diagnosis.disease,
+      disease: result.friendly,
       zone: "Zone A",
       startDate: todayISO,
       steps,
     });
 
-    toast.success("Added to Spray Plan", {
-      description: `Plan created for ${diagnosis.disease}. Check Spray Planner for schedule.`,
-    });
+    toast.success("Added to spray plan");
   };
 
-  // Action: Ask KrishiGPT about this
+  // [Ask KrishiGPT about this] button handler
   const handleAskKrishiGPT = () => {
-    if (!diagnosis) return;
-    const query = `Tell me more about ${diagnosis.disease} on tomato plants and how to stop it spreading`;
+    if (!result) return;
+    const query = `Tell me more about ${result.friendly} on tomato and how to stop it spreading`;
     router.push(`/assistant?q=${encodeURIComponent(query)}`);
   };
 
-  // Click-to-reopen a history item
-  const handleReopenHistory = (item: StoredLeafScan) => {
+  // Click reopens that result card from history
+  const handleReopenHistory = (item: StoredScanItem) => {
     setSelectedHistoryId(item.id);
     setPreviewUrl(item.thumbnail);
-    const isRejected = item.className === "Not A Leaf" || item.confidence < 0.6;
-    setRejectionMessage(isRejected
-      ? "This does not look like a leaf. Please upload a clear photo of ONE tomato leaf on a plain background."
-      : null);
 
-    // Reconstruct diagnosis from item
-    setDiagnosis(isRejected ? null : computeDiagnosis(item.className, item.confidence, farm.temp, farm.hum));
+    if (item.isRejected) {
+      setRejection(REJECTION_MESSAGE);
+      setResult(null);
+      toast.info("Reopened scan: Rejected non-leaf photo");
+      return;
+    }
 
-    toast.info(`Reopened: ${item.className}`, {
+    setRejection(null);
+
+    // Recompute live risk with current temperature and humidity
+    const info = DISEASE_INFO[item.label] || {
+      friendly: item.friendly,
+      scientific: item.scientific,
+      natural: item.natural,
+      chemical: item.chemical,
+      prevention: item.prevention,
+      risk: () => ({ level: item.spreadRisk, isHigh: item.spreadRisk === "High", text: item.spreadRiskText, toString: () => item.spreadRiskText, valueOf: () => item.spreadRiskText }),
+    };
+
+    const liveRisk = info.risk(farm.temp, farm.hum);
+
+    const reloaded: LeafClassification = {
+      label: item.label,
+      friendly: item.friendly,
+      scientific: item.scientific,
+      confidence: item.confidence,
+      severity: item.severity,
+      spreadRisk: liveRisk.level,
+      spreadRiskText: liveRisk.text,
+      natural: item.natural,
+      chemical: item.chemical,
+      prevention: item.prevention,
+      isRejected: false,
+      rejectionMessage: null,
+      allProbabilities: [],
+    };
+
+    setResult(reloaded);
+    toast.info(`Reopened: ${item.friendly}`, {
       description: `Scanned on ${item.date}`,
     });
   };
@@ -390,27 +470,33 @@ export default function LeafScanner() {
         onChange={handleFileUpload}
       />
 
-      {/* Model Loading Spinner / Error Banner */}
+      {/* Model Loading Spinner */}
       {modelStatus === "loading" && (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-8 text-center">
           <div className="h-8 w-8 animate-spin rounded-full border-3 border-emerald-500/20 border-t-emerald-400" />
           <p className="mt-3 text-sm font-bold text-emerald-300">Loading AI model…</p>
-          <p className="mt-1 text-xs text-zinc-400">Loading TensorFlow.js weights for real on-device diagnosis</p>
+          <p className="mt-1 text-xs text-zinc-400">
+            Initializing 11-class tomato neural network on-device
+          </p>
         </div>
       )}
 
+      {/* Honest Error Card */}
       {modelStatus === "error" && (
-        <div className="rounded-2xl border border-red-500/40 bg-red-500/10 p-5 text-center">
-          <AlertTriangle className="mx-auto h-7 w-7 text-red-400 mb-2" />
-          <h4 className="text-base font-bold text-red-200">Model unavailable — check your connection</h4>
+        <div className="rounded-2xl border-2 border-red-500/50 bg-red-950/60 p-6 text-center text-red-200">
+          <AlertTriangle className="mx-auto h-8 w-8 text-red-400 mb-2" />
+          <h4 className="text-base font-extrabold text-red-100">
+            Model unavailable — check that public/model files exist
+          </h4>
           <p className="mt-1 text-xs text-red-300/80">
-            Could not fetch neural network weights from /model/model.json. Scan buttons are disabled.
+            Could not load TensorFlow.js model weights from /model/tomato/model.json or fallback /model/model.json.
+            Scanning buttons are disabled.
           </p>
         </div>
       )}
 
       {/* ============================================================ */}
-      {/* 2. SCANNER CONTROLS & PREVIEW TILE                          */}
+      {/* SCANNER CONTROLS & PREVIEW TILE                              */}
       {/* Keeps ONLY: [Upload Image], [Capture Frame], preview tile    */}
       {/* ============================================================ */}
       <div className="card-surface rounded-2xl border border-white/10 p-5 sm:p-6">
@@ -418,35 +504,39 @@ export default function LeafScanner() {
           <div>
             <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
               <ScanLine className="h-5 w-5 text-emerald-400" />
-              Real Leaf Disease Doctor
+              Real Tomato Leaf Doctor
             </h2>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Powered by on-device TensorFlow.js · Analyzes 5 tomato leaf conditions
+              11-class on-device TensorFlow.js model · 10 tomato conditions + non-leaf rejection
             </p>
           </div>
           <div className="flex items-center gap-2">
             <span
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-mono font-bold",
+                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-mono font-bold border",
                 modelStatus === "ready"
-                  ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                  ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
                   : modelStatus === "loading"
-                    ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
-                    : "bg-red-500/15 text-red-300 border border-red-500/30"
+                    ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                    : "bg-red-500/15 text-red-300 border-red-500/30"
               )}
             >
               <span
                 className={cn(
                   "h-2 w-2 rounded-full",
-                  modelStatus === "ready" ? "bg-emerald-400 animate-pulse" : modelStatus === "loading" ? "bg-amber-400" : "bg-red-400"
+                  modelStatus === "ready"
+                    ? "bg-emerald-400 animate-pulse"
+                    : modelStatus === "loading"
+                      ? "bg-amber-400"
+                      : "bg-red-400"
                 )}
               />
-              {modelStatus === "ready" ? "AI MODEL ONLINE" : modelStatus === "loading" ? "MODEL LOADING" : "OFFLINE"}
+              {modelStatus === "ready" ? "11-CLASS MODEL ONLINE" : modelStatus === "loading" ? "LOADING MODEL" : "OFFLINE"}
             </span>
           </div>
         </div>
 
-        {/* Buttons Row: [Upload Image] (jpg/png) & [Capture Frame] (getUserMedia) */}
+        {/* Buttons Row: [Upload Image] & [Capture Frame] */}
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             type="button"
@@ -460,7 +550,7 @@ export default function LeafScanner() {
 
           <button
             type="button"
-            onClick={startCamera}
+            onClick={startCameraCapture}
             disabled={modelStatus !== "ready" || scanning || cameraLoading}
             className="flex items-center justify-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm font-extrabold text-sky-200 transition-all hover:bg-sky-500/20 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
           >
@@ -530,12 +620,12 @@ export default function LeafScanner() {
       </div>
 
       {/* ============================================================ */}
-      {/* 4 & 5. RESULT CARDS (Hidden until a scan finishes)           */}
+      {/* RESULT CARDS                                                 */}
       {/* Rejection Card OR Diagnosis Card                             */}
       {/* ============================================================ */}
       <AnimatePresence mode="wait">
         {/* REJECTION CARD: Red Card when Not A Leaf or confidence < 0.60 */}
-        {rejectionMessage && !scanning && (
+        {rejection && !scanning && (
           <motion.div
             key="rejection"
             initial={{ opacity: 0, y: 16 }}
@@ -558,7 +648,7 @@ export default function LeafScanner() {
                   </span>
                 </div>
                 <p className="text-sm font-semibold leading-relaxed text-red-50">
-                  {rejectionMessage}
+                  {rejection}
                 </p>
                 <p className="text-xs text-red-300/80">
                   The model did not find a tomato leaf with sufficient confidence (&ge; 60%). Ensure good lighting and a single leaf in focus.
@@ -569,7 +659,7 @@ export default function LeafScanner() {
         )}
 
         {/* DIAGNOSIS CARD: Valid Leaf Disease Result */}
-        {diagnosis && !rejectionMessage && !scanning && (
+        {result && !rejection && !scanning && (
           <motion.div
             key="diagnosis"
             initial={{ opacity: 0, y: 16 }}
@@ -578,19 +668,24 @@ export default function LeafScanner() {
             transition={{ duration: 0.3 }}
             className="card-surface rounded-2xl border border-emerald-500/30 p-5 sm:p-6 space-y-5"
           >
-            {/* Header: Common Name & Severity Badge */}
+            {/* Header: Friendly Name Big + Scientific Name Italic */}
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/10 pb-4">
               <div className="space-y-1">
                 <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5" /> AI Plant Disease Diagnosis
                 </span>
-                <h3 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
                   <span
                     className="h-3.5 w-3.5 rounded-full shrink-0"
-                    style={{ backgroundColor: diseaseDotColor(diagnosis.disease) }}
+                    style={{ backgroundColor: diseaseDotColor(result.friendly) }}
                   />
-                  {diagnosis.disease}
+                  {result.friendly}
                 </h3>
+                {result.scientific && result.scientific !== "-" && (
+                  <p className="text-sm italic font-medium text-emerald-300/80">
+                    {result.scientific}
+                  </p>
+                )}
               </div>
 
               {/* Severity: confidence <70 Low, 70-85 Medium, >85 High */}
@@ -599,14 +694,14 @@ export default function LeafScanner() {
                 <span
                   className={cn(
                     "mt-0.5 rounded-full px-3 py-1 text-xs font-mono font-black uppercase tracking-wider border",
-                    diagnosis.severity === "Low"
+                    result.severity === "Low"
                       ? "bg-sky-500/15 text-sky-300 border-sky-500/30"
-                      : diagnosis.severity === "Medium"
+                      : result.severity === "Medium"
                         ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
                         : "bg-red-500/20 text-red-300 border-red-500/40 shadow-[0_0_12px_rgba(239,68,68,0.4)]"
                   )}
                 >
-                  {diagnosis.severity} Severity
+                  {result.severity} Severity
                 </span>
               </div>
             </div>
@@ -616,13 +711,13 @@ export default function LeafScanner() {
               <div className="flex items-center justify-between text-xs">
                 <span className="font-bold text-zinc-400">Confidence Score</span>
                 <span className="font-mono font-black text-emerald-300 text-sm">
-                  {Math.round(diagnosis.confidence * 100)}%
+                  {Math.round(result.confidence * 100)}%
                 </span>
               </div>
               <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/10">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${Math.round(diagnosis.confidence * 100)}%` }}
+                  animate={{ width: `${Math.round(result.confidence * 100)}%` }}
                   transition={{ duration: 0.8, ease: "easeOut" }}
                   className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-emerald-400 to-sky-400 shadow-[0_0_12px_rgba(34,197,94,0.6)]"
                 />
@@ -632,7 +727,7 @@ export default function LeafScanner() {
               </p>
             </div>
 
-            {/* Spread Risk from LIVE Store Values */}
+            {/* SPREAD RISK line computed from LIVE store temp/hum */}
             <div className="rounded-xl border border-white/10 bg-black/40 p-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
@@ -641,18 +736,18 @@ export default function LeafScanner() {
                 <span
                   className={cn(
                     "rounded-md px-2.5 py-0.5 text-xs font-mono font-extrabold uppercase",
-                    diagnosis.spreadRisk === "High"
+                    result.spreadRisk === "High"
                       ? "bg-red-500/20 text-red-300 border border-red-500/40"
-                      : diagnosis.spreadRisk === "No risk"
+                      : result.spreadRisk === "none"
                         ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
                         : "bg-sky-500/20 text-sky-300 border border-sky-500/40"
                   )}
                 >
-                  {diagnosis.spreadRisk}
+                  {result.spreadRisk === "none" ? "No Risk" : result.spreadRisk}
                 </span>
               </div>
-              <p className="mt-2 text-xs text-zinc-300 leading-relaxed font-medium">
-                {diagnosis.spreadRiskReason}
+              <p className="mt-2 text-sm text-zinc-200 leading-relaxed font-semibold">
+                {result.spreadRiskText}
               </p>
               <div className="mt-2 flex items-center gap-4 text-[11px] text-zinc-400 font-mono">
                 <span>Live Temp: <strong className="text-zinc-200">{farm.temp.toFixed(1)}°C</strong></span>
@@ -660,50 +755,53 @@ export default function LeafScanner() {
               </div>
             </div>
 
-            {/* Treatment Block with NATURAL FIRST */}
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] p-4 space-y-2">
-              <div className="flex items-center gap-2">
-                <Sprout className="h-4 w-4 text-emerald-400" />
-                <h4 className="text-xs font-black uppercase tracking-wider text-emerald-300">
-                  Natural Treatment (First Choice)
-                </h4>
+            {/* Treatment block: NATURAL FIRST box (green), CHEMICAL FALLBACK box (amber), PREVENTION list */}
+            <div className="space-y-3">
+              {/* Natural First Box (Green) */}
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.08] p-4 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <Sprout className="h-4 w-4 text-emerald-400" />
+                  <h4 className="text-xs font-black uppercase tracking-wider text-emerald-300">
+                    Natural Treatment (First Choice)
+                  </h4>
+                </div>
+                <p className="text-sm font-semibold leading-relaxed text-emerald-100">
+                  {result.natural}
+                </p>
               </div>
-              <p className="text-sm font-semibold leading-relaxed text-emerald-100">
-                {diagnosis.naturalTreatment}
-              </p>
-            </div>
 
-            {/* Chemical Fallback Line (Only when severity High) */}
-            {diagnosis.chemicalFallback && (
-              <div className="rounded-xl border border-amber-500/40 bg-amber-500/[0.08] p-4 space-y-1">
+              {/* Chemical Fallback Box (Amber, with safety-period text) */}
+              <div className="rounded-xl border border-amber-500/40 bg-amber-500/[0.08] p-4 space-y-1.5">
                 <div className="flex items-center gap-2 text-amber-300">
                   <FlaskConical className="h-4 w-4 text-amber-400" />
                   <h4 className="text-xs font-black uppercase tracking-wider">
-                    High Severity Chemical Fallback
+                    Chemical Fallback (Safety-Period Specified)
                   </h4>
                 </div>
                 <p className="text-sm font-semibold text-amber-100">
-                  {diagnosis.chemicalFallback}
+                  {result.chemical}
                 </p>
               </div>
-            )}
 
-            {/* Three Prevention Bullets */}
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                Agronomic Prevention Rules
-              </h4>
-              <ul className="space-y-1.5 text-xs text-zinc-300 font-medium">
-                {diagnosis.prevention.map((bullet) => (
-                  <li key={bullet} className="flex items-center gap-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                    <span>{bullet}</span>
-                  </li>
-                ))}
-              </ul>
+              {/* Prevention Bullet List */}
+              {result.prevention && result.prevention.length > 0 && (
+                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                    Agronomic Prevention Rules
+                  </h4>
+                  <ul className="space-y-1.5 text-xs text-zinc-300 font-medium">
+                    {result.prevention.map((bullet) => (
+                      <li key={bullet} className="flex items-center gap-2">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                        <span>{bullet}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
-            {/* 6. ACTION BUTTONS */}
+            {/* ACTION BUTTONS: [Add to Spray Plan] and [Ask KrishiGPT about this] */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
               <button
                 type="button"
@@ -726,8 +824,9 @@ export default function LeafScanner() {
       </AnimatePresence>
 
       {/* ============================================================ */}
-      {/* 7. HISTORY: Last 10 scans saved to localStorage               */}
-      {/* Grid under the scanner with click-to-reopen                   */}
+      {/* HISTORY: Last 10 scans in localStorage                       */}
+      {/* Thumbnail dataURL 96px, date, friendly label, confidence     */}
+      {/* Grid under scanner; click reopens that result card           */}
       {/* ============================================================ */}
       <div className="card-surface rounded-2xl border border-white/10 p-5 sm:p-6 space-y-4">
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
@@ -764,24 +863,36 @@ export default function LeafScanner() {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={item.thumbnail}
-                      alt={item.className}
+                      alt={item.friendly}
+                      width={96}
+                      height={96}
                       className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     <span
                       className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full border border-black/50"
-                      style={{ backgroundColor: diseaseDotColor(item.className) }}
+                      style={{
+                        backgroundColor: item.isRejected
+                          ? "#ef4444"
+                          : diseaseDotColor(item.friendly),
+                      }}
                     />
                   </div>
                   <div className="p-2 space-y-1">
                     <p className="truncate text-xs font-bold text-white">
-                      {item.className}
+                      {item.isRejected ? "Rejected (Non-Leaf)" : item.friendly}
                     </p>
                     <div className="flex items-center justify-between text-[10px] text-zinc-400">
-                      <span className="font-mono">{Math.round(item.confidence * 100)}%</span>
+                      <span className="font-mono">
+                        {Math.round(item.confidence * 100)}%
+                      </span>
                       <span
                         className={cn(
                           "font-bold uppercase",
-                          item.severity === "High" ? "text-red-400" : item.severity === "Medium" ? "text-amber-400" : "text-sky-400"
+                          item.severity === "High"
+                            ? "text-red-400"
+                            : item.severity === "Medium"
+                              ? "text-amber-400"
+                              : "text-sky-400"
                         )}
                       >
                         {item.severity}
