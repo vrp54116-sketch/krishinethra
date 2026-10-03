@@ -1,20 +1,34 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { MapPin, CloudRain } from "lucide-react";
 import { useFarm, useFarmStore } from "@/lib/store";
 import HealthScoreCard from "@/components/dashboard/HealthScoreCard";
-import DailyReportCard from "@/components/dashboard/DailyReportCard";
 import SensorGrid from "@/components/dashboard/SensorGrid";
 import PumpControl from "@/components/dashboard/PumpControl";
-import SuggestionsCard from "@/components/dashboard/SuggestionsCard";
-import AlertsFeed from "@/components/dashboard/AlertsFeed";
-import QuickActions from "@/components/dashboard/QuickActions";
 import EdgeStaleBanner from "@/components/mqtt/EdgeStaleBanner";
 import EdgeAiStatusBanners from "@/components/dashboard/EdgeAiStatusBanners";
-import AiAgentReasoning from "@/components/dashboard/AiAgentReasoning";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { cn } from "@/lib/utils";
-import OfflineResilienceCard from "@/components/dashboard/OfflineResilienceCard";
+
+const DailyReportCard = dynamic(() => import("@/components/dashboard/DailyReportCard"), {
+  loading: () => <div className="h-64 rounded-none border border-[var(--line)] bg-[var(--panel)] animate-pulse" />,
+});
+const SuggestionsCard = dynamic(() => import("@/components/dashboard/SuggestionsCard"), {
+  loading: () => <div className="h-64 rounded-none border border-[var(--line)] bg-[var(--panel)] animate-pulse" />,
+});
+const AlertsFeed = dynamic(() => import("@/components/dashboard/AlertsFeed"), {
+  loading: () => <div className="h-64 rounded-none border border-[var(--line)] bg-[var(--panel)] animate-pulse" />,
+});
+const QuickActions = dynamic(() => import("@/components/dashboard/QuickActions"), {
+  loading: () => <div className="h-64 rounded-none border border-[var(--line)] bg-[var(--panel)] animate-pulse" />,
+});
+const AiAgentReasoning = dynamic(() => import("@/components/dashboard/AiAgentReasoning"), {
+  loading: () => <div className="h-64 rounded-none border border-[var(--line)] bg-[var(--panel)] animate-pulse" />,
+});
+const OfflineResilienceCard = dynamic(() => import("@/components/dashboard/OfflineResilienceCard"), {
+  loading: () => <div className="h-64 rounded-none border border-[var(--line)] bg-[var(--panel)] animate-pulse" />,
+});
 
 /**
  * /dashboard — KrishiNethra Command Center.

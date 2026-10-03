@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { memo, useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Brain, Sparkles, ShieldAlert, CloudRain, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useFarm } from "@/lib/store";
@@ -13,7 +13,7 @@ interface ReasoningState {
   rule: string;
 }
 
-export default function AiAgentReasoning({ className }: { className?: string }) {
+export default memo(function AiAgentReasoning({ className }: { className?: string }) {
   const farm = useFarm();
   const manualRemaining = farm.manualRemainingSec;
 
@@ -241,4 +241,4 @@ export default function AiAgentReasoning({ className }: { className?: string }) 
       </div>
     </div>
   );
-}
+});

@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Camera, Droplets, Map, MessageCircle, type LucideIcon } from "lucide-react";
@@ -17,7 +18,7 @@ interface Action {
   run?: () => void;
 }
 
-export default function QuickActions() {
+export default memo(function QuickActions() {
   const t = useT();
   const farm = useFarm();
   const setPumpManual = farm.setPumpManual;
@@ -71,4 +72,4 @@ export default function QuickActions() {
       </div>
     </Card>
   );
-}
+});

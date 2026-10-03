@@ -368,6 +368,12 @@ export default function SchemesPage() {
 
   const recommended = useMemo(() => recommendSchemes(profile), [profile]);
 
+  /** Schemes already rendered in the "Recommended for YOU" rail — never repeated below. */
+  const recommendedIds = useMemo(
+    () => new Set(recommended.map(({ scheme }) => scheme.id)),
+    [recommended],
+  );
+
   /** All visible schemes scored 0-100 for this farm, best match first. */
   const scored = useMemo(() => scoreAllSchemes(profile), [profile]);
 
@@ -375,6 +381,7 @@ export default function SchemesPage() {
     const q = query.trim().toLowerCase();
     return scored.filter(({ scheme }) => {
       const s = scheme;
+      if (recommendedIds.has(s.id)) return false;
       if (filter !== "All" && s.category !== filter) return false;
       if (!q) return true;
       return (
@@ -385,7 +392,18 @@ export default function SchemesPage() {
         s.eligibility.some((e) => e.toLowerCase().includes(q))
       );
     });
-  }, [scored, filter, query]);
+  }, [scored, filter, query, recommendedIds]);
+
+  /** True when a search term only matches a scheme already shown in the rail above. */
+  const recommendedOnlyMatch = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return false;
+    return recommended.some(({ scheme }) =>
+      scheme.name.toLowerCase().includes(q) ||
+      scheme.shortName.toLowerCase().includes(q) ||
+      scheme.benefit.toLowerCase().includes(q),
+    );
+  }, [query, recommended]);
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-5">
@@ -465,7 +483,9 @@ export default function SchemesPage() {
         <Card>
           <CardHeader
             title={`All Schemes for ${profile.state}`}
-            subtitle={`${filtered.length}/${visible.length} schemes · sorted by match · Last verified: ${SCHEMES_LAST_VERIFIED}`}
+            subtitle={`${filtered.length}/${visible.length - recommendedIds.size} schemes${
+              recommendedIds.size > 0 ? ` · top ${recommendedIds.size} shown above` : ""
+            } · sorted by match · Last verified: ${SCHEMES_LAST_VERIFIED}`}
             action={
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/5 text-zinc-400">
                 <Search className="h-4 w-4" />
@@ -502,7 +522,9 @@ export default function SchemesPage() {
 
           {filtered.length === 0 ? (
             <p className="rounded-xl border border-dashed border-white/10 p-6 text-center text-xs text-zinc-500">
-              No schemes match — try a different filter or search word.
+              {recommendedOnlyMatch
+                ? "That match is already listed in “Recommended for YOU” at the top of this page."
+                : "No schemes match — try a different filter or search word."}
             </p>
           ) : (
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">

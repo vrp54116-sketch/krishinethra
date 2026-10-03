@@ -97,7 +97,6 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark h-full" data-theme="dark" suppressHydrationWarning>
       <head>
-        {/* Inter via runtime stylesheet (non-blocking, offline-safe fallback) */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
@@ -108,7 +107,16 @@ export default function RootLayout({
         <link
           href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter+Tight:ital,wght@0,800;1,800&family=Inter:wght@400;500;600;700;800&display=swap"
           rel="stylesheet"
+          media="print"
+          // @ts-expect-error non-blocking font stylesheet
+          onLoad="this.media='all'"
         />
+        <noscript>
+          <link
+            href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter+Tight:ital,wght@0,800;1,800&family=Inter:wght@400;500;600;700;800&display=swap"
+            rel="stylesheet"
+          />
+        </noscript>
         {/* Legacy iOS PWA tags for older Safari versions */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-title" content="KrishiNethra" />

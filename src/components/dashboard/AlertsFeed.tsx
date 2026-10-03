@@ -60,7 +60,7 @@ export const AlertRow = memo(function AlertRow({
   );
 });
 
-export default function AlertsFeed() {
+export default memo(function AlertsFeed() {
   const t = useT();
   const alerts = useFarmStore((s) => s.alerts);
   const tasks = useFarmStore((s) => s.tasks);
@@ -153,4 +153,4 @@ export default function AlertsFeed() {
       )}
     </Card>
   );
-}
+});

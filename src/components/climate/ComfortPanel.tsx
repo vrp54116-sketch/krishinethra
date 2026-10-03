@@ -87,7 +87,7 @@ export default function ComfortPanel() {
           aria-valuemax={45}
           aria-valuenow={farm.temp}
         >
-          <span className="absolute -top-1.5 h-7 w-1.5 rounded-full border border-white bg-white shadow-[0_0_10px_rgba(255,255,255,0.85)]" style={{ left: `${Math.max(0, Math.min(100, (farm.temp / 45) * 100))}%`, transform: "translateX(-50%)" }} />
+          <span className="absolute -top-1.5 h-7 w-1.5 rounded-full border border-white bg-white shadow-[0_0_10px_rgba(255,255,255,0.85)] transition-all duration-300 ease-out" style={{ left: `${Math.max(0, Math.min(100, (farm.temp / 45) * 100))}%`, transform: "translateX(-50%)" }} />
         </div>
         <div className="mt-1 flex justify-between text-[9px] font-bold tabular-nums text-zinc-500"><span>0°C · cold stress</span><span>18–27°C · optimal</span><span>45°C · heat stress</span></div>
       </div>

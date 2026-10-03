@@ -64,10 +64,7 @@ function RouteLiquidMorph({
   return (
     <motion.div
       key={routeKey}
-      initial={{
-        opacity: 0,
-        y: shouldReduceMotion ? 0 : 12,
-      }}
+      initial={false}
       animate={{
         opacity: 1,
         y: 0,
@@ -86,6 +83,8 @@ function RouteLiquidMorph({
 interface NavItem {
   href: string;
   label?: string;
+  /** Compact label used by the 5-slot mobile tab rail (keeps it overlap-free at 390px). */
+  shortLabel?: string;
   labelKey: string;
   titleKey: string;
   icon: LucideIcon;
@@ -93,7 +92,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/app/dashboard", labelKey: "nav.dashboard", titleKey: "titles.dashboard", icon: LayoutDashboard },
-  { href: "/app/camera", label: "📷 Leaf Scanner", labelKey: "nav.camera", titleKey: "titles.camera", icon: Camera },
+  { href: "/app/camera", label: "📷 Leaf Scanner", shortLabel: "Scan", labelKey: "nav.camera", titleKey: "titles.camera", icon: Camera },
   { href: "/app/irrigation", labelKey: "nav.irrigation", titleKey: "titles.irrigation", icon: Droplets },
   { href: "/app/climate", labelKey: "nav.climate", titleKey: "titles.climate", icon: CloudSun },
   { href: "/app/sensors", label: "🔌 Sensor Health", labelKey: "nav.sensors", titleKey: "titles.sensors", icon: Activity },
@@ -163,11 +162,16 @@ function LivePill() {
 
 function LogoBlock({ className }: { className?: string }) {
   return (
-    <div className={cn("flex items-center justify-between px-4 py-3.5 border-b border-[var(--line)]", className)}>
-      <span className="font-editorial-display-italic text-lg font-extrabold text-[var(--ink)] tracking-tight">
+    <div
+      className={cn(
+        "flex items-center justify-between gap-2 px-4 py-3.5 border-b border-[var(--line)]",
+        className,
+      )}
+    >
+      <span className="min-w-0 truncate font-editorial-display-italic text-base font-extrabold text-[var(--ink)] tracking-tight">
         KrishiNethra
       </span>
-      <span className="font-editorial-mono text-[10px] font-bold text-[var(--ink-3)] uppercase tracking-[0.12em]">
+      <span className="shrink-0 font-editorial-mono text-[10px] font-bold text-[var(--ink-3)] uppercase tracking-[0.12em]">
         SYSTEM VER 5.0.0
       </span>
     </div>
@@ -385,10 +389,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <Link
               href="/"
-              className="inline-flex items-center gap-1 font-editorial-mono text-[11px] uppercase tracking-[0.14em] text-[var(--ink-2)] hover:text-[var(--terra)] border border-[var(--line)] bg-[var(--panel-2)] px-2 py-1 sm:px-2.5 sm:py-1 transition-colors select-none shrink-0"
+              className="inline-flex items-center gap-1 font-editorial-mono text-[11px] uppercase tracking-[0.14em] text-[var(--ink-2)] hover:text-[var(--terra)] border border-[var(--line)] bg-[var(--panel-2)] px-2 py-1 sm:px-2.5 sm:py-1 transition-colors select-none shrink-0 whitespace-nowrap"
               title="Return to Marketing Overview"
             >
-              ← BACK TO OVERVIEW
+              <span className="hidden sm:inline">← BACK TO OVERVIEW</span>
+              <span className="sm:hidden">← BACK</span>
             </Link>
             <div className="flex h-7 w-7 shrink-0 items-center justify-center border border-[var(--line)] bg-[var(--panel-2)] md:hidden">
               <Leaf className="h-3.5 w-3.5 text-[var(--terra)]" />
@@ -409,7 +414,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </span>
 
             {/* Live gateway chip */}
-            <div className="hidden xs:inline-flex">
+            <div className="hidden lg:inline-flex">
               <LivePill />
             </div>
 
@@ -443,7 +448,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               aria-pressed={eli5Mode}
               aria-label="Toggle simple farm language"
               className={cn(
-                "inline-flex items-center gap-1 px-2 py-1.5 font-editorial-mono text-[11px] font-bold border transition-colors",
+                "hidden sm:inline-flex items-center gap-1 px-2 py-1.5 font-editorial-mono text-[11px] font-bold border transition-colors",
                 eli5Mode
                   ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-300"
                   : "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink-2)] hover:text-[var(--ink)]",
@@ -451,7 +456,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             >
               ELI5 {eli5Mode ? "ON" : "OFF"}
             </button>
-            <div className="relative">
+            <div className="relative hidden lg:block">
               <button
                 type="button"
                 onClick={() => {
@@ -579,10 +584,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   key="more"
                   type="button"
                   onClick={() => setMoreOpen(true)}
-                  className="flex flex-col items-center justify-center gap-1 py-1.5 font-editorial-mono text-[10px] uppercase tracking-wider text-[var(--ink-2)] hover:text-[var(--ink)] transition-colors rounded-none cursor-pointer"
+                  className="flex w-full min-w-0 flex-col items-center justify-center gap-1 py-1.5 font-editorial-mono text-[9px] uppercase tracking-tight text-[var(--ink-2)] hover:text-[var(--ink)] transition-colors rounded-none cursor-pointer"
                 >
                   <MoreHorizontal className="h-4 w-4 text-[var(--ink-3)]" />
-                  <span className="truncate">{t("nav.more")}</span>
+                  <span className="w-full truncate text-center">{t("nav.more")}</span>
                 </button>
               );
             }
@@ -590,16 +595,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             const active = pathname === tab.href || pathname?.startsWith(tab.href + "/");
             const showBadge = tab.href === "/app/alerts" && unread > 0;
             return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className={cn(
-                  "relative flex flex-col items-center justify-center gap-1 py-1.5 font-editorial-mono text-[10px] uppercase tracking-wider transition-colors rounded-none select-none",
-                  active
-                    ? "text-[var(--terra)] font-bold bg-[var(--terra-soft)]"
-                    : "text-[var(--ink-2)] hover:text-[var(--ink)]",
-                )}
-              >
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={cn(
+                    "relative flex w-full min-w-0 flex-col items-center justify-center gap-1 py-1.5 font-editorial-mono text-[9px] uppercase tracking-tight transition-colors rounded-none select-none",
+                    active
+                      ? "text-[var(--terra)] font-bold bg-[var(--terra-soft)]"
+                      : "text-[var(--ink-2)] hover:text-[var(--ink)]",
+                  )}
+                >
                 <div className="relative">
                   <Icon
                     className={cn("h-4 w-4", active ? "text-[var(--terra)]" : "text-[var(--ink-3)]")}
@@ -610,9 +615,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     </span>
                   )}
                 </div>
-                <span className="truncate">
-                  {"label" in tab && tab.label ? tab.label : t(tab.labelKey)}
-                </span>
+                <span className="w-full truncate text-center">{tab.shortLabel ?? t(tab.labelKey)}</span>
               </Link>
             );
           })}

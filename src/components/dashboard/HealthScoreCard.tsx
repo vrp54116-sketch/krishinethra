@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -12,7 +12,7 @@ import { AnimatedNumber, Card, healthColor } from "./ui";
 const RING_SIZE = 120;
 const STROKE = 10;
 
-export default function HealthScoreCard() {
+export default memo(function HealthScoreCard() {
   const t = useT();
   const farm = useFarm();
   const farmHealthScore = farm.farmHealthScore ?? 85;
@@ -159,4 +159,4 @@ export default function HealthScoreCard() {
       </div>
     </Card>
   );
-}
+});

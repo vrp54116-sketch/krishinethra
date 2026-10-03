@@ -63,9 +63,25 @@ export async function POST(request: Request) {
       generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
     });
     const chat = model.startChat({ history });
-    const result = await chat.sendMessage(message);
-    const reply = result.response.text().trim();
-    if (!reply) throw new Error("Gemini returned an empty response");
+
+    let reply = "";
+    let lastErr: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const result = await chat.sendMessage(message);
+        reply = result.response.text().trim();
+        if (reply) break;
+      } catch (err) {
+        lastErr = err;
+        if (attempt < 2) {
+          await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)));
+        }
+      }
+    }
+
+    if (!reply) {
+      throw lastErr instanceof Error ? lastErr : new Error("Gemini returned an empty response");
+    }
     return Response.json({ reply });
   } catch (error) {
     const detail = error instanceof Error ? error.message : "Gemini request failed";

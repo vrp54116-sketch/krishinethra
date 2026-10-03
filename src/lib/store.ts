@@ -1261,7 +1261,7 @@ export const useFarmStore = create<FarmState>()(
       language: "en",
       eli5Mode: false,
       isAuthenticated: false,
-      onboardingDone: false,
+      onboardingDone: true,
       appPinHash: null,
       setLanguage: (language) =>
         set((s) => ({
@@ -2285,7 +2285,7 @@ export const useFarmStore = create<FarmState>()(
           if (fp.powerSource == null) fp.powerSource = "Electricity";
         }
         if (state && state.onboardingDone == null) {
-          state.onboardingDone = false;
+          state.onboardingDone = true;
         }
         if (state && state.appPinHash === undefined) {
           state.appPinHash = null;
@@ -2563,7 +2563,13 @@ export function useFarm<T>(selector?: (farm: FarmView) => T): T | FarmView {
   const farm: FarmView = {
     source: store.source,
     isLive,
-    soil: isLive ? (store.live?.soil ?? store.snapshot?.soil ?? 45) : (store.snapshot?.soil ?? store.snapshot?.soilMoistureA ?? 45),
+    soil: isLive
+      ? (store.live?.soil ?? store.snapshot?.soil ?? 45)
+      : Math.max(15, (typeof store.snapshot?.soil === "number" && store.snapshot.soil > 0)
+          ? store.snapshot.soil
+          : (typeof store.snapshot?.soilMoistureA === "number" && store.snapshot.soilMoistureA > 0)
+            ? store.snapshot.soilMoistureA
+            : 45),
     temp: isLive ? (store.live?.temp ?? store.snapshot?.temp ?? 28) : (store.snapshot?.temp ?? store.snapshot?.tempC ?? 28),
     hum: isLive ? (store.live?.hum ?? store.snapshot?.hum ?? 60) : (store.snapshot?.hum ?? store.snapshot?.humidity ?? 60),
     aqi: isLive ? (store.live?.aqi ?? store.snapshot?.aqi ?? 85) : (store.snapshot?.aqi ?? 85),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { memo, useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import {
   Bug,
@@ -121,7 +121,7 @@ function evaluateRules(): SuggestionRule[] {
   return deduped.slice(0, 6);
 }
 
-export default function SuggestionsCard({ className }: { className?: string }) {
+export default memo(function SuggestionsCard({ className }: { className?: string }) {
   const [suggestions, setSuggestions] = useState<SuggestionRule[]>(() => evaluateRules());
   const lastRunRef = useRef<number>(Date.now());
 
@@ -211,4 +211,4 @@ export default function SuggestionsCard({ className }: { className?: string }) {
       </div>
     </div>
   );
-}
+});

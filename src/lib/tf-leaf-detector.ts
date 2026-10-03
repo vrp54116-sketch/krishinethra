@@ -141,13 +141,33 @@ export async function classifyLeafImage(
     }
   }
 
-  const topClass = classes[topIdx] || "Not A Leaf";
-  const confidence = maxProb;
+  // Analyze foliage/chlorophyll profile to ensure non-leaf objects (shoes, boots, faces, everyday clutter) are reliably identified as Not A Leaf
+  let plantPixelCount = 0;
+  let totalSampled = 0;
+  try {
+    const imgData = ctx.getImageData(0, 0, 224, 224).data;
+    for (let i = 0; i < imgData.length; i += 16) {
+      const r = imgData[i];
+      const g = imgData[i + 1];
+      const b = imgData[i + 2];
+      totalSampled++;
+      const isGreen = g > 35 && g > r * 0.85 && g > b * 1.12;
+      const isBlightFoliage = g > 30 && r > 35 && (g + r) > b * 1.9 && Math.abs(r - g) < 75;
+      if (isGreen || isBlightFoliage) plantPixelCount++;
+    }
+  } catch {
+    // fallback if canvas security blocks read
+  }
+  const plantRatio = totalSampled > 0 ? plantPixelCount / totalSampled : 0.5;
+  const isNonLeafVisual = plantRatio < 0.07;
+
+  let topClass = isNonLeafVisual ? "Not A Leaf" : (classes[topIdx] || "Not A Leaf");
+  let confidence = isNonLeafVisual ? 0.98 : maxProb;
 
   // Rejection rule:
   // "If top class is "Not A Leaf" OR top confidence < 0.60 → show a red card:
   // 'This does not look like a leaf. Please upload a clear photo of ONE tomato leaf on a plain background.' and stop."
-  const isRejected = topClass === "Not A Leaf" || confidence < 0.60;
+  const isRejected = isNonLeafVisual || topClass === "Not A Leaf" || confidence < 0.60;
 
   const allProbabilities = classes.map((label, idx) => ({
     label,

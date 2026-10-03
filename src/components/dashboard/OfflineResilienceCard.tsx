@@ -1,9 +1,10 @@
 "use client";
 
+import { memo } from "react";
 import { CheckCircle2, Wifi } from "lucide-react";
 import { useT } from "@/lib/i18n";
 
-export default function OfflineResilienceCard() {
+export default memo(function OfflineResilienceCard() {
   const t = useT();
   return (
     <section aria-label="Offline resilience" className="h-full border border-[var(--line)] bg-[var(--panel)] p-5">
@@ -22,4 +23,4 @@ export default function OfflineResilienceCard() {
       </div>
     </section>
   );
-}
+});

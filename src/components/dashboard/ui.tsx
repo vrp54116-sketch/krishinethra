@@ -2,7 +2,6 @@
 
 import { memo, useEffect, useId, useState, useSyncExternalStore, type ReactNode } from "react";
 import { animate, motion, useMotionValue, useReducedMotion } from "framer-motion";
-import { Area, ComposedChart, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 
 /* ------------------------------------------------------------------ */
@@ -144,22 +143,6 @@ export function AnimatedNumber({
   decimals?: number;
   className?: string;
 }) {
-  const shouldReduceMotion = useReducedMotion();
-  const mv = useMotionValue(value);
-  const [display, setDisplay] = useState(value);
-
-  useEffect(() => {
-    if (shouldReduceMotion) return;
-    const controls = animate(mv, value, {
-      duration: 0.6,
-      ease: "easeOut",
-      onUpdate: (v) => setDisplay(v),
-    });
-    return () => controls.stop();
-  }, [value, mv, shouldReduceMotion]);
-
-  const activeDisplay = shouldReduceMotion ? value : display;
-
   return (
     <span
       className={cn(
@@ -167,7 +150,7 @@ export function AnimatedNumber({
         className,
       )}
     >
-      {activeDisplay.toFixed(decimals)}
+      {(Number.isFinite(value) ? value : 0).toFixed(decimals)}
     </span>
   );
 }
@@ -183,45 +166,69 @@ export const Sparkline = memo(function Sparkline({
   data: number[];
   color?: string;
 }) {
-  const pts = data.map((v, i) => ({ i, v }));
   const rawId = useId().replace(/[^a-zA-Z0-9]/g, "");
   const gid = `spark-${rawId}`;
+
+  if (!data || data.length === 0) {
+    return <div className="h-10 w-full" />;
+  }
+
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const width = 100;
+  const height = 40;
+  const padding = 4;
+  const innerHeight = height - padding * 2;
+
+  const points = data.map((val, idx) => {
+    const x = (idx / Math.max(1, data.length - 1)) * width;
+    const y = height - padding - ((val - min) / range) * innerHeight;
+    return { x, y };
+  });
+
+  const pathD = points.reduce(
+    (acc, pt, i) => `${acc} ${i === 0 ? "M" : "L"} ${pt.x.toFixed(1)},${pt.y.toFixed(1)}`,
+    "",
+  );
+  const areaD = `${pathD} L ${width},${height} L 0,${height} Z`;
+
   return (
-    <div className="h-10 w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={pts} margin={{ top: 4, right: 2, bottom: 2, left: 2 }}>
-          <defs>
-            <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity={0.35} />
-              <stop offset="100%" stopColor={color} stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <Area
-            type="monotone"
-            dataKey="v"
-            stroke={color}
-            strokeWidth={1.5}
-            fill={`url(#${gid})`}
-            dot={(props: { cx?: number; cy?: number; index?: number }) => {
-              const { cx, cy, index } = props;
-              // Render square dot only on every 6th point or last point for a clean editorial sparkline
-              if (index === undefined || cx === undefined || cy === undefined) return null;
-              if (index % 6 !== 0 && index !== pts.length - 1) return null;
-              return (
-                <rect
-                  key={`dot-${index}`}
-                  x={cx - 1.5}
-                  y={cy - 1.5}
-                  width={3}
-                  height={3}
-                  fill={color}
-                />
-              );
-            }}
-            isAnimationActive={false}
-          />
-        </ComposedChart>
-      </ResponsiveContainer>
+    <div className="h-10 w-full overflow-hidden">
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+        className="h-full w-full overflow-visible"
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.35} />
+            <stop offset="100%" stopColor={color} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <path d={areaD} fill={`url(#${gid})`} />
+        <path
+          d={pathD}
+          fill="none"
+          stroke={color}
+          strokeWidth={1.5}
+          vectorEffect="non-scaling-stroke"
+        />
+        {points.map((pt, index) => {
+          if (index % 6 !== 0 && index !== points.length - 1) return null;
+          return (
+            <rect
+              key={`dot-${index}`}
+              x={pt.x - 1.5}
+              y={pt.y - 1.5}
+              width={3}
+              height={3}
+              fill={color}
+            />
+          );
+        })}
+      </svg>
     </div>
   );
 });

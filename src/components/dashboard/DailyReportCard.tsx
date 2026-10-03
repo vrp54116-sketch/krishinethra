@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Sparkles, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -22,7 +22,7 @@ function voiceLang(lang: string): string {
   }
 }
 
-export default function DailyReportCard() {
+export default memo(function DailyReportCard() {
   const t = useT();
   const farm = useFarm();
   const snapshot = farm.snapshot;
@@ -188,4 +188,4 @@ export default function DailyReportCard() {
       </div>
     </Card>
   );
-}
+});

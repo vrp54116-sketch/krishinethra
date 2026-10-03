@@ -36,7 +36,7 @@ export default function EdgeAiStatusBanners({ className }: { className?: string 
   // Evaluate candidate banner
   const stale = farm.stale;
   const rain = farm.rain && !farm.pump;
-  const cloudOffline = !farm.isLive;
+  const cloudOffline = farm.isLive && farm.stale;
   const weakWifi = farm.rssi != null && farm.rssi < -80;
 
   let candidate: BannerItem | null = null;
@@ -141,14 +141,10 @@ export default function EdgeAiStatusBanners({ className }: { className?: string 
             key={activeBanner.id}
             role="alert"
             aria-live="assertive"
-            initial={{ opacity: 0, y: -28, scale: 0.96 }}
+            initial={false}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.96 }}
-            transition={{
-              type: "spring",
-              stiffness: 450,
-              damping: 28,
-            }}
+            transition={{ duration: 0.15 }}
             className={cn(
               "liquid-glass-card relative overflow-hidden rounded-[20px] p-4 border transition-all duration-300",
               activeBanner.tone.bg,
