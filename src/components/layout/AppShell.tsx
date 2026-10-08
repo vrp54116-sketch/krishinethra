@@ -31,7 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import { LANGUAGES } from "@/lib/types";
 import { useFarmStore } from "@/lib/store";
-import { useT } from "@/lib/i18n";
+import { useT, HeaderLangSwitcher } from "@/lib/i18n";
 import FloatingMicButton from "@/components/voice/FloatingMicButton";
 import LiveFarmPill from "@/components/layout/LiveFarmPill";
 import MqttManager from "@/components/mqtt/MqttManager";
@@ -92,10 +92,10 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/app/dashboard", labelKey: "nav.dashboard", titleKey: "titles.dashboard", icon: LayoutDashboard },
-  { href: "/app/camera", label: "📷 Leaf Scanner", shortLabel: "Scan", labelKey: "nav.camera", titleKey: "titles.camera", icon: Camera },
+  { href: "/app/camera", shortLabel: "Scan", labelKey: "nav.camera", titleKey: "titles.camera", icon: Camera },
   { href: "/app/irrigation", labelKey: "nav.irrigation", titleKey: "titles.irrigation", icon: Droplets },
   { href: "/app/climate", labelKey: "nav.climate", titleKey: "titles.climate", icon: CloudSun },
-  { href: "/app/sensors", label: "🔌 Sensor Health", labelKey: "nav.sensors", titleKey: "titles.sensors", icon: Activity },
+  { href: "/app/sensors", labelKey: "nav.sensors", titleKey: "titles.sensors", icon: Activity },
   { href: "/app/spray", labelKey: "nav.spray", titleKey: "titles.spray", icon: SprayCan },
   { href: "/app/fertilizer", labelKey: "nav.fertilizer", titleKey: "titles.fertilizer", icon: FlaskConical },
   { href: "/app/market", labelKey: "nav.market", titleKey: "titles.market", icon: TrendingUp },
@@ -227,7 +227,7 @@ function HealthCardInner({
     >
       {/* Mono row: HEALTH 63/100 */}
       <div className="flex items-center justify-between text-xs font-bold uppercase tracking-[0.1em] text-[var(--ink)]">
-        <span>HEALTH</span>
+        <span>{t("common.farmHealth")}</span>
         <span className="tabular-nums">{mounted ? `${Math.round(score)}/100` : "--/100"}</span>
       </div>
 
@@ -240,7 +240,7 @@ function HealthCardInner({
             : "border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)]",
         )}
       >
-        {isLive ? "LIVE" : "SIMULATION"}
+        {isLive ? t("common.live") : t("common.simulation")}
       </div>
     </div>
   );
@@ -363,7 +363,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     active ? "text-[var(--terra)]" : "text-[var(--ink-3)]",
                   )}
                 />
-                <span className="truncate">{label ?? t(labelKey)}</span>
+                <span className="truncate">{t(labelKey)}</span>
                 {mounted && showBadge && (
                   <span className="ml-auto flex h-4 min-w-4 items-center justify-center rounded-none bg-[var(--terra)] px-1 font-editorial-mono text-[9px] font-bold text-white">
                     {unread > 99 ? "99+" : unread}
@@ -456,48 +456,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   : "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink-2)] hover:text-[var(--ink)]",
               )}
             >
-              ELI5 {eli5Mode ? "ON" : "OFF"}
+              ELI5 {eli5Mode ? t("common.on") : t("common.off")}
             </button>
-            <div className="relative hidden lg:block">
-              <button
-                type="button"
-                onClick={() => {
-                  setAlertsOpen(false);
-                  setLangOpen((v) => !v);
-                }}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 font-editorial-mono text-xs border border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink)] hover:bg-[var(--panel)] transition-colors rounded-none cursor-pointer"
-                aria-label={t("common.language")}
-              >
-                <span>{activeLang?.nativeLabel ?? "English"}</span>
-                <ChevronDown className="h-3 w-3 text-[var(--ink-3)]" />
-              </button>
-              {langOpen && (
-                <>
-                  <button aria-label="close" className="fixed inset-0 z-40 cursor-default" onClick={closeOverlays} />
-                  <div className="absolute right-0 top-full z-50 mt-1 w-44 border border-[var(--line)] bg-[var(--panel)] p-1 rounded-none shadow-xl font-editorial-mono">
-                    {LANGUAGES.map((l) => (
-                      <button
-                        key={l.code}
-                        type="button"
-                        onClick={() => {
-                          setLanguage(l.code);
-                          setLangOpen(false);
-                        }}
-                        className={cn(
-                          "flex w-full items-center justify-between px-3 py-2 text-left text-xs transition-colors rounded-none cursor-pointer",
-                          language === l.code
-                            ? "bg-[var(--terra-soft)] font-bold text-[var(--terra)]"
-                            : "text-[var(--ink-2)] hover:bg-[var(--panel-2)] hover:text-[var(--ink)]",
-                        )}
-                      >
-                        <span>{l.nativeLabel}</span>
-                        <span className="text-[10px] text-[var(--ink-3)]">{l.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
+
+            {/* Header switcher [EN][हिं][ગુ][मरा] applying instantly without reload */}
+            <HeaderLangSwitcher />
 
             {/* Theme mode toggle box */}
             <ThemeToggleBox />
@@ -617,7 +580,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                     </span>
                   )}
                 </div>
-                <span className="w-full truncate text-center">{tab.shortLabel ?? t(tab.labelKey)}</span>
+                <span className="w-full truncate text-center">{t(tab.labelKey)}</span>
               </Link>
             );
           })}
@@ -673,7 +636,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                {NAV_ITEMS.filter((n) => !MOBILE_TABS.some((m) => "href" in m && m.href === n.href)).map(({ href, label, labelKey, icon: Icon }) => {
+                {NAV_ITEMS.filter((n) => !MOBILE_TABS.some((m) => "href" in m && m.href === n.href)).map(({ href, labelKey, icon: Icon }) => {
                   const showBadge = href === "/app/alerts" && unread > 0;
                   const active = pathname === href || pathname?.startsWith(href + "/");
                   return (
@@ -691,7 +654,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       <Icon
                         className={cn("h-4 w-4", active ? "text-[var(--terra)]" : "text-[var(--ink-3)]")}
                       />
-                      <span className="truncate w-full">{label ?? t(labelKey)}</span>
+                      <span className="truncate w-full">{t(labelKey)}</span>
                       {mounted && showBadge && (
                         <span className="absolute right-1.5 top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-none bg-[var(--terra)] px-1 text-[8px] font-bold text-white">
                           {unread > 99 ? "99+" : unread}

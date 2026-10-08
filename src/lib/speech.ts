@@ -52,8 +52,13 @@ function pickVoice(
       v.lang?.toLowerCase().startsWith(prefix),
     );
     if (sameLang) return sameLang;
+    // Explicit fallback: fallback hi-IN when mr voice missing
+    if (prefix === "mr" || lang.toLowerCase().startsWith("mr")) {
+      const hi = voices.find((v) => v.lang === "hi-IN" || v.lang?.toLowerCase().startsWith("hi"));
+      if (hi) return hi;
+    }
     // Spec: prefer hi-IN / en-IN voices when available.
-    const hi = voices.find((v) => v.lang === "hi-IN");
+    const hi = voices.find((v) => v.lang === "hi-IN" || v.lang?.toLowerCase().startsWith("hi"));
     if (hi && (prefix === "hi" || prefix === "mr" || prefix === "gu"))
       return hi;
     const enIn = voices.find((v) => v.lang === "en-IN");

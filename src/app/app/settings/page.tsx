@@ -27,7 +27,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useFarmStore, DEFAULT_SETTINGS, sizeToAcres } from "@/lib/store";
 import { LANGUAGES } from "@/lib/types";
-import { useT } from "@/lib/i18n";
+import { useT, useLang } from "@/lib/i18n";
 import { Card, CardHeader, useMounted } from "@/components/dashboard/ui";
 import { MANDI_PRICES, mandiById } from "@/lib/market-data";
 import { INDIAN_STATES, districtsForState } from "@/lib/india-locations";
@@ -252,6 +252,7 @@ function ThemeSettingsCard() {
  */
 export default function SettingsPage() {
   const t = useT();
+  const { coverage } = useLang();
   const router = useRouter();
   const mounted = useMounted();
   const settings = useFarmStore((s) => s.settings);
@@ -1056,6 +1057,37 @@ export default function SettingsPage() {
                 </button>
               );
             })}
+          </div>
+
+          {/* Dev Row: Live Translation Coverage % per Language (Enforced 100%) */}
+          <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-2)]/30 p-3.5 space-y-2">
+            <div className="flex items-center justify-between text-xs font-mono font-bold">
+              <span className="flex items-center gap-1.5 text-emerald-400">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                Live i18n Translation Coverage
+              </span>
+              <span className="text-[10px] text-[var(--text-2)] font-mono">
+                {coverage.en.total} keys / lang
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 font-mono text-xs">
+              <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2">
+                <div className="text-[10px] text-[var(--text-2)]">EN (English)</div>
+                <div className="text-sm font-black text-emerald-400">{coverage.en.pct}% ({coverage.en.translated}/{coverage.en.total})</div>
+              </div>
+              <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2">
+                <div className="text-[10px] text-[var(--text-2)]">HI (हिंदी)</div>
+                <div className="text-sm font-black text-emerald-400">{coverage.hi.pct}% ({coverage.hi.translated}/{coverage.hi.total})</div>
+              </div>
+              <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2">
+                <div className="text-[10px] text-[var(--text-2)]">GU (ગુજરાતી)</div>
+                <div className="text-sm font-black text-emerald-400">{coverage.gu.pct}% ({coverage.gu.translated}/{coverage.gu.total})</div>
+              </div>
+              <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2">
+                <div className="text-[10px] text-[var(--text-2)]">MR (मराठी)</div>
+                <div className="text-sm font-black text-emerald-400">{coverage.mr.pct}% ({coverage.mr.translated}/{coverage.mr.total})</div>
+              </div>
+            </div>
           </div>
         </Card>
       </Rise>

@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "i18n:check": "npx tsx scripts/i18n-check.ts",
+    "build": "npm run i18n:check && next build",
     "start": "next start",
     "lint": "eslint",
     "test": "npx tsx scripts/qa-sweep.ts"

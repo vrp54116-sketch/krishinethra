@@ -7,6 +7,7 @@ import DemoSeedBoot from "@/components/pwa/DemoSeedBoot";
 import { AlertPipelineListener } from "@/lib/notifications";
 import { AmbientBackground } from "@/components/ui/glass";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import { LangProvider } from "@/lib/i18n";
 import "./globals.css";
 // V2.1 liquid glass system — imported after globals so its tokens/utilities
 // (e.g. --glass-blur: 20px) win the cascade over the legacy glass helpers.
@@ -128,23 +129,25 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('krishinethra-field-theme')||localStorage.getItem('krishinethra-theme');var isLight=t==='light'||((t==='system'||!t)&&window.matchMedia('(prefers-color-scheme: light)').matches);if(isLight){document.documentElement.classList.add('light');document.documentElement.setAttribute('data-theme','light');}else{document.documentElement.classList.remove('light');document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();`,
+            __html: `(function(){try{var l=localStorage.getItem('kn_lang');if(l&&['en','hi','gu','mr'].indexOf(l)!==-1){document.documentElement.lang=l;}var t=localStorage.getItem('krishinethra-field-theme')||localStorage.getItem('krishinethra-theme');var isLight=t==='light'||((t==='system'||!t)&&window.matchMedia('(prefers-color-scheme: light)').matches);if(isLight){document.documentElement.classList.add('light');document.documentElement.setAttribute('data-theme','light');}else{document.documentElement.classList.remove('light');document.documentElement.setAttribute('data-theme','dark');}}catch(e){}})();`,
           }}
         />
       </head>
       <body className="min-h-full bg-[var(--bg)] font-sans text-[var(--text)] antialiased">
-        <AmbientBackground />
-        <ErrorBoundary name="Root">
-          {children}
-        </ErrorBoundary>
-        <AppToaster />
-        <AlertPipelineListener />
-        <ServiceWorkerRegister />
-        <DemoSeedBoot />
-        {/* Vercel Web Vitals + Speed Insights (only on Vercel — the scripts
-            404 locally and would log console errors on self-hosted builds) */}
-        {process.env.VERCEL ? <Analytics /> : null}
-        {process.env.VERCEL ? <SpeedInsights /> : null}
+        <LangProvider>
+          <AmbientBackground />
+          <ErrorBoundary name="Root">
+            {children}
+          </ErrorBoundary>
+          <AppToaster />
+          <AlertPipelineListener />
+          <ServiceWorkerRegister />
+          <DemoSeedBoot />
+          {/* Vercel Web Vitals + Speed Insights (only on Vercel — the scripts
+              404 locally and would log console errors on self-hosted builds) */}
+          {process.env.VERCEL ? <Analytics /> : null}
+          {process.env.VERCEL ? <SpeedInsights /> : null}
+        </LangProvider>
       </body>
     </html>
   );

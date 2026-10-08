@@ -1,4 +1,7 @@
 import type { LayersModel, Tensor } from "@tensorflow/tfjs";
+import { t, type Lang } from "./i18n";
+
+// validate terms with Krishi Vigyan Kendra
 
 export interface RiskResult {
   level: "High" | "Low" | "none";
@@ -223,6 +226,207 @@ export const DISEASE_INFO: Record<string, DiseaseInfoItem> = {
   },
 };
 
+/**
+ * Localized Disease Information helper.
+ * Maps 11 tomato classes with exact terms, Latin scientific name appended,
+ * localized natural/chemical treatments with numeric doses, and agronomic prevention rules.
+ * validate terms with Krishi Vigyan Kendra
+ */
+export function getLocalizedDiseaseInfo(
+  label: string,
+  lang?: Lang,
+  tempC: number = 22,
+  humPct: number = 65
+): DiseaseInfoItem {
+  const norm = label.toLowerCase();
+
+  if (norm.includes("healthy")) {
+    return {
+      friendly: t("leaf_class_healthy", undefined, lang),
+      scientific: "Solanum lycopersicum",
+      natural: t("leaf_treatment_natural_healthy", undefined, lang),
+      chemical: t("leaf_treatment_chemical_healthy", undefined, lang),
+      prevention: [
+        t("leaf_prevention_healthy_1", undefined, lang),
+        t("leaf_prevention_healthy_2", undefined, lang),
+        t("leaf_prevention_healthy_3", undefined, lang),
+      ],
+      risk: () => makeRisk("none", false, "none"),
+    };
+  }
+
+  if (norm.includes("early_blight") || norm.includes("early blight")) {
+    const isHigh = tempC > 24 && humPct > 70;
+    const text = isHigh
+      ? `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = high spread conditions`
+      : `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = low spread conditions (requires temp > 24°C & hum > 70%)`;
+    return {
+      friendly: t("leaf_class_early_blight", undefined, lang),
+      scientific: "Alternaria solani",
+      natural: t("leaf_treatment_natural_early_blight", undefined, lang),
+      chemical: t("leaf_treatment_chemical_early_blight", undefined, lang),
+      prevention: [
+        t("leaf_prevention_early_blight_1", undefined, lang),
+        t("leaf_prevention_early_blight_2", undefined, lang),
+        t("leaf_prevention_early_blight_3", undefined, lang),
+      ],
+      risk: () => makeRisk(isHigh ? "High" : "Low", isHigh, text),
+    };
+  }
+
+  if (norm.includes("late_blight") || norm.includes("late blight")) {
+    const isHigh = humPct > 85 && tempC >= 10 && tempC <= 25;
+    const text = isHigh
+      ? `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = high spread conditions`
+      : `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = low spread conditions (requires hum > 85% & temp 10–25°C)`;
+    return {
+      friendly: t("leaf_class_late_blight", undefined, lang),
+      scientific: "Phytophthora infestans",
+      natural: t("leaf_treatment_natural_late_blight", undefined, lang),
+      chemical: t("leaf_treatment_chemical_late_blight", undefined, lang),
+      prevention: [
+        t("leaf_prevention_late_blight_1", undefined, lang),
+        t("leaf_prevention_late_blight_2", undefined, lang),
+        t("leaf_prevention_late_blight_3", undefined, lang),
+      ],
+      risk: () => makeRisk(isHigh ? "High" : "Low", isHigh, text),
+    };
+  }
+
+  if (norm.includes("leaf_mold") || norm.includes("leaf mold")) {
+    const isHigh = humPct > 80 && tempC > 20;
+    const text = isHigh
+      ? `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = high spread conditions`
+      : `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = low spread conditions (requires hum > 80% & temp > 20°C)`;
+    return {
+      friendly: t("leaf_class_leaf_mold", undefined, lang),
+      scientific: "Passalora fulva",
+      natural: t("leaf_treatment_natural_leaf_mold", undefined, lang),
+      chemical: t("leaf_treatment_chemical_leaf_mold", undefined, lang),
+      prevention: [
+        t("leaf_prevention_leaf_mold_1", undefined, lang),
+        t("leaf_prevention_leaf_mold_2", undefined, lang),
+        t("leaf_prevention_leaf_mold_3", undefined, lang),
+      ],
+      risk: () => makeRisk(isHigh ? "High" : "Low", isHigh, text),
+    };
+  }
+
+  if (norm.includes("septoria")) {
+    const isHigh = humPct > 75 && tempC >= 20 && tempC <= 30;
+    const text = isHigh
+      ? `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = high spread conditions`
+      : `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = low spread conditions (requires hum > 75% & temp 20–30°C)`;
+    return {
+      friendly: t("leaf_class_septoria", undefined, lang),
+      scientific: "Septoria lycopersici",
+      natural: t("leaf_treatment_natural_septoria", undefined, lang),
+      chemical: t("leaf_treatment_chemical_septoria", undefined, lang),
+      prevention: [
+        t("leaf_prevention_septoria_1", undefined, lang),
+        t("leaf_prevention_septoria_2", undefined, lang),
+      ],
+      risk: () => makeRisk(isHigh ? "High" : "Low", isHigh, text),
+    };
+  }
+
+  if (norm.includes("bacterial_spot") || norm.includes("bacterial spot")) {
+    const isHigh = humPct > 80 && tempC > 25;
+    const text = isHigh
+      ? `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = high spread conditions`
+      : `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = low spread conditions (requires hum > 80% & temp > 25°C)`;
+    return {
+      friendly: t("leaf_class_bacterial_spot", undefined, lang),
+      scientific: "Xanthomonas spp.",
+      natural: t("leaf_treatment_natural_bacterial_spot", undefined, lang),
+      chemical: t("leaf_treatment_chemical_bacterial_spot", undefined, lang),
+      prevention: [
+        t("leaf_prevention_bacterial_spot_1", undefined, lang),
+        t("leaf_prevention_bacterial_spot_2", undefined, lang),
+        t("leaf_prevention_bacterial_spot_3", undefined, lang),
+      ],
+      risk: () => makeRisk(isHigh ? "High" : "Low", isHigh, text),
+    };
+  }
+
+  if (norm.includes("target_spot") || norm.includes("target spot")) {
+    const isHigh = humPct > 80 && tempC >= 22 && tempC <= 30;
+    const text = isHigh
+      ? `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = high spread conditions`
+      : `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = low spread conditions (requires hum > 80% & temp 22–30°C)`;
+    return {
+      friendly: t("leaf_class_target_spot", undefined, lang),
+      scientific: "Corynespora cassiicola",
+      natural: t("leaf_treatment_natural_target_spot", undefined, lang),
+      chemical: t("leaf_treatment_chemical_target_spot", undefined, lang),
+      prevention: [
+        t("leaf_prevention_target_spot_1", undefined, lang),
+        t("leaf_prevention_target_spot_2", undefined, lang),
+      ],
+      risk: () => makeRisk(isHigh ? "High" : "Low", isHigh, text),
+    };
+  }
+
+  if (norm.includes("spider_mites") || norm.includes("spider mites")) {
+    const isHigh = tempC > 30 && humPct < 40;
+    const text = isHigh
+      ? `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = high spread conditions`
+      : `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = low spread conditions (requires temp > 30°C & hum < 40%)`;
+    return {
+      friendly: t("leaf_class_spider_mites", undefined, lang),
+      scientific: "Tetranychus urticae",
+      natural: t("leaf_treatment_natural_spider_mites", undefined, lang),
+      chemical: t("leaf_treatment_chemical_spider_mites", undefined, lang),
+      prevention: [
+        t("leaf_prevention_spider_mites_1", undefined, lang),
+        t("leaf_prevention_spider_mites_2", undefined, lang),
+        t("leaf_prevention_spider_mites_3", undefined, lang),
+      ],
+      risk: () => makeRisk(isHigh ? "High" : "Low", isHigh, text),
+    };
+  }
+
+  if (norm.includes("mosaic_virus") || norm.includes("tomv") || norm.includes("mosaic")) {
+    return {
+      friendly: t("leaf_class_mosaic_virus", undefined, lang),
+      scientific: "Tomato mosaic virus",
+      natural: t("leaf_treatment_natural_mosaic_virus", undefined, lang),
+      chemical: t("leaf_treatment_chemical_mosaic_virus", undefined, lang),
+      prevention: [
+        t("leaf_prevention_mosaic_virus_1", undefined, lang),
+        t("leaf_prevention_mosaic_virus_2", undefined, lang),
+        t("leaf_prevention_mosaic_virus_3", undefined, lang),
+      ],
+      risk: () => makeRisk("High", true, "spreads by touch — isolate now"),
+    };
+  }
+
+  if (norm.includes("tylcv") || norm.includes("yellow_leaf_curl") || norm.includes("yellow leaf curl")) {
+    return {
+      friendly: t("leaf_class_tylcv", undefined, lang),
+      scientific: "Tomato yellow leaf curl virus",
+      natural: t("leaf_treatment_natural_tylcv", undefined, lang),
+      chemical: t("leaf_treatment_chemical_tylcv", undefined, lang),
+      prevention: [
+        t("leaf_prevention_tylcv_1", undefined, lang),
+        t("leaf_prevention_tylcv_2", undefined, lang),
+        t("leaf_prevention_tylcv_3", undefined, lang),
+      ],
+      risk: () => makeRisk("High", true, "whitefly spreads it — trap now"),
+    };
+  }
+
+  // Not A Leaf fallback
+  return {
+    friendly: t("leaf_class_not_leaf", undefined, lang),
+    scientific: "-",
+    natural: t("leaf_treatment_natural_not_leaf", undefined, lang),
+    chemical: t("leaf_treatment_chemical_not_leaf", undefined, lang),
+    prevention: [],
+    risk: () => makeRisk("none", false, "none"),
+  };
+}
+
 // Module-level model cache to ensure it loads ONCE per session
 let cachedModel: LayersModel | null = null;
 let modelPromise: Promise<LayersModel | null> | null = null;
@@ -353,7 +557,8 @@ export function computeSeverity(confidence: number): "Low" | "Medium" | "High" {
 export async function classifyLeafImage(
   source: HTMLCanvasElement | HTMLImageElement | HTMLVideoElement,
   tempC: number = 22,
-  humPct: number = 65
+  humPct: number = 65,
+  lang?: Lang
 ): Promise<LeafClassification | null> {
   const model = await loadModel();
   if (!model) return null;
@@ -431,15 +636,7 @@ export async function classifyLeafImage(
   // if label === "Not A Leaf" OR confidence < 0.60 -> red card
   const isRejected = topLabel === "Not A Leaf" || confidence < 0.60;
 
-  const info = DISEASE_INFO[topLabel] || {
-    friendly: topLabel,
-    scientific: "-",
-    natural: "No action needed.",
-    chemical: "None required",
-    prevention: [],
-    risk: () => makeRisk("none", false, "none"),
-  };
-
+  const info = getLocalizedDiseaseInfo(topLabel, lang, tempC, humPct);
   const riskResult = info.risk(tempC, humPct);
 
   return {
@@ -454,10 +651,10 @@ export async function classifyLeafImage(
     chemical: info.chemical,
     prevention: info.prevention,
     isRejected,
-    rejectionMessage: isRejected ? REJECTION_MESSAGE : null,
+    rejectionMessage: isRejected ? (t("scanner_rejection_msg", undefined, lang) || REJECTION_MESSAGE) : null,
     allProbabilities: labels.map((l, idx) => ({
       label: l,
-      friendly: DISEASE_INFO[l]?.friendly || l,
+      friendly: getLocalizedDiseaseInfo(l, lang).friendly || l,
       probability: probabilities[idx] ?? 0,
     })),
   };

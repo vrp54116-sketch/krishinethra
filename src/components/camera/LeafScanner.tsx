@@ -21,9 +21,11 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFarm, useFarmStore } from "@/lib/store";
+import { useLang } from "@/lib/i18n";
 import {
   loadModel,
   classifyLeafImage,
+  getLocalizedDiseaseInfo,
   DISEASE_INFO,
   REJECTION_MESSAGE,
   type LeafClassification,
@@ -64,6 +66,7 @@ export function diseaseDotColor(name: string): string {
 export default function LeafScanner() {
   const router = useRouter();
   const farm = useFarm();
+  const { lang, t } = useLang();
   const addSprayPlan = useFarmStore((s) => s.addSprayPlan);
   const addAlert = useFarmStore((s) => s.addAlert);
   const addTask = useFarmStore((s) => s.addTask);
@@ -537,9 +540,9 @@ export default function LeafScanner() {
       {modelStatus === "loading" && (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.04] p-8 text-center">
           <div className="h-8 w-8 animate-spin rounded-full border-3 border-emerald-500/20 border-t-emerald-400" />
-          <p className="mt-3 text-sm font-bold text-emerald-300">Loading AI model…</p>
+          <p className="mt-3 text-sm font-bold text-emerald-300">{t("scanner_loading_title")}</p>
           <p className="mt-1 text-xs text-zinc-400">
-            Initializing 11-class tomato neural network on-device
+            {t("scanner_loading_sub")}
           </p>
         </div>
       )}
@@ -549,11 +552,10 @@ export default function LeafScanner() {
         <div className="rounded-2xl border-2 border-red-500/50 bg-red-950/60 p-6 text-center text-red-200">
           <AlertTriangle className="mx-auto h-8 w-8 text-red-400 mb-2" />
           <h4 className="text-base font-extrabold text-red-100">
-            Model unavailable — check that public/model files exist
+            {t("scanner_error_title")}
           </h4>
           <p className="mt-1 text-xs text-red-300/80">
-            Could not load TensorFlow.js model weights from /model/tomato/model.json or fallback /model/model.json.
-            Scanning buttons are disabled.
+            {t("scanner_error_sub")}
           </p>
         </div>
       )}
@@ -567,10 +569,10 @@ export default function LeafScanner() {
           <div>
             <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
               <ScanLine className="h-5 w-5 text-emerald-400" />
-              Real Tomato Leaf Doctor
+              {t("scanner_real_title")}
             </h2>
             <p className="text-xs text-zinc-400 mt-0.5">
-              11-class on-device TensorFlow.js model · 10 tomato conditions + non-leaf rejection
+              {t("scanner_real_subtitle")}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -594,7 +596,7 @@ export default function LeafScanner() {
                       : "bg-red-400"
                 )}
               />
-              {modelStatus === "ready" ? "11-CLASS MODEL ONLINE" : modelStatus === "loading" ? "LOADING MODEL" : "OFFLINE"}
+              {modelStatus === "ready" ? t("scanner_model_online") : modelStatus === "loading" ? t("scanner_loading_model") : t("scanner_offline")}
             </span>
           </div>
         </div>
@@ -608,7 +610,7 @@ export default function LeafScanner() {
             className="flex items-center justify-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-extrabold text-emerald-200 transition-all hover:bg-emerald-500/20 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Upload className="h-4 w-4" />
-            Upload Image (JPG / PNG)
+            {t("scanner_upload_btn")}
           </button>
 
           <button
@@ -618,16 +620,16 @@ export default function LeafScanner() {
             className="flex items-center justify-center gap-2 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm font-extrabold text-sky-200 transition-all hover:bg-sky-500/20 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {cameraLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-            {cameraLoading ? "Capturing frame…" : "Capture Frame"}
+            {cameraLoading ? t("scanner_capturing_btn") : t("scanner_capture_btn")}
           </button>
         </div>
 
         {/* Preview Tile */}
         <div className="mt-5">
           <div className="flex items-center justify-between text-xs font-bold text-zinc-400 mb-2">
-            <span>Leaf Preview Tile</span>
+            <span>{t("scanner_preview_title")}</span>
             {previewUrl && (
-              <span className="text-emerald-400 font-mono text-[11px]">224 × 224 Tensor Ready</span>
+              <span className="text-emerald-400 font-mono text-[11px]">{t("scanner_tensor_ready")}</span>
             )}
           </div>
 
@@ -637,7 +639,7 @@ export default function LeafScanner() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={previewUrl}
-                  alt="Scanned tomato leaf preview"
+                  alt={t("scanner_preview_title")}
                   className="h-full w-full object-cover"
                 />
 
@@ -665,9 +667,9 @@ export default function LeafScanner() {
             ) : (
               <div className="flex flex-col items-center justify-center p-6 text-center text-zinc-500">
                 <Sprout className="h-12 w-12 text-zinc-600 mb-2" />
-                <p className="text-sm font-semibold text-zinc-400">No Leaf Selected</p>
+                <p className="text-sm font-semibold text-zinc-400">{t("scanner_no_leaf_title")}</p>
                 <p className="mt-1 text-xs text-zinc-500 max-w-xs">
-                  Upload a photo or tap Capture Frame to analyze your tomato plant for disease with TensorFlow.js.
+                  {t("scanner_no_leaf_sub")}
                 </p>
               </div>
             )}
@@ -676,7 +678,7 @@ export default function LeafScanner() {
           {scanning && (
             <p className="mt-3 text-center text-xs font-bold text-emerald-300 animate-pulse flex items-center justify-center gap-2">
               <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-              Running TensorFlow.js neural network inference…
+              {t("scanner_running_inference")}
             </p>
           )}
         </div>
@@ -704,17 +706,17 @@ export default function LeafScanner() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <h3 className="text-base font-extrabold text-red-200 uppercase tracking-wider">
-                    Invalid Leaf Photo
+                    {t("scanner_invalid_title")}
                   </h3>
                   <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[10px] font-mono font-bold text-red-300 border border-red-500/30">
-                    SCAN REJECTED
+                    {t("scanner_rejected_badge")}
                   </span>
                 </div>
                 <p className="text-sm font-semibold leading-relaxed text-red-50">
-                  {rejection}
+                  {t("scanner_rejection_msg") || rejection}
                 </p>
                 <p className="text-xs text-red-300/80">
-                  The model did not find a tomato leaf with sufficient confidence (&ge; 60%). Ensure good lighting and a single leaf in focus.
+                  {t("scanner_rejection_hint")}
                 </p>
               </div>
             </div>
@@ -723,8 +725,10 @@ export default function LeafScanner() {
 
         {/* DIAGNOSIS CARD: Valid Leaf Disease or Healthy Result */}
         {result && !rejection && !scanning && (() => {
+          const localized = getLocalizedDiseaseInfo(result.label, lang, farm.temp, farm.hum);
           const isHealthy =
             result.label === "Tomato___healthy" ||
+            result.label.toLowerCase().includes("healthy") ||
             result.friendly.toLowerCase().includes("healthy");
 
           return (
@@ -747,20 +751,20 @@ export default function LeafScanner() {
                   <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-400 flex items-center gap-1.5">
                     {isHealthy ? (
                       <>
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> Healthy Plant Verified
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> {t("scanner_healthy_verified")}
                       </>
                     ) : (
                       <>
-                        <Sparkles className="h-3.5 w-3.5 text-emerald-400" /> AI Plant Disease Diagnosis
+                        <Sparkles className="h-3.5 w-3.5 text-emerald-400" /> {t("scanner_ai_diagnosis")}
                       </>
                     )}
                   </span>
                   <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
                     <span
                       className="h-3.5 w-3.5 rounded-full shrink-0"
-                      style={{ backgroundColor: diseaseDotColor(result.friendly) }}
+                      style={{ backgroundColor: diseaseDotColor(localized.friendly) }}
                     />
-                    {result.friendly}
+                    {localized.friendly}
                   </h3>
                   {result.scientific && result.scientific !== "-" && (
                     <p className="text-sm italic font-medium text-emerald-300/80">
@@ -772,7 +776,7 @@ export default function LeafScanner() {
                 {/* Health/Severity Badge */}
                 <div className="flex flex-col sm:items-end">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
-                    {isHealthy ? "Condition" : "Severity"}
+                    {isHealthy ? t("scanner_condition") : t("scanner_severity")}
                   </span>
                   <span
                     className={cn(
@@ -786,7 +790,7 @@ export default function LeafScanner() {
                             : "bg-red-500/20 text-red-300 border-red-500/40 shadow-[0_0_12px_rgba(239,68,68,0.4)]"
                     )}
                   >
-                    {isHealthy ? "Optimal Health" : `${result.severity} Severity`}
+                    {isHealthy ? t("scanner_optimal_health") : `${t(result.severity === "Low" ? "severity_low" : result.severity === "Medium" ? "severity_medium" : "severity_high")} ${t("scanner_severity")}`}
                   </span>
                 </div>
               </div>
@@ -794,7 +798,7 @@ export default function LeafScanner() {
               {/* Confidence Percentage with Progress Bar */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-zinc-400">Confidence Score</span>
+                  <span className="font-bold text-zinc-400">{t("scanner_confidence_score")}</span>
                   <span className="font-mono font-black text-emerald-300 text-sm">
                     {Math.round(result.confidence * 100)}%
                   </span>
@@ -809,8 +813,8 @@ export default function LeafScanner() {
                 </div>
                 <p className="text-[11px] text-zinc-500">
                   {isHealthy
-                    ? "Healthy leaf signature confirmed across all 11 neural network classes."
-                    : "Severity rule: <70% Low · 70–85% Medium · >85% High"}
+                    ? t("scanner_healthy_conf_note")
+                    : t("scanner_severity_rule")}
                 </p>
               </div>
 
@@ -818,7 +822,7 @@ export default function LeafScanner() {
               <div className="rounded-xl border border-white/10 bg-black/40 p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                    {isHealthy ? "Farm Pathogen Risk" : "Live Farm Spread Risk"}
+                    {isHealthy ? t("scanner_pathogen_risk") : t("scanner_live_spread_risk")}
                   </span>
                   <span
                     className={cn(
@@ -830,17 +834,17 @@ export default function LeafScanner() {
                           : "bg-sky-500/20 text-sky-300 border border-sky-500/40"
                     )}
                   >
-                    {isHealthy || result.spreadRisk === "none" ? "No Risk" : result.spreadRisk}
+                    {isHealthy || result.spreadRisk === "none" ? t("scanner_no_risk") : (result.spreadRisk === "High" ? t("severity_high") : t("severity_low"))}
                   </span>
                 </div>
                 <p className="mt-2 text-sm text-zinc-200 leading-relaxed font-semibold">
                   {isHealthy
-                    ? "Crop foliage is healthy. No active pathogen infection or spread risk. Keep up regular scouting."
-                    : result.spreadRiskText}
+                    ? t("scanner_healthy_risk_desc")
+                    : localized.risk(farm.temp, farm.hum).text}
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-3 sm:gap-4 text-[11px] text-zinc-400 font-mono">
-                  <span>Live Temp: <strong className="text-zinc-200">{farm.temp.toFixed(1)}°C</strong></span>
-                  <span>Live Humidity: <strong className="text-zinc-200">{farm.hum.toFixed(0)}%</strong></span>
+                  <span>{t("scanner_live_temp")} <strong className="text-zinc-200">{farm.temp.toFixed(1)}°C</strong></span>
+                  <span>{t("scanner_live_hum")} <strong className="text-zinc-200">{farm.hum.toFixed(0)}%</strong></span>
                 </div>
               </div>
 
@@ -851,11 +855,11 @@ export default function LeafScanner() {
                   <div className="flex items-center gap-2">
                     <Sprout className="h-4 w-4 text-emerald-400" />
                     <h4 className="text-xs font-black uppercase tracking-wider text-emerald-300">
-                      {isHealthy ? "Plant Care & Maintenance (First Choice)" : "Natural Treatment (First Choice)"}
+                      {isHealthy ? t("scanner_natural_healthy_title") : t("scanner_natural_disease_title")}
                     </h4>
                   </div>
                   <p className="text-sm font-semibold leading-relaxed text-emerald-100">
-                    {result.natural}
+                    {localized.natural}
                   </p>
                 </div>
 
@@ -876,7 +880,7 @@ export default function LeafScanner() {
                   >
                     <FlaskConical className="h-4 w-4" />
                     <h4 className="text-xs font-black uppercase tracking-wider">
-                      {isHealthy ? "Chemical Intervention" : "Chemical Fallback (Safety-Period Specified)"}
+                      {isHealthy ? t("scanner_chemical_healthy_title") : t("scanner_chemical_disease_title")}
                     </h4>
                   </div>
                   <p
@@ -886,19 +890,19 @@ export default function LeafScanner() {
                     )}
                   >
                     {isHealthy
-                      ? "None required. Maintain clean organic cultivation and avoid unnecessary chemical sprays."
-                      : result.chemical}
+                      ? t("scanner_chemical_healthy_desc")
+                      : localized.chemical}
                   </p>
                 </div>
 
                 {/* Prevention Bullet List */}
-                {result.prevention && result.prevention.length > 0 && (
+                {localized.prevention && localized.prevention.length > 0 && (
                   <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-2">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                      {isHealthy ? "Agronomic Best Practices" : "Agronomic Prevention Rules"}
+                      {isHealthy ? t("scanner_prevention_healthy_title") : t("scanner_prevention_disease_title")}
                     </h4>
                     <ul className="space-y-1.5 text-xs text-zinc-300 font-medium">
-                      {result.prevention.map((bullet) => (
+                      {localized.prevention.map((bullet) => (
                         <li key={bullet} className="flex items-center gap-2">
                           <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
                           <span>{bullet}</span>
@@ -916,7 +920,7 @@ export default function LeafScanner() {
                   onClick={handleAddToSprayPlan}
                   className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-extrabold text-black shadow-[0_0_20px_rgba(34,197,94,0.4)] transition-all hover:bg-emerald-400 active:scale-[0.98]"
                 >
-                  <Plus className="h-4 w-4" /> Add to Spray Plan
+                  <Plus className="h-4 w-4" /> {t("scanner_add_spray_btn")}
                 </button>
 
                 <button
@@ -924,7 +928,7 @@ export default function LeafScanner() {
                   onClick={handleAskKrishiGPT}
                   className="flex items-center justify-center gap-2 rounded-xl border border-sky-500/40 bg-sky-500/10 px-4 py-3 text-sm font-extrabold text-sky-200 transition-all hover:bg-sky-500/20 active:scale-[0.98]"
                 >
-                  <MessageCircle className="h-4 w-4" /> Ask KrishiGPT about this
+                  <MessageCircle className="h-4 w-4" /> {t("scanner_ask_krishi_btn")}
                 </button>
               </div>
             </motion.div>
@@ -941,21 +945,25 @@ export default function LeafScanner() {
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
           <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
             <History className="h-4 w-4 text-emerald-400" />
-            Scan History
+            {t("scanner_history_title")}
           </h3>
           <span className="font-mono text-xs text-zinc-400">
-            {history.length} / 10 scans
+            {history.length} / 10
           </span>
         </div>
 
         {history.length === 0 ? (
           <div className="rounded-xl border border-dashed border-white/10 p-8 text-center text-xs text-zinc-500">
-            No scans recorded yet. Upload a leaf photo or capture a frame from your camera to diagnose tomato diseases.
+            {t("scanner_history_empty")}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
             {history.map((item) => {
               const active = selectedHistoryId === item.id;
+              const itemFriendly = item.isRejected
+                ? t("scanner_history_rejected")
+                : getLocalizedDiseaseInfo(item.label, lang).friendly || item.friendly;
+
               return (
                 <button
                   key={item.id}
@@ -972,7 +980,7 @@ export default function LeafScanner() {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={item.thumbnail}
-                      alt={item.friendly}
+                      alt={itemFriendly}
                       width={96}
                       height={96}
                       className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -988,7 +996,7 @@ export default function LeafScanner() {
                   </div>
                   <div className="p-2 space-y-1">
                     <p className="truncate text-xs font-bold text-white">
-                      {item.isRejected ? "Rejected (Non-Leaf)" : item.friendly}
+                      {itemFriendly}
                     </p>
                     <div className="flex items-center justify-between text-[10px] text-zinc-400">
                       <span className="font-mono">
@@ -1004,7 +1012,7 @@ export default function LeafScanner() {
                               : "text-sky-400"
                         )}
                       >
-                        {item.severity}
+                        {t(item.severity === "High" ? "severity_high" : item.severity === "Medium" ? "severity_medium" : "severity_low")}
                       </span>
                     </div>
                     <p className="truncate text-[9px] text-zinc-500">

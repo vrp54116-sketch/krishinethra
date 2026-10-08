@@ -4,6 +4,7 @@ import { memo, useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Brain, Sparkles, ShieldAlert, CloudRain, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useFarm, useFarmStore } from "@/lib/store";
+import { useLang } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 interface ReasoningState {
@@ -15,6 +16,7 @@ interface ReasoningState {
 
 export default memo(function AiAgentReasoning({ className }: { className?: string }) {
   const farm = useFarm();
+  const { t } = useLang();
   const reasoningLogs = useFarmStore((s) => s.reasoningLogs) ?? [];
   const manualRemaining = farm.manualRemainingSec;
 
@@ -34,8 +36,8 @@ export default memo(function AiAgentReasoning({ className }: { className?: strin
       return {
         id: `stale-${stale}`,
         type: "stale_lock",
-        headline: "Sensor node stale (Edge node offline 5s+) → Auto-irrigation locked for safety",
-        rule: "Fail-safe watchdog triggered: irrigation suppressed until link restored",
+        headline: t("reasoning_stale_headline"),
+        rule: t("reasoning_stale_rule"),
       };
     }
 
@@ -43,8 +45,8 @@ export default memo(function AiAgentReasoning({ className }: { className?: strin
       return {
         id: `rain-${rain}-${isRunning}`,
         type: "rain_lock",
-        headline: "Rain detected → Pump locked OFF (water savings: ~12L today)",
-        rule: "Rain sensor active • Precipitation detected • Conserving reservoir",
+        headline: t("reasoning_rain_headline"),
+        rule: t("reasoning_rain_rule"),
       };
     }
 
@@ -53,23 +55,23 @@ export default memo(function AiAgentReasoning({ className }: { className?: strin
         return {
           id: `on-${soil}`,
           type: "on",
-          headline: `Soil ${soil}% < ${lowThresh}% threshold AND No rain detected → Pump ON (Auto mode)`,
-          rule: `Active hydration cycle • Moisture target: ${highThresh}% • Auto shutoff armed`,
+          headline: t("reasoning_on_headline", { soil, low: lowThresh }),
+          rule: t("reasoning_on_rule", { high: highThresh }),
         };
       } else {
         if (soil >= highThresh) {
           return {
             id: `off-high-${soil}`,
             type: "off",
-            headline: `Soil ${soil}% > ${highThresh}% threshold → Pump OFF`,
-            rule: "Optimal root zone saturation reached • Pump idle",
+            headline: t("reasoning_off_high_headline", { soil, high: highThresh }),
+            rule: t("reasoning_off_high_rule"),
           };
         } else {
           return {
             id: `off-normal-${soil}`,
             type: "off",
-            headline: `Soil ${soil}% within acceptable zone [${lowThresh}% - ${highThresh}%] → Pump OFF`,
-            rule: "Autonomous guard cycle active • Continuous soil moisture surveillance",
+            headline: t("reasoning_off_normal_headline", { soil, low: lowThresh, high: highThresh }),
+            rule: t("reasoning_off_normal_rule"),
           };
         }
       }
@@ -79,15 +81,15 @@ export default memo(function AiAgentReasoning({ className }: { className?: strin
         return {
           id: `manual-on-${soil}`,
           type: "on",
-          headline: "Manual override active → Pump running under operator control",
-          rule: `Manual burst timer: ${manualRemaining != null ? Math.ceil(manualRemaining) : 0}s remaining • Safety cut-off at 10m`,
+          headline: t("reasoning_manual_on_headline"),
+          rule: t("reasoning_manual_on_rule", { remaining: manualRemaining != null ? Math.ceil(manualRemaining) : 0 }),
         };
       } else {
         return {
           id: `manual-off-${soil}`,
           type: "manual_hold",
-          headline: "Manual mode enabled → Pump idle waiting for command",
-          rule: "Autonomous decisions paused • Operator manual dispatch ready",
+          headline: t("reasoning_manual_off_headline"),
+          rule: t("reasoning_manual_off_rule"),
         };
       }
     }
@@ -100,6 +102,7 @@ export default memo(function AiAgentReasoning({ className }: { className?: strin
     manualRemaining,
     farm.thresholds?.moistureLow,
     farm.thresholds?.moistureHigh,
+    t,
   ]);
 
   const [lastHeadline, setLastHeadline] = useState(currentReasoning.headline);
@@ -189,7 +192,7 @@ export default memo(function AiAgentReasoning({ className }: { className?: strin
           </div>
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-              AI AGENT REASONING // JAL-SUPERVISOR
+              {t("reasoning_title")}
             </h3>
           </div>
         </div>
@@ -197,11 +200,11 @@ export default memo(function AiAgentReasoning({ className }: { className?: strin
         <div className="flex items-center gap-2">
           {isLocked ? (
             <span className="px-1.5 py-0.5 border border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)] font-bold text-[10px] uppercase tracking-wider">
-              LOCKED
+              {t("reasoning_locked")}
             </span>
           ) : (
             <span className="px-1.5 py-0.5 border border-[var(--moss)] bg-[var(--moss-soft)] text-[var(--moss)] font-bold text-[10px] uppercase tracking-wider">
-              {farm.mode === "AUTO" ? "AUTONOMOUS" : "MANUAL"}
+              {farm.mode === "AUTO" ? t("reasoning_autonomous") : t("reasoning_manual")}
             </span>
           )}
           <span className="text-[10px] text-[var(--ink-3)] font-mono">
@@ -216,7 +219,7 @@ export default memo(function AiAgentReasoning({ className }: { className?: strin
           <span className="text-[var(--ink-3)] shrink-0 font-mono">[{nowStamp}]</span>
           {isLocked && (
             <span className="shrink-0 px-1 py-0.2 border border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)] font-bold text-[9px] uppercase">
-              LOCKED
+              {t("reasoning_locked")}
             </span>
           )}
           <span className={cn("font-medium", isLocked ? "text-[var(--terra)]" : "text-[var(--ink)]")}>
@@ -240,12 +243,12 @@ export default memo(function AiAgentReasoning({ className }: { className?: strin
       {/* Footer live status bar */}
       <div className="mt-3 pt-2 border-t border-[var(--line)] flex flex-wrap items-center justify-between gap-2 text-[10px] text-[var(--ink-3)]">
         <div className="flex items-center gap-3">
-          <span>SOIL: <strong className="text-[var(--ink)]">{Math.round(farm.soil)}%</strong></span>
-          <span>RAIN: <strong className={farm.rain ? "text-[var(--terra)]" : "text-[var(--moss)]"}>{farm.rain ? "DETECTED" : "NONE"}</strong></span>
-          <span>LINK: <strong className={farm.stale ? "text-[var(--terra)]" : "text-[var(--moss)]"}>{farm.stale ? "STALE" : "LIVE"}</strong></span>
+          <span>{t("reasoning_soil_label")} <strong className="text-[var(--ink)]">{Math.round(farm.soil)}%</strong></span>
+          <span>{t("reasoning_rain_label")} <strong className={farm.rain ? "text-[var(--terra)]" : "text-[var(--moss)]"}>{farm.rain ? t("reasoning_detected") : t("reasoning_none")}</strong></span>
+          <span>{t("reasoning_link_label")} <strong className={farm.stale ? "text-[var(--terra)]" : "text-[var(--moss)]"}>{farm.stale ? t("reasoning_stale") : t("reasoning_live")}</strong></span>
         </div>
         <div>
-          THRESHOLDS: {farm.thresholds?.moistureLow ?? 30}% / {farm.thresholds?.moistureHigh ?? 75}%
+          {t("reasoning_thresholds")} {farm.thresholds?.moistureLow ?? 30}% / {farm.thresholds?.moistureHigh ?? 75}%
         </div>
       </div>
     </div>

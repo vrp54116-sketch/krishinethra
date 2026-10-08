@@ -174,8 +174,11 @@ export function getHealthBreakdown(
 /* Daily report                                                        */
 /* ------------------------------------------------------------------ */
 
-function healthWord(score: number, hindi: boolean): string {
-  if (hindi) return score > 75 ? "अच्छी" : score >= 50 ? "सामान्य" : "खराब";
+function healthWord(score: number, lang: string | boolean): string {
+  const l = typeof lang === "boolean" ? (lang ? "hi" : "en") : lang;
+  if (l === "gu") return score > 75 ? "ઉત્તમ" : score >= 50 ? "સામાન્ય" : "નબળી";
+  if (l === "mr") return score > 75 ? "उत्कृष्ट" : score >= 50 ? "सामान्य" : "खराब";
+  if (l === "hi") return score > 75 ? "अच्छी" : score >= 50 ? "सामान्य" : "खराब";
   return score > 75 ? "good" : score >= 50 ? "fair" : "poor";
 }
 
@@ -211,12 +214,12 @@ function activeDiseaseScan(scans: DiseaseScan[]): DiseaseScan | undefined {
 
 /**
  * Build a natural-language daily summary from live farm state.
- * English when settings.language is "en", Hindi otherwise.
+ * Supports en, hi, gu, mr.
  */
 export function generateDailyReport(state: DashboardAiState): string {
   const { snapshot: s, settings, farmHealthScore, totalWaterUsedL, tasks, scans } =
     state;
-  const hindi = settings?.language !== "en";
+  const lang = settings?.language ?? "en";
   const t = settings?.thresholds ?? {
     moistureLow: 30,
     moistureHigh: 75,
@@ -233,10 +236,92 @@ export function generateDailyReport(state: DashboardAiState): string {
   const aqiVal = s?.aqi ?? 50;
   const waterL = totalWaterUsedL ?? 0;
 
-  if (hindi) {
+  if (lang === "gu") {
     const parts: string[] = [];
     parts.push(
-      `खेत का स्वास्थ्य स्कोर 100 में से ${Math.round(farmHealthScore ?? 85)} है — कुल मिलाकर ${healthWord(farmHealthScore ?? 85, true)} स्थिति है।`,
+      `ખેતરનું સ્વાસ્થ્ય સ્કોર 100 માંથી ${Math.round(farmHealthScore ?? 85)} છે — એકંદરે ${healthWord(farmHealthScore ?? 85, "gu")} સ્થિતિ છે.`,
+    );
+    parts.push(
+      `જમીનનો ભેજ ${f1(soilVal)}% છે (${soilVal < t.moistureLow ? "ઓછો ભેજ" : soilVal > t.moistureHigh ? "વધુ પડતો ભેજ" : "અનુકૂળ"}).`,
+    );
+    parts.push(
+      `આજે અત્યાર સુધી ${waterL.toFixed(2)} લિટર પાણી વપરાયું છે.`,
+    );
+    if (pending.length === 0) {
+      parts.push("કોઈ બાકી કામ નથી.");
+    } else {
+      parts.push(
+        `${pending.length} કાર્યો બાકી છે, સૌથી પહેલા “${pending[0].title}” પૂર્ણ કરો.`,
+      );
+    }
+    parts.push(
+      disease
+        ? `સક્રિય રોગ પર ધ્યાન આપો: ${disease.disease} (${disease.severity}) — સ્પ્રે યોજનાથી સારવાર ચાલુ રાખો.`
+        : "પાકમાં કોઈ સક્રિય રોગ નથી.",
+    );
+    const weatherBits = `${f1(tempVal)}°C તાપમાન અને ${f1(humVal)}% ભેજ છે`;
+    const rainBit =
+      isRaining
+        ? ", વરસાદ પડી રહ્યો છે — સિંચાઈ મોકૂફ રાખી શકાય છે"
+        : ", હાલ વરસાદ નથી";
+    const aqiBit =
+      aqiVal > t.aqiHigh ? `। AQI ${aqiVal} વધુ છે — પાંદડા પર છંટકાવ ટાળો` : "";
+    parts.push(`${weatherBits}${rainBit} છે${aqiBit}।`);
+    parts.push(
+      state.pump?.running
+        ? "પંપ અત્યારે ચાલુ છે — જમીનમાં ભેજ વધી રહ્યો છે."
+        : soilVal < t.moistureLow
+          ? "સલાહ: પંપને Auto AI મોડ પર રાખો જેથી પાકને સમયસર પાણી મળે."
+          : "સલાહ: સ્થિતિ સ્થિર છે — પંપ Auto AI મોડ પર જ રાખો.",
+    );
+    return parts.join(" ");
+  }
+
+  if (lang === "mr") {
+    const parts: string[] = [];
+    parts.push(
+      `शेताचा आरोग्य स्कोअर 100 पैकी ${Math.round(farmHealthScore ?? 85)} आहे — एकंदरीत ${healthWord(farmHealthScore ?? 85, "mr")} स्थिती आहे.`,
+    );
+    parts.push(
+      `मातीतील ओलावा ${f1(soilVal)}% आहे (${soilVal < t.moistureLow ? "कमी ओलावा" : soilVal > t.moistureHigh ? "जास्त ओलावा" : "अनुकूल"}).`,
+    );
+    parts.push(
+      `आज आतापर्यंत ${waterL.toFixed(2)} लिटर पाणी वापरले गेले आहे.`,
+    );
+    if (pending.length === 0) {
+      parts.push("कोणतीही कामे शिल्लक नाहीत.");
+    } else {
+      parts.push(
+        `${pending.length} कामे प्रलंबित आहेत, सर्वात आधी “${pending[0].title}” पूर्ण करा.`,
+      );
+    }
+    parts.push(
+      disease
+        ? `सक्रिय रोगाकडे लक्ष द्या: ${disease.disease} (${disease.severity}) — फवारणी योजनेनुसार उपचार सुरू ठेवा.`
+        : "पिकावर कोणताही सक्रिय रोग नाही.",
+    );
+    const weatherBits = `${f1(tempVal)}°C तापमान आणि ${f1(humVal)}% आर्द्रता आहे`;
+    const rainBit =
+      isRaining
+        ? ", पाऊस पडत आहे — सिंचन टाळता येऊ शकते"
+        : ", सध्या पाऊस नाही";
+    const aqiBit =
+      aqiVal > t.aqiHigh ? `। AQI ${aqiVal} जास्त आहे — पानांवर फवारणी टाळा` : "";
+    parts.push(`${weatherBits}${rainBit} आहे${aqiBit}।`);
+    parts.push(
+      state.pump?.running
+        ? "पंप सध्या चालू आहे — ओलावा वाढत आहे."
+        : soilVal < t.moistureLow
+          ? "सल्ला: पंप Auto AI मोडवर ठेवा जेणेकरून शेताला वेळेवर पाणी मिळेल."
+          : "सल्ला: परिस्थिती स्थिर आहे — पंप Auto AI मोडवरच ठेवा.",
+    );
+    return parts.join(" ");
+  }
+
+  if (lang === "hi") {
+    const parts: string[] = [];
+    parts.push(
+      `खेत का स्वास्थ्य स्कोर 100 में से ${Math.round(farmHealthScore ?? 85)} है — कुल मिलाकर ${healthWord(farmHealthScore ?? 85, "hi")} स्थिति है।`,
     );
     parts.push(
       `मिट्टी की नमी ${f1(soilVal)}% है (${soilVal < t.moistureLow ? "कम नमी" : soilVal > t.moistureHigh ? "अधिक नमी" : "अनुकूल"})।`,
@@ -276,7 +361,7 @@ export function generateDailyReport(state: DashboardAiState): string {
 
   const parts: string[] = [];
   parts.push(
-    `Farm health stands at ${Math.round(farmHealthScore ?? 85)} out of 100 — a ${healthWord(farmHealthScore ?? 85, false)} day overall.`,
+    `Farm health stands at ${Math.round(farmHealthScore ?? 85)} out of 100 — a ${healthWord(farmHealthScore ?? 85, "en")} day overall.`,
   );
   parts.push(
     `Soil moisture is at ${f1(soilVal)}% (${soilVal < t.moistureLow ? "dry" : soilVal > t.moistureHigh ? "wet" : "optimal"}).`,

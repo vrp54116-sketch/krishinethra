@@ -112,6 +112,11 @@ const PUMP_ON_PHRASES = [
   "पंप चालु",
   "मोटर चालू",
   "पंप ऑन",
+  "પંપ ચાલુ",
+  "મોટર ચાલુ",
+  "પંપ શરૂ",
+  "मोटार चालू",
+  "पंप सुरु",
 ];
 
 const PUMP_OFF_PHRASES = [
@@ -127,6 +132,9 @@ const PUMP_OFF_PHRASES = [
   "पंप बंद",
   "मोटर बंद",
   "पंप ऑफ",
+  "પંપ બંધ",
+  "મોટર બંધ",
+  "मोटार बंद",
 ];
 
 const SCAN_PHRASES = [
@@ -141,6 +149,14 @@ const SCAN_PHRASES = [
   "रोग स्कैन",
   "स्कैन करो",
   "स्कैन",
+  "પાન સ્કેન",
+  "રોગ સ્કેન",
+  "સ્કેન કરો",
+  "સ્કેન",
+  "पान स्कॅन",
+  "रोग स्कॅन",
+  "स्कॅन करा",
+  "स्कॅन",
 ];
 
 const REPORT_PHRASES = [
@@ -152,6 +168,11 @@ const REPORT_PHRASES = [
   "आज का रिपोर्ट",
   "रिपोर्ट सुनाओ",
   "रिपोर्ट सुन",
+  "અહેવાલ",
+  "રિપોર્ટ",
+  "અહેવાલ સંભળાવો",
+  "अहवाल",
+  "अहवाल सांगा",
 ];
 
 const STATUS_PHRASES = [
@@ -164,6 +185,13 @@ const STATUS_PHRASES = [
   "स्थिति बताओ",
   "खेत की स्थिति",
   "खेत का हाल",
+  "સ્થિતિ",
+  "પરિસ્થિતિ",
+  "હાલત",
+  "ખેતરની સ્થિતિ",
+  "परिस्थिती",
+  "स्थिती सांगा",
+  "शेताची स्थिती",
 ];
 
 const WATER_PHRASES = [
@@ -175,6 +203,13 @@ const WATER_PHRASES = [
   "पानी कितना",
   "टंकी कितना",
   "पानी का उपयोग",
+  "પાણી",
+  "પાણી કેટલું",
+  "પાણીનો વપરાશ",
+  "પાણી કેટલું વપરાયું",
+  "पाणी",
+  "पाणी किती",
+  "पाणी वापर",
 ];
 
 const WEATHER_PHRASES = [
@@ -183,6 +218,11 @@ const WEATHER_PHRASES = [
   "weather",
   "मौसम",
   "बारिश",
+  "હવામાન",
+  "વાતાવરણ",
+  "વરસાદ",
+  "हवामान",
+  "पाऊस",
 ];
 
 const ALERTS_PHRASES = [
@@ -193,6 +233,11 @@ const ALERTS_PHRASES = [
   "open alerts",
   "अलर्ट दिखाओ",
   "चेतावनी दिखाओ",
+  "ચેતવણી",
+  "ચેતવણીઓ",
+  "ચેતવણી બતાવો",
+  "सूचना",
+  "सूचना दाखवा",
 ];
 
 const MAP_PHRASES = [
@@ -202,6 +247,12 @@ const MAP_PHRASES = [
   "मैप खोलो",
   "नक्शा खोलो",
   "नक्शा",
+  "નકશો",
+  "નકશો ખોલો",
+  "ખેતરનો નકશો",
+  "नकाशा",
+  "नकाशा उघडा",
+  "शेताचा नकाशा",
 ];
 
 const HELP_PHRASES = [
@@ -215,6 +266,11 @@ const HELP_PHRASES = [
   "help",
   "कमांड",
   "सहायता",
+  "મદદ",
+  "સહાય",
+  "કમાન્ડ",
+  "मदत",
+  "कमांड्स",
 ];
 
 /** UI reference table (command → what it does, in both languages). */
@@ -332,7 +388,10 @@ export function executeVoiceCommand(
         uptime: s.live.uptime,
       }
     : s.snapshot;
-  const hindi = !recLang.toLowerCase().startsWith("en");
+  const langCode = recLang.toLowerCase().slice(0, 2);
+  const isGu = langCode === "gu";
+  const isMr = langCode === "mr";
+  const isHi = langCode === "hi" || (!recLang.toLowerCase().startsWith("en") && !isGu && !isMr);
   const unread = s.alerts.filter((a) => !a.read).length;
 
   // --- Pump ON ---
@@ -340,7 +399,13 @@ export function executeVoiceCommand(
     s.setPumpManual(false);
     return {
       key: "pump-off",
-      spoken: hindi ? "पंप बंद कर दिया है।" : "Pump turned off.",
+      spoken: isGu
+        ? "પંપ બંધ કર્યો છે."
+        : isMr
+          ? "पंप बंद केला आहे."
+          : isHi
+            ? "पंप बंद कर दिया है।"
+            : "Pump turned off.",
       success: true,
     };
   }
@@ -349,9 +414,13 @@ export function executeVoiceCommand(
     s.setPumpManual(true, duration);
     return {
       key: "pump-on",
-      spoken: hindi
-        ? `पंप चालू कर दिया है। ${duration} सेकंड तक चलेगा।`
-        : `Pump turned on for ${duration} seconds.`,
+      spoken: isGu
+        ? `પંપ ચાલુ કર્યો છે. ${duration} સેકન્ડ ચાલશે.`
+        : isMr
+          ? `पंप चालू केला आहे. ${duration} सेकंद चालेल.`
+          : isHi
+            ? `पंप चालू कर दिया है। ${duration} सेकंड तक चलेगा।`
+            : `Pump turned on for ${duration} seconds.`,
       success: true,
     };
   }
@@ -360,9 +429,13 @@ export function executeVoiceCommand(
   if (containsAny(said, SCAN_PHRASES)) {
     return {
       key: "scan",
-      spoken: hindi
-        ? "पत्ती स्कैनर खोल रहा हूँ।"
-        : "Opening leaf scanner.",
+      spoken: isGu
+        ? "પાન સ્કેનર ખોલી રહ્યો છું."
+        : isMr
+          ? "पान स्कॅनर उघडत आहे."
+          : isHi
+            ? "पत्ती स्कैनर खोल रहा हूँ।"
+            : "Opening leaf scanner.",
       navigateTo: "/app/camera?tab=scanner",
       success: true,
     };
@@ -394,9 +467,13 @@ export function executeVoiceCommand(
     const temp = (snap?.tempC ?? snap?.temp ?? 0).toFixed(1);
     return {
       key: "status",
-      spoken: hindi
-        ? `खेत स्वास्थ्य ${health}, मिट्टी की नमी ${moisture} प्रतिशत, तापमान ${temp} डिग्री, ${unread} चेतावनी।`
-        : `Farm health ${health} out of 100. Soil moisture ${moisture} percent, temperature ${temp} degrees, ${unread} unread alerts.`,
+      spoken: isGu
+        ? `ખેતર સ્વાસ્થ્ય ${health}, જમીનનો ભેજ ${moisture} ટકા, તાપમાન ${temp} ડિગ્રી, ${unread} નવી ચેતવણીઓ.`
+        : isMr
+          ? `शेत आरोग्य ${health}, मातीतील ओलावा ${moisture} टक्के, तापमान ${temp} अंश, ${unread} न वाचलेल्या सूचना.`
+          : isHi
+            ? `खेत स्वास्थ्य ${health}, मिट्टी की नमी ${moisture} प्रतिशत, तापमान ${temp} डिग्री, ${unread} चेतावनी।`
+            : `Farm health ${health} out of 100. Soil moisture ${moisture} percent, temperature ${temp} degrees, ${unread} unread alerts.`,
       success: true,
     };
   }
@@ -406,9 +483,13 @@ export function executeVoiceCommand(
     const liters = (s.totalWaterUsedL ?? 0).toFixed(2);
     return {
       key: "water",
-      spoken: hindi
-        ? `आज ${liters} लीटर पानी इस्तेमाल हुआ है।`
-        : `Today you used ${liters} litres of water.`,
+      spoken: isGu
+        ? `આજે ${liters} લિટર પાણી વપરાયું છે.`
+        : isMr
+          ? `आज ${liters} लिटर पाणी वापरले गेले आहे.`
+          : isHi
+            ? `आज ${liters} लीटर पानी इस्तेमाल हुआ है।`
+            : `Today you used ${liters} litres of water.`,
       success: true,
     };
   }
@@ -417,9 +498,13 @@ export function executeVoiceCommand(
   if (containsAny(said, ALERTS_PHRASES)) {
     return {
       key: "alerts",
-      spoken: hindi
-        ? `चेतावनी खोल रहा हूँ। ${unread} नई चेतावनी हैं।`
-        : `Opening alerts. You have ${unread} unread alerts.`,
+      spoken: isGu
+        ? `ચેતવણીઓ ખોલી રહ્યો છું. ${unread} નવી ચેતવણીઓ છે.`
+        : isMr
+          ? `सूचना उघडत आहे. ${unread} नवीन सूचना आहेत.`
+          : isHi
+            ? `चेतावनी खोल रहा हूँ। ${unread} नई चेतावनी हैं।`
+            : `Opening alerts. You have ${unread} unread alerts.`,
       navigateTo: "/app/alerts",
       success: true,
     };
@@ -429,9 +514,13 @@ export function executeVoiceCommand(
   if (containsAny(said, MAP_PHRASES)) {
     return {
       key: "map",
-      spoken: hindi
-        ? "खेत का नक्शा खोल रहा हूँ।"
-        : "Opening farm map.",
+      spoken: isGu
+        ? "ખેતરનો નકશો ખોલી રહ્યો છું."
+        : isMr
+          ? "शेताचा नकाशा उघडत आहे."
+          : isHi
+            ? "खेत का नक्शा खोल रहा हूँ।"
+            : "Opening farm map.",
       navigateTo: "/app/map",
       success: true,
     };
@@ -444,20 +533,30 @@ export function executeVoiceCommand(
     const isRaining = Boolean(snap.rain);
     let chanceEn = isRaining ? "rain detected right now" : "no rain detected";
     let chanceHi = isRaining ? "अभी बारिश हो रही है" : "अभी बारिश नहीं है";
+    let chanceGu = isRaining ? "હાલ વરસાદ પડી રહ્યો છે" : "હાલ વરસાદ નથી";
+    let chanceMr = isRaining ? "सध्या पाऊस पडत आहे" : "सध्या पाऊस नाही";
     if (!isRaining) {
       if (snap.humidity > 75) {
         chanceEn = "high rain chance";
         chanceHi = "बारिश की संभावना ज़्यादा है";
+        chanceGu = "વરસાદની સંભાવના વધુ છે";
+        chanceMr = "पावसाची शक्यता जास्त आहे";
       } else if (snap.humidity > 60) {
         chanceEn = "slight rain chance";
         chanceHi = "हल्की बारिश हो सकती है";
+        chanceGu = "હળવો વરસાદ પડી શકે છે";
+        chanceMr = "हलका पाऊस पडू शकतो";
       }
     }
     return {
       key: "weather",
-      spoken: hindi
-        ? `तापमान ${temp} डिग्री, नमी ${hum} प्रतिशत — ${chanceHi}।`
-        : `Temperature ${temp} degrees, humidity ${hum} percent — ${chanceEn}.`,
+      spoken: isGu
+        ? `તાપમાન ${temp} ડિગ્રી, ભેજ ${hum} ટકા — ${chanceGu}.`
+        : isMr
+          ? `तापमान ${temp} अंश, आर्द्रता ${hum} टक्के — ${chanceMr}.`
+          : isHi
+            ? `तापमान ${temp} डिग्री, नमी ${hum} प्रतिशत — ${chanceHi}।`
+            : `Temperature ${temp} degrees, humidity ${hum} percent — ${chanceEn}.`,
       success: true,
     };
   }
@@ -466,9 +565,13 @@ export function executeVoiceCommand(
   if (containsAny(said, HELP_PHRASES)) {
     return {
       key: "help",
-      spoken: hindi
-        ? "आप बोल सकते हैं: पंप चालू करो, पंप बंद करो, रोग स्कैन करो, रिपोर्ट सुनाओ, स्थिति बताओ, पानी कितना, मौसम, अलर्ट दिखाओ, मैप खोलो।"
-        : "You can say: turn on pump, turn off pump, scan disease, daily report, farm status, water usage, weather, show alerts, open map.",
+      spoken: isGu
+        ? "તમે બોલી શકો છો: પંપ ચાલુ કરો, પંપ બંધ કરો, રોગ સ્કેન કરો, અહેવાલ સંભળાવો, સ્થિતિ બતાવો, પાણી કેટલું, હવામાન, ચેતવણી બતાવો, નકશો ખોલો."
+        : isMr
+          ? "तुम्ही बोलू शकता: पंप चालू करा, पंप बंद करा, रोग स्कॅन करा, अहवाल सांगा, परिस्थिती सांगा, पाणी किती, हवामान, सूचना दाखवा, नकाशा उघडा."
+          : isHi
+            ? "आप बोल सकते हैं: पंप चालू करो, पंप बंद करो, रोग स्कैन करो, रिपोर्ट सुनाओ, स्थिति बताओ, पानी कितना, मौसम, अलर्ट दिखाओ, मैप खोलो।"
+            : "You can say: turn on pump, turn off pump, scan disease, daily report, farm status, water usage, weather, show alerts, open map.",
       success: true,
     };
   }
@@ -476,9 +579,13 @@ export function executeVoiceCommand(
   // --- Fallback ---
   return {
     key: "unknown",
-    spoken: hindi
-      ? "समझ नहीं आया। कृपया फिर से बोलें, या कमांड सूची के लिए मदद बोलें।"
-      : "Sorry, I did not catch that. Try again, or say commands for the list.",
+    spoken: isGu
+      ? "સમજાયું નહીં. કૃપા કરીને ફરીથી બોલો, અથવા કમાન્ડ સૂચિ માટે મદદ બોલો."
+      : isMr
+        ? "समजले नाही. कृपया पुन्हा बोला, किंवा आदेश सूचीसाठी मदत बोला."
+        : isHi
+          ? "समझ नहीं आया। कृपया फिर से बोलें, या कमांड सूची के लिए मदद बोलें।"
+          : "Sorry, I did not catch that. Try again, or say commands for the list.",
     success: false,
   };
 }
