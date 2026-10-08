@@ -5,6 +5,7 @@
  */
 
 import type { CommandLogEntry } from "./types";
+import memory from "./brain/memory";
 
 const STORAGE_KEY = "krishinethra-esp32-cmd-log-v1";
 const MAX_ENTRIES = 50;
@@ -89,6 +90,11 @@ export function logCommand(
       /* ignore storage write failures */
     }
   }
+
+  void memory.logEvent({
+    type: "command",
+    payload: entry,
+  });
 
   return entry;
 }

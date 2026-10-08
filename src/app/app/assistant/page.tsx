@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Mic, Send, Square, Volume2, VolumeX } from "lucide-react";
+import { Mic, Send, Square, Volume2, VolumeX, ThumbsUp, ThumbsDown } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFarmStore, type FarmSource } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { Card, CardHeader } from "@/components/dashboard/ui";
+import memory from "@/lib/brain/memory";
 
 type ChatRole = "user" | "assistant";
 type ChatMessage = {
@@ -154,10 +156,30 @@ export default function AssistantPage() {
   const [activeSpeech, setActiveSpeech] = useState<string | null>(null);
   const [hasRecognition] = useState(() => Boolean(recognitionConstructor()));
   const [farmContext, setFarmContext] = useState<FarmContext | null>(() => (typeof window !== "undefined" ? currentFarmContext() : null));
+  const [feedbackMap, setFeedbackMap] = useState<Record<string, "up" | "down">>({});
+  const [citation, setCitation] = useState<{ days: number; rows: number }>({ days: 0, rows: 0 });
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const interimRef = useRef("");
+
+  useEffect(() => {
+    const updateCitation = async () => {
+      try {
+        const c = await memory.citation();
+        setCitation(c);
+      } catch {
+        /* ignore */
+      }
+    };
+    void updateCitation();
+
+    const handleMemoryUpdated = () => {
+      void updateCitation();
+    };
+    window.addEventListener("kn-memory-updated", handleMemoryUpdated);
+    return () => window.removeEventListener("kn-memory-updated", handleMemoryUpdated);
+  }, []);
 
   useEffect(() => {
     if (query && inputRef.current) {
@@ -249,9 +271,43 @@ export default function AssistantPage() {
       };
       setMessages((current) => [...current, assistantMessage]);
       setTyping(false);
+
+      // Log chat answer to Farm Memory
+      void memory.logEvent({
+        type: "chat",
+        payload: {
+          question,
+          answer,
+          offline,
+          eli5,
+          language,
+        },
+      });
+
       if (readAloud) speak(assistantMessage.id, answer);
     },
     [eli5, language, messages, readAloud, speak, typing],
+  );
+
+  const handleFeedback = useCallback(
+    (messageId: string, rating: "up" | "down", answerText: string) => {
+      setFeedbackMap((prev) => ({ ...prev, [messageId]: rating }));
+      const lastUser = [...messages].reverse().find((m) => m.role === "user");
+      void memory.logEvent({
+        type: "feedback",
+        payload: {
+          messageId,
+          rating,
+          helpful: rating === "up",
+          answer: answerText,
+          question: lastUser?.text ?? "",
+        },
+      });
+      toast.success(rating === "up" ? "Feedback recorded: Helpful" : "Feedback recorded: Needs fix", {
+        description: "Logged to Farm Memory (IndexedDB: kn_farm) for model learning.",
+      });
+    },
+    [messages],
   );
 
   const toggleMic = () => {
@@ -336,9 +392,11 @@ export default function AssistantPage() {
             Explain Like I&apos;m 5
           </label>
           <span className="text-xs text-zinc-500">
-            {farmContext
-              ? `Farm context ready · ${farmContext.soil.toFixed(0)}% soil moisture · ${farmContext.temp.toFixed(1)}°C`
-              : "Loading farm context…"}
+            {citation.rows > 0
+              ? `Brain memory: based on your last ${citation.days} days, ${citation.rows} rows`
+              : farmContext
+                ? `Farm context ready · ${farmContext.soil.toFixed(0)}% soil moisture · ${farmContext.temp.toFixed(1)}°C`
+                : "Loading farm context…"}
           </span>
         </div>
 
@@ -390,7 +448,7 @@ export default function AssistantPage() {
                   {message.text}
                 </div>
                 {message.role === "assistant" && (
-                  <div className="mt-1.5 flex gap-2">
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onClick={() => speak(message.id, message.text)}
@@ -405,6 +463,40 @@ export default function AssistantPage() {
                     >
                       <Square className="h-3 w-3" /> Stop
                     </button>
+
+                    {/* Thumbs Feedback Controls */}
+                    <div className="flex items-center gap-1 border-l border-white/10 pl-2">
+                      <button
+                        type="button"
+                        onClick={() => handleFeedback(message.id, "up", message.text)}
+                        aria-label="Helpful answer"
+                        title="Mark helpful — logged to Farm Memory"
+                        className={cn(
+                          "flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] transition-all",
+                          feedbackMap[message.id] === "up"
+                            ? "border-emerald-400 bg-emerald-500/20 text-emerald-300 font-bold"
+                            : "border-white/10 text-zinc-400 hover:border-emerald-400/40 hover:text-emerald-200",
+                        )}
+                      >
+                        <ThumbsUp className="h-3 w-3" />
+                        <span className="hidden sm:inline">Helpful</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleFeedback(message.id, "down", message.text)}
+                        aria-label="Not helpful answer"
+                        title="Mark not helpful — logged to Farm Memory"
+                        className={cn(
+                          "flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] transition-all",
+                          feedbackMap[message.id] === "down"
+                            ? "border-amber-400 bg-amber-500/20 text-amber-300 font-bold"
+                            : "border-white/10 text-zinc-400 hover:border-amber-400/40 hover:text-amber-200",
+                        )}
+                      >
+                        <ThumbsDown className="h-3 w-3" />
+                        <span className="hidden sm:inline">Needs fix</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

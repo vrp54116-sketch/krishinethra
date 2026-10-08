@@ -38,6 +38,7 @@ import BuzzerPatternTester from "@/components/alerts/BuzzerPatternTester";
 import CommandLogCard from "@/components/settings/CommandLogCard";
 import SensorCalibrationCard from "@/components/settings/SensorCalibrationCard";
 import DiagnosticsCard from "@/components/settings/DiagnosticsCard";
+import FarmMemoryCard from "@/components/settings/FarmMemoryCard";
 import ThemeToggle, { useTheme } from "@/components/ui/glass/ThemeToggle";
 
 function Rise({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
@@ -577,6 +578,11 @@ export default function SettingsPage() {
       {/* ============ DIAGNOSTICS & ANALYTICS COUNTERS ============ */}
       <Rise delay={0.13}>
         <DiagnosticsCard />
+      </Rise>
+
+      {/* ============ FARM MEMORY // DIARY ============ */}
+      <Rise delay={0.135}>
+        <FarmMemoryCard />
       </Rise>
 
       {/* ============ 1. FARM PROFILE ============ */}

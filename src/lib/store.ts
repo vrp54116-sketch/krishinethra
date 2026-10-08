@@ -46,6 +46,7 @@ import {
   fetchHwStatus,
   sendHwPump,
 } from "./hw-client";
+import memory from "./brain/memory";
 
 /* ------------------------------------------------------------------ */
 /* Live Telemetry Types                                               */
@@ -928,6 +929,31 @@ function applyLiveSnapshotDirect(raw: SensorSnapshot): void {
     ].slice(0, 200);
   }
 
+  // Memory log events: pump transition & alerts
+  if (!wasRunning && running) {
+    void memory.logEvent({ type: "pump_on", payload: { mode: snapshot.mode, source: "LIVE" } });
+  } else if (wasRunning && !running) {
+    void memory.logEvent({ type: "pump_off", payload: { mode: snapshot.mode, source: "LIVE" } });
+  }
+  for (const a of fresh) {
+    void memory.logEvent({
+      type: "alert",
+      payload: { id: a.id, level: a.level, title: a.title, message: a.message, zone: a.zone },
+    });
+  }
+  // Telemetry row (throttled to 1/min in memory.ts)
+  void memory.logTelemetry({
+    ts: snapshot.timestamp,
+    soil: snapshot.soil,
+    temp: snapshot.temp,
+    hum: snapshot.hum,
+    aqi: snapshot.aqi,
+    rain: snapshot.rain,
+    pump: snapshot.pump,
+    mode: snapshot.mode || (s.pump.mode === "auto" ? "AUTO" : "MANUAL"),
+    source: "LIVE",
+  });
+
   useFarmStore.setState({
     pump,
     snapshot,
@@ -1107,6 +1133,34 @@ function doTick(): void {
     diary = [entry, ...s.diary].slice(0, 200);
   }
   void wasManualRemaining;
+
+  // Memory log events: pump transition & alerts
+  if (!wasRunning && pump.running) {
+    void memory.logEvent({ type: "pump_on", payload: { mode: pump.mode, source: "SIM" } });
+  } else if (wasRunning && !pump.running) {
+    void memory.logEvent({
+      type: "pump_off",
+      payload: { mode: pump.mode, source: "SIM", totalRunSeconds: pump.totalRunSeconds },
+    });
+  }
+  for (const a of fresh) {
+    void memory.logEvent({
+      type: "alert",
+      payload: { id: a.id, level: a.level, title: a.title, message: a.message, zone: a.zone },
+    });
+  }
+  // Telemetry row (throttled to 1/min in memory.ts)
+  void memory.logTelemetry({
+    ts: snapshot.timestamp,
+    soil: snapshot.soil,
+    temp: snapshot.temp,
+    hum: snapshot.hum,
+    aqi: snapshot.aqi,
+    rain: snapshot.rain,
+    pump: snapshot.pump,
+    mode: s.pump.mode.toUpperCase(),
+    source: "SIM",
+  });
 
   useFarmStore.setState({
     pump,
@@ -1421,10 +1475,35 @@ export const useFarmStore = create<FarmState>()(
             hwUptimeSec: t.up,
           };
         });
+
+        // Memory log telemetry (throttled to 1/min in memory.ts) & pump transitions for LIVE MQTT stream
+        const currentLive = get().live;
+        if (currentLive) {
+          if (t.pump && !currentLive.pump) {
+            void memory.logEvent({ type: "pump_on", payload: { mode: t.mode, source: "LIVE" } });
+          } else if (!t.pump && currentLive.pump) {
+            void memory.logEvent({ type: "pump_off", payload: { mode: t.mode, source: "LIVE" } });
+          }
+        }
+        void memory.logTelemetry({
+          ts: now,
+          soil: t.soil,
+          temp: t.temp,
+          hum: t.hum,
+          aqi: t.aqi,
+          rain: t.rain,
+          pump: t.pump,
+          mode: t.mode,
+          source: "LIVE",
+        });
       },
       farmCmd: (cmd) => {
         const clean = (cmd || "").trim();
         if (!clean) return;
+        void memory.logEvent({
+          type: "command",
+          payload: { command: clean, source: "farmCmd" },
+        });
         if (clean === "PUMP_ON") {
           set((s) => ({
             pump: { ...s.pump, running: true, lastRunAt: Date.now() },
@@ -1567,6 +1646,17 @@ export const useFarmStore = create<FarmState>()(
                 a.title === blocked.title &&
                 Date.now() - a.timestamp < ALERT_DEDUP_WINDOW_MS,
             );
+            if (!exists) {
+              void memory.logEvent({
+                type: "alert",
+                payload: {
+                  id: blocked.id,
+                  level: blocked.level,
+                  title: blocked.title,
+                  message: blocked.message,
+                },
+              });
+            }
             return {
               pump: { ...s.pump, mode: "manual", running: false },
               manualPumpRemainingSec: null,
@@ -1663,6 +1753,17 @@ export const useFarmStore = create<FarmState>()(
                 a.title === blocked.title &&
                 Date.now() - a.timestamp < ALERT_DEDUP_WINDOW_MS,
             );
+            if (!exists) {
+              void memory.logEvent({
+                type: "alert",
+                payload: {
+                  id: blocked.id,
+                  level: blocked.level,
+                  title: blocked.title,
+                  message: blocked.message,
+                },
+              });
+            }
             return {
               pump: { ...s.pump, mode: "schedule", running: false },
               manualPumpRemainingSec: null,
@@ -1721,6 +1822,16 @@ export const useFarmStore = create<FarmState>()(
               return s;
             }
           }
+          void memory.logEvent({
+            type: "alert",
+            payload: {
+              id: full.id,
+              level: full.level,
+              title: full.title,
+              message: full.message,
+              zone: full.zone,
+            },
+          });
           return { alerts: [full, ...s.alerts].slice(0, 100) };
         });
         return alertId;
@@ -1749,6 +1860,22 @@ export const useFarmStore = create<FarmState>()(
           treatmentChemical: scan.treatmentChemical,
           resolved: scan.resolved ?? false,
         };
+        void memory.logEvent({
+          type: "scan",
+          payload: {
+            id: full.id,
+            timestamp: full.timestamp,
+            disease: full.disease,
+            confidence: full.confidence,
+            severity: full.severity,
+            affectedPercent: full.affectedPercent,
+            source: full.source,
+            imageName: full.imageName,
+            treatmentNatural: full.treatmentNatural,
+            treatmentChemical: full.treatmentChemical,
+            resolved: full.resolved,
+          },
+        });
         set((s) => {
           const scans = [full, ...s.scans];
           const diaryEntry: DiaryEntry = {

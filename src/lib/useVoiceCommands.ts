@@ -21,6 +21,7 @@ import {
   stopSpeaking,
   warmUpVoices,
 } from "./speech";
+import memory from "./brain/memory";
 
 /* ------------------------------------------------------------------ */
 /* SpeechRecognition typings (not in TS DOM lib)                       */
@@ -673,6 +674,15 @@ export function pushVoiceLog(entry: Omit<VoiceLogEntry, "id" | "timestamp"> & Pa
   };
   globalLog = [full, ...globalLog].slice(0, LOG_MAX);
   persistLog();
+  void memory.logEvent({
+    type: "command",
+    payload: {
+      channel: "voice",
+      transcript: full.transcript,
+      response: full.response,
+      success: full.success,
+    },
+  });
   for (const l of [...logListeners]) {
     try {
       l();

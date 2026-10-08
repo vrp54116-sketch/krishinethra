@@ -94,11 +94,20 @@ async function runQaTests() {
     const risk = healthy.risk(25, 60);
     assert(risk.level === "none" && !risk.isHigh, "Healthy leaf has spread risk level 'none'");
 
-    // Check LeafScanner rendering for healthy card
+    // Check LeafScanner rendering for healthy card (accepts i18n keys or direct English)
     const scannerSrc = fs.readFileSync(path.join(__dirname, "../src/components/camera/LeafScanner.tsx"), "utf8");
-    assert(scannerSrc.includes("Healthy Plant Verified"), "Scanner renders 'Healthy Plant Verified' badge for healthy leaf");
-    assert(scannerSrc.includes("Optimal Health"), "Scanner renders 'Optimal Health' condition for healthy leaf");
-    assert(scannerSrc.includes("Plant Care & Maintenance (First Choice)"), "Scanner renders maintenance section for healthy leaf");
+    assert(
+      scannerSrc.includes("Healthy Plant Verified") || scannerSrc.includes("scanner_healthy_verified"),
+      "Scanner renders 'Healthy Plant Verified' badge for healthy leaf",
+    );
+    assert(
+      scannerSrc.includes("Optimal Health") || scannerSrc.includes("scanner_optimal_health"),
+      "Scanner renders 'Optimal Health' condition for healthy leaf",
+    );
+    assert(
+      scannerSrc.includes("Plant Care & Maintenance (First Choice)") || scannerSrc.includes("scanner_natural_healthy_title"),
+      "Scanner renders maintenance section for healthy leaf",
+    );
   }
 
   // -------------------------------------------------------------------
