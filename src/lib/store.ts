@@ -139,6 +139,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   soundEnabled: true,
   muteBuzzer: false,
   showRawCalibrationValues: false,
+  brainCadence: "hourly",
   irrigationSchedule: [
     { id: "sched-mon", day: 1, time: "06:00", durationMin: 8 },
     { id: "sched-thu", day: 4, time: "06:00", durationMin: 8 },

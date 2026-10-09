@@ -381,7 +381,7 @@ export async function count(storeName: "telemetry" | "events" = "telemetry"): Pr
 /**
  * Fetch telemetry rows where ts >= since (ascending order).
  */
-export async function range(since: number): Promise<TelemetryRow[]> {
+export async function range(since: number = 0): Promise<TelemetryRow[]> {
   const db = await openDB();
   if (!db) return [];
 

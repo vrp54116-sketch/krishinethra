@@ -283,6 +283,8 @@ export interface AppSettings {
   muteBuzzer?: boolean;
   /** Calibration mode: show raw analog values prominently */
   showRawCalibrationValues?: boolean;
+  /** Personal Brain in-browser training cadence */
+  brainCadence?: "hourly" | "daily" | "weekly" | "manual";
   /** Weekly auto-run slots used by pump "schedule" mode. */
   irrigationSchedule: IrrigationScheduleSlot[];
   /** Farm coordinates used by the /climate Open-Meteo forecast. */
