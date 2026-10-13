@@ -2,30 +2,43 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Mic, Send, Square, Volume2, VolumeX, ThumbsUp, ThumbsDown } from "lucide-react";
+import {
+  Brain,
+  Cpu,
+  Mic,
+  Send,
+  Sparkles,
+  Square,
+  ThumbsDown,
+  ThumbsUp,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFarmStore, type FarmSource } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { Card, CardHeader } from "@/components/dashboard/ui";
 import memory from "@/lib/brain/memory";
+import {
+  answerQuestion,
+  type AnswerBadge,
+  type FarmLiveContext,
+} from "@/lib/brain/engine";
+import { getLearnedCount } from "@/lib/brain/learned";
 
 type ChatRole = "user" | "assistant";
-type ChatMessage = {
+
+interface ChatMessage {
   id: string;
   role: ChatRole;
   text: string;
+  badge?: AnswerBadge;
+  latencyMs?: number;
+  intent?: string;
   offline?: boolean;
-};
-type FarmContext = {
-  soil: number;
-  temp: number;
-  hum: number;
-  aqi: number;
-  rain: boolean;
-  pump: boolean;
-  mode: string;
-};
+}
+
 type SpeechRecognitionResultItem = { transcript: string };
 type SpeechRecognitionEventLike = {
   resultIndex: number;
@@ -43,63 +56,64 @@ interface SpeechRecognitionLike {
 }
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
-const SUGGESTIONS = [
-  "What is farming?",
-  "Why do tomato leaves curl?",
-  "How much urea for 10 tomato plants?",
-  "Explain MQTT like I'm 5",
-  "What is the weather risk this week?",
-];
+const SUGGESTIONS_BY_LANG: Record<string, string[]> = {
+  gu: [
+    "હમણે પાણી આપું?",
+    "પીળા પાન કેમ પડે છે?",
+    "યુરિયા કેટલું આપવું?",
+    "અર્લી બ્લાઇટનો ઉપચાર",
+    "પંપ ચાલુ છે કે બંધ?",
+    "કેટલા રૂપિયા બચ્યા?",
+  ],
+  mr: [
+    "आता पाणी द्यावं का?",
+    "पाने पिवळी का पडत आहेत?",
+    "युरिया किती टाकावा?",
+    "अर्ली ब्लाइट (करपा) वर उपाय",
+    "पंप चालू आहे की बंद?",
+    "किती पैसे वाचले?",
+  ],
+  hi: [
+    "क्या मुझे अभी पानी देना चाहिए?",
+    "टमाटर की पत्तियां पीली क्यों हैं?",
+    "यूरिया की सही मात्रा क्या है?",
+    "अगेती झुलसा का इलाज",
+    "पंप चालू है कि बंद?",
+    "कितने रुपये बचे?",
+  ],
+  en: [
+    "Should I irrigate now?",
+    "Why are tomato leaves turning yellow?",
+    "How much urea for tomato plants?",
+    "Early blight treatment",
+    "Is the pump running?",
+    "How much money have I saved?",
+  ],
+};
 
-const OFFLINE_ANSWERS: Array<{ terms: string[]; answer: string }> = [
-  {
-    terms: ["leaf curl", "curling leaves", "leaves curl"],
-    answer:
-      "Tomato leaf curl can come from whiteflies carrying a virus, heat, or uneven watering. Check the undersides of leaves for whiteflies, remove badly affected plants, keep weeds down, and use insect netting where possible. Neem oil at 5 ml per litre can help reduce soft-bodied pests; test a few leaves first and spray in the evening.",
-  },
-  {
-    terms: ["blight", "late blight", "early blight"],
-    answer:
-      "For suspected tomato blight, remove spotted leaves and fruit and discard them away from the field. Avoid wetting leaves, water near the soil in the morning, and give plants good airflow. Blight can spread quickly in wet weather; confirm the disease locally before choosing a treatment.",
-  },
-  {
-    terms: ["watering", "water tomato", "irrigat", "weather risk", "weather this week"],
-    answer:
-      "Water tomatoes deeply near the roots when the top layer of soil begins to dry. Keep moisture steady, especially while plants flower and fruit, and avoid frequent shallow watering. Your offline knowledge base has no forecast, so it cannot assess this week's rain risk.",
-  },
-  {
-    terms: ["what is farming", "farming", "agriculture", "kheti"],
-    answer:
-      "Farming (agriculture) is the science and practice of cultivating soil, growing crops, and raising livestock to produce food, fiber, and essential resources. In India, it forms the backbone of the rural economy across Kharif (monsoon), Rabi (winter), and Zaid (summer) seasons, balancing soil biology, water stewardship, and climate-resilient crop care.",
-  },
-  {
-    terms: ["mqtt", "what is mqtt"],
-    answer:
-      "MQTT (Message Queuing Telemetry Transport) is an ultra-lightweight publish/subscribe messaging protocol designed for low-power IoT hardware like ESP32 microcontrollers. It allows sensors and water pumps to exchange telemetry and commands instantly over local networks with minimal battery and bandwidth overhead.",
-  },
-  {
-    terms: ["urea", "nitrogen dose", "fertilizer dose"],
-    answer:
-      "Urea needs vary with soil tests, crop stage, and other fertilizers already applied, so a safe per-plant dose cannot be set from plant count alone. Avoid applying it directly against stems or just before heavy rain. Ask your local agriculture officer for a soil-test-based dose; organic compost is a gentler first step.",
-  },
-];
-
-function currentFarmContext(): FarmContext {
+function currentFarmContext(): FarmLiveContext {
   const state = useFarmStore.getState();
   const live = state.live;
-  const activeLive: boolean = (state.source as FarmSource) === "LIVE" || state.settings.mode === "live";
+  const activeLive: boolean =
+    (state.source as FarmSource) === "LIVE" || state.settings.mode === "live";
   const snapshot = state.snapshot;
   return {
     soil: activeLive
       ? live?.soil ?? snapshot.soil ?? snapshot.soilMoistureB
       : snapshot.soil ?? snapshot.soilMoistureA,
-    temp: activeLive ? live?.temp ?? snapshot.temp ?? snapshot.tempC : snapshot.temp ?? snapshot.tempC,
+    temp: activeLive
+      ? live?.temp ?? snapshot.temp ?? snapshot.tempC
+      : snapshot.temp ?? snapshot.tempC,
     hum: activeLive
       ? live?.hum ?? snapshot.hum ?? snapshot.humidity
       : snapshot.hum ?? snapshot.humidity,
     aqi: activeLive ? live?.aqi ?? snapshot.aqi : snapshot.aqi,
-    rain: activeLive ? Boolean(live?.rain ?? snapshot.rain) : Boolean(snapshot.rain),
-    pump: activeLive ? Boolean(live?.pump ?? state.pump.running) : state.pump.running,
+    rain: activeLive
+      ? Boolean(live?.rain ?? snapshot.rain)
+      : Boolean(snapshot.rain),
+    pump: activeLive
+      ? Boolean(live?.pump ?? state.pump.running)
+      : state.pump.running,
     mode: activeLive
       ? live?.mode ?? (state.pump.mode === "auto" ? "AUTO" : "MANUAL")
       : state.pump.mode.toUpperCase(),
@@ -116,25 +130,25 @@ function recognitionConstructor(): SpeechRecognitionConstructor | null {
 }
 
 function recognitionLanguage(language: string): string {
-  return ({ hi: "hi-IN", gu: "gu-IN", mr: "mr-IN" } as Record<string, string>)[language] ?? "en-IN";
+  return (
+    ({ hi: "hi-IN", gu: "gu-IN", mr: "mr-IN" } as Record<string, string>)[
+      language
+    ] ?? "en-IN"
+  );
 }
 
 function speechLanguage(language: string): string {
-  return language === "hi" ? "hi-IN" : "en-IN";
-}
-
-function offlineAnswer(question: string, isEli5 = false): string {
-  const normalized = question.toLowerCase();
-  if (isEli5 && (normalized.includes("farming") || normalized.includes("agriculture") || normalized.includes("kheti"))) {
-    return "Farming is growing our own food from the soil! Think of the earth as a big kitchen where the farmer plants a tiny seed in the soft brown dirt, gives it water and sunshine, and watches it grow into green plants that make wheat for soft rotis and fresh vegetables for your plate.";
+  switch (language) {
+    case "hi":
+      return "hi-IN";
+    case "gu":
+      return "gu-IN";
+    case "mr":
+      return "mr-IN";
+    case "en":
+    default:
+      return "en-IN";
   }
-  if (isEli5 && normalized.includes("mqtt")) {
-    return "MQTT is like a WhatsApp group for your farm's machines! The soil sensor sends a quick message saying 'I need water', and the water pump reads it and turns itself on immediately.";
-  }
-  return (
-    OFFLINE_ANSWERS.find(({ terms }) => terms.some((term) => normalized.includes(term)))?.answer ??
-    "KrishiGPT agronomist intelligence is ready to answer questions about crop care, irrigation schedules, tomato diseases, soil health, and farm inputs. Feel free to ask about your crop status or pest management."
-  );
 }
 
 export default function AssistantPage() {
@@ -142,6 +156,10 @@ export default function AssistantPage() {
   const searchParams = useSearchParams();
   const query = searchParams?.get("q") ?? searchParams?.get("query") ?? "";
   const language = useFarmStore((state) => state.settings.language);
+  const brainLearnedFromYou = useFarmStore(
+    (state) => state.brainLearnedFromYou,
+  );
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState(query);
   const [prevQuery, setPrevQuery] = useState(query);
@@ -149,37 +167,67 @@ export default function AssistantPage() {
     setPrevQuery(query);
     setInput(query);
   }
+
   const [typing, setTyping] = useState(false);
   const [listening, setListening] = useState(false);
-  const [eli5, setEli5] = useState(() => (typeof window !== "undefined" ? localStorage.getItem("krishigpt-eli5") === "true" : false));
-  const [readAloud, setReadAloud] = useState(() => (typeof window !== "undefined" ? localStorage.getItem("krishigpt-read-aloud") === "true" : false));
+  const [eli5, setEli5] = useState(() =>
+    typeof window !== "undefined"
+      ? localStorage.getItem("krishigpt-eli5") === "true"
+      : false,
+  );
+  const [readAloud, setReadAloud] = useState(() =>
+    typeof window !== "undefined"
+      ? localStorage.getItem("krishigpt-read-aloud") === "true"
+      : false,
+  );
   const [activeSpeech, setActiveSpeech] = useState<string | null>(null);
   const [hasRecognition] = useState(() => Boolean(recognitionConstructor()));
-  const [farmContext, setFarmContext] = useState<FarmContext | null>(() => (typeof window !== "undefined" ? currentFarmContext() : null));
-  const [feedbackMap, setFeedbackMap] = useState<Record<string, "up" | "down">>({});
-  const [citation, setCitation] = useState<{ days: number; rows: number }>({ days: 0, rows: 0 });
+  const [farmContext, setFarmContext] = useState<FarmLiveContext | null>(
+    () => (typeof window !== "undefined" ? currentFarmContext() : null),
+  );
+  const [feedbackMap, setFeedbackMap] = useState<Record<string, "up" | "down">>(
+    {},
+  );
+  const [citation, setCitation] = useState<{ days: number; rows: number }>({
+    days: 0,
+    rows: 0,
+  });
+  const [learnedCount, setLearnedCount] = useState<number>(0);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const interimRef = useRef("");
 
+  const refreshCitationAndLearned = useCallback(async () => {
+    try {
+      const c = await memory.citation();
+      setCitation(c);
+      const l = getLearnedCount();
+      setLearnedCount(Math.max(l, brainLearnedFromYou ?? 0));
+    } catch {
+      // ignore
+    }
+  }, [brainLearnedFromYou]);
+
   useEffect(() => {
-    const updateCitation = async () => {
-      try {
-        const c = await memory.citation();
-        setCitation(c);
-      } catch {
-        /* ignore */
-      }
-    };
-    void updateCitation();
+    void refreshCitationAndLearned();
 
     const handleMemoryUpdated = () => {
-      void updateCitation();
+      void refreshCitationAndLearned();
     };
+    const handleLearnedUpdated = () => {
+      void refreshCitationAndLearned();
+    };
+
     window.addEventListener("kn-memory-updated", handleMemoryUpdated);
-    return () => window.removeEventListener("kn-memory-updated", handleMemoryUpdated);
-  }, []);
+    window.addEventListener("kn-learned-updated", handleLearnedUpdated);
+
+    return () => {
+      window.removeEventListener("kn-memory-updated", handleMemoryUpdated);
+      window.removeEventListener("kn-learned-updated", handleLearnedUpdated);
+    };
+  }, [refreshCitationAndLearned]);
 
   useEffect(() => {
     if (query && inputRef.current) {
@@ -209,13 +257,34 @@ export default function AssistantPage() {
 
   const speak = useCallback(
     (id: string, text: string) => {
-      if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+      if (typeof window === "undefined" || !("speechSynthesis" in window))
+        return;
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = speechLanguage(language);
-      utterance.rate = 0.9;
-      utterance.onend = () => setActiveSpeech((current) => (current === id ? null : current));
-      utterance.onerror = () => setActiveSpeech((current) => (current === id ? null : current));
+
+      // Strip bracketed citations for cleaner speech audio
+      const cleanText = text.replace(/\[.*?\]/g, "").trim();
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      const targetLang = speechLanguage(language);
+      utterance.lang = targetLang;
+
+      // Match voice for Indian language if available
+      try {
+        const voices = window.speechSynthesis.getVoices();
+        const matched = voices.find(
+          (v) =>
+            v.lang.toLowerCase() === targetLang.toLowerCase() ||
+            v.lang.toLowerCase().startsWith(language.toLowerCase()),
+        );
+        if (matched) utterance.voice = matched;
+      } catch {
+        // ignore
+      }
+
+      utterance.rate = 0.95;
+      utterance.onend = () =>
+        setActiveSpeech((current) => (current === id ? null : current));
+      utterance.onerror = () =>
+        setActiveSpeech((current) => (current === id ? null : current));
       setActiveSpeech(id);
       window.speechSynthesis.speak(utterance);
     },
@@ -232,67 +301,121 @@ export default function AssistantPage() {
         role: "user",
         text: question,
       };
+
       const previousMessages = messages;
       setMessages((current) => [...current, userMessage]);
       setInput("");
       if (inputRef.current) inputRef.current.style.height = "auto";
       setTyping(true);
+
       const liveContext = currentFarmContext();
       setFarmContext(liveContext);
 
-      let answer: string;
-      let offline = false;
       try {
-        const response = await fetch("/api/gemini", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: question,
-            history: previousMessages
-              .map(({ role, text }) => ({ role, text })),
-            eli5,
-            lang: language,
-            context: liveContext,
-          }),
-        });
-        const payload = (await response.json()) as { reply?: string; error?: string };
-        if (!response.ok || !payload.reply) throw new Error(payload.error || "Gemini request failed");
-        answer = payload.reply;
-      } catch {
-        answer = offlineAnswer(question, eli5);
-        offline = true;
-      }
-
-      const assistantMessage: ChatMessage = {
-        id: `${Date.now()}-assistant`,
-        role: "assistant",
-        text: answer,
-        offline,
-      };
-      setMessages((current) => [...current, assistantMessage]);
-      setTyping(false);
-
-      // Log chat answer to Farm Memory
-      void memory.logEvent({
-        type: "chat",
-        payload: {
+        // Execute Answer Engine
+        const result = await answerQuestion(
           question,
-          answer,
-          offline,
-          eli5,
           language,
-        },
-      });
+          liveContext,
+          {
+            eli5,
+            history: previousMessages.map(({ role, text }) => ({
+              role,
+              text,
+            })),
+          },
+        );
 
-      if (readAloud) speak(assistantMessage.id, answer);
+        const assistantMessageId = `${Date.now()}-assistant`;
+
+        // If GEMINI badge: stream response word by word for live feel
+        if (result.badge === "GEMINI") {
+          const fullText = result.text;
+          const words = fullText.split(" ");
+          let displayed = "";
+
+          // Create initial message
+          setMessages((current) => [
+            ...current,
+            {
+              id: assistantMessageId,
+              role: "assistant",
+              text: "",
+              badge: "GEMINI",
+              latencyMs: result.latencyMs,
+              offline: false,
+            },
+          ]);
+
+          // Stream words in fast intervals
+          for (let i = 0; i < words.length; i++) {
+            displayed += (i === 0 ? "" : " ") + words[i];
+            const currentText = displayed;
+            setMessages((current) =>
+              current.map((m) =>
+                m.id === assistantMessageId
+                  ? { ...m, text: currentText }
+                  : m,
+              ),
+            );
+            // Yield every 2 words
+            if (i % 2 === 0) {
+              await new Promise((r) => setTimeout(r, 16));
+            }
+          }
+        } else {
+          // Instant response for BRAIN or LEARNED
+          const assistantMessage: ChatMessage = {
+            id: assistantMessageId,
+            role: "assistant",
+            text: result.text,
+            badge: result.badge,
+            latencyMs: result.latencyMs,
+            intent: result.intent,
+            offline: result.offline,
+          };
+          setMessages((current) => [...current, assistantMessage]);
+        }
+
+        // Log to Farm Memory
+        void memory.logEvent({
+          type: "chat",
+          payload: {
+            question,
+            answer: result.text,
+            badge: result.badge,
+            latencyMs: result.latencyMs,
+            intent: result.intent,
+            language,
+          },
+        });
+
+        if (readAloud) speak(assistantMessageId, result.text);
+      } catch (err) {
+        console.error("Answer engine error", err);
+        const errMsg: ChatMessage = {
+          id: `${Date.now()}-assistant`,
+          role: "assistant",
+          text: "KrishiNethra Farm Brain: Temporary error processing request. Please try again.",
+          badge: "BRAIN",
+          latencyMs: 10,
+          offline: true,
+        };
+        setMessages((current) => [...current, errMsg]);
+      } finally {
+        setTyping(false);
+        void refreshCitationAndLearned();
+      }
     },
-    [eli5, language, messages, readAloud, speak, typing],
+    [eli5, language, messages, readAloud, refreshCitationAndLearned, speak, typing],
   );
 
   const handleFeedback = useCallback(
     (messageId: string, rating: "up" | "down", answerText: string) => {
       setFeedbackMap((prev) => ({ ...prev, [messageId]: rating }));
-      const lastUser = [...messages].reverse().find((m) => m.role === "user");
+      const lastUser = [...messages]
+        .reverse()
+        .find((m) => m.role === "user");
       void memory.logEvent({
         type: "feedback",
         payload: {
@@ -303,9 +426,12 @@ export default function AssistantPage() {
           question: lastUser?.text ?? "",
         },
       });
-      toast.success(rating === "up" ? "Feedback recorded: Helpful" : "Feedback recorded: Needs fix", {
-        description: "Logged to Farm Memory (IndexedDB: kn_farm) for model learning.",
-      });
+      toast.success(
+        rating === "up" ? "Feedback recorded: Helpful" : "Feedback recorded: Needs fix",
+        {
+          description: "Logged to Farm Memory (IndexedDB: kn_farm) for model learning.",
+        },
+      );
     },
     [messages],
   );
@@ -333,7 +459,8 @@ export default function AssistantPage() {
       }
       interimRef.current += finalTranscript;
       setInput(`${interimRef.current} ${interimTranscript}`.trimStart());
-      if (finalTranscript.trim()) void send(`${interimRef.current} ${interimTranscript}`);
+      if (finalTranscript.trim())
+        void send(`${interimRef.current} ${interimTranscript}`);
     };
     recognition.onend = () => setListening(false);
     recognition.onerror = () => setListening(false);
@@ -357,12 +484,15 @@ export default function AssistantPage() {
     });
   };
 
+  const suggestions =
+    SUGGESTIONS_BY_LANG[language] ?? SUGGESTIONS_BY_LANG.en;
+
   return (
     <div className="mx-auto w-full max-w-3xl space-y-3">
       <Card className="flex flex-col">
         <CardHeader
           title={t("assistant.title")}
-          subtitle="Ask KrishiGPT about farming or anything else"
+          subtitle="Instant, offline, personalized farming intelligence in 4 languages"
           action={
             <button
               type="button"
@@ -375,13 +505,18 @@ export default function AssistantPage() {
                   : "border-white/10 bg-white/[0.03] text-zinc-400 hover:text-white",
               )}
             >
-              {readAloud ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              {readAloud ? (
+                <Volume2 className="h-4 w-4" />
+              ) : (
+                <VolumeX className="h-4 w-4" />
+              )}
               Read aloud
             </button>
           }
         />
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 px-1 py-3">
+        {/* Brain Meta Strip */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/5 px-2 py-3">
           <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-200">
             <input
               type="checkbox"
@@ -391,17 +526,29 @@ export default function AssistantPage() {
             />
             Explain Like I&apos;m 5
           </label>
-          <span className="text-xs text-zinc-500">
-            {citation.rows > 0
-              ? `Brain memory: based on your last ${citation.days} days, ${citation.rows} rows`
-              : farmContext
-                ? `Farm context ready · ${farmContext.soil.toFixed(0)}% soil moisture · ${farmContext.temp.toFixed(1)}°C`
-                : "Loading farm context…"}
-          </span>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-400">
+            {citation.rows > 0 && (
+              <span className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 font-mono text-[11px] text-zinc-300">
+                Memory: {citation.days}d ({citation.rows} rows)
+              </span>
+            )}
+            {learnedCount > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 font-mono text-[11px] text-amber-300">
+                <Sparkles className="h-3 w-3 text-amber-400" />
+                Learned: {learnedCount}
+              </span>
+            )}
+            {farmContext && (
+              <span className="hidden sm:inline font-mono text-[11px] text-emerald-400">
+                {farmContext.soil.toFixed(0)}% soil · {farmContext.temp.toFixed(1)}°C · {farmContext.mode}
+              </span>
+            )}
+          </div>
         </div>
 
+        {/* Multilingual Suggestion Chips */}
         <div className="-mx-1 flex gap-2 overflow-x-auto px-1 py-3">
-          {SUGGESTIONS.map((suggestion) => (
+          {suggestions.map((suggestion) => (
             <button
               key={suggestion}
               type="button"
@@ -414,52 +561,106 @@ export default function AssistantPage() {
           ))}
         </div>
 
-        <div className="h-[52vh] space-y-3 overflow-y-auto py-2 pr-1 sm:h-[56vh]" aria-live="polite">
+        {/* Message Stream Viewport */}
+        <div
+          className="h-[52vh] space-y-3 overflow-y-auto py-2 pr-1 sm:h-[56vh]"
+          aria-live="polite"
+        >
           {messages.length === 0 && (
             <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm leading-relaxed text-zinc-300">
-              Namaste! I&apos;m KrishiGPT. Ask a farming question or anything you&apos;re curious about.
+              <p className="font-semibold text-emerald-400 mb-1">
+                🌾 Namaste! KrishiNethra 4-Language Knowledge Brain is ready.
+              </p>
+              <p className="text-xs text-zinc-400">
+                Ask in English, Hindi, Gujarati, or Marathi. Answers run 100%
+                offline with your farm&apos;s live sensors, memory citation, and
+                soil crossing forecast.
+              </p>
             </div>
           )}
+
           {messages.map((message) => (
             <div
               key={message.id}
-              className={cn("flex", message.role === "user" ? "justify-end" : "items-end gap-2")}
+              className={cn(
+                "flex",
+                message.role === "user" ? "justify-end" : "items-end gap-2",
+              )}
             >
               {message.role === "assistant" && (
-                <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10 text-base">
+                <span
+                  aria-hidden
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10 text-base"
+                >
                   🌾
                 </span>
               )}
               <div className="max-w-[88%]">
-                {message.offline && (
-                  <div className="mb-2 rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs font-semibold leading-relaxed text-amber-200">
-                    Gemini unreachable — showing offline knowledge base answer
+                {/* Engine Badge Strip */}
+                {message.role === "assistant" && message.badge && (
+                  <div className="mb-1.5 flex items-center gap-2">
+                    {/* BRAIN Badge (Moss) */}
+                    {message.badge === "BRAIN" && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-600/40 bg-[#1b3a24] px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase text-emerald-300 shadow-[0_0_12px_rgba(34,197,94,0.2)]">
+                        <Brain className="h-3 w-3 text-emerald-400" />
+                        BRAIN
+                      </span>
+                    )}
+
+                    {/* LEARNED Badge (Gold) */}
+                    {message.badge === "LEARNED" && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-[#3d2a0e] px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)]">
+                        <Sparkles className="h-3 w-3 text-amber-400" />
+                        LEARNED
+                      </span>
+                    )}
+
+                    {/* GEMINI Badge (Muted) */}
+                    {message.badge === "GEMINI" && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-700/60 bg-zinc-900 px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase text-zinc-300">
+                        <Cpu className="h-3 w-3 text-zinc-400" />
+                        GEMINI
+                      </span>
+                    )}
+
+                    {/* Latency in mono font */}
+                    {typeof message.latencyMs === "number" && (
+                      <span className="font-mono text-[11px] text-zinc-400">
+                        {message.latencyMs}ms
+                      </span>
+                    )}
                   </div>
                 )}
+
                 <div
                   className={cn(
-                    "whitespace-pre-wrap rounded-2xl px-3 py-2.5 text-sm leading-relaxed transition-shadow",
+                    "whitespace-pre-wrap rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed transition-shadow",
                     message.role === "user"
                       ? "rounded-br-md bg-emerald-500 font-medium text-black shadow-[0_0_16px_rgba(34,197,94,0.3)]"
                       : "rounded-bl-md border border-white/10 bg-white/[0.04] text-zinc-100",
-                    activeSpeech === message.id && "border-emerald-300 bg-emerald-500/15 shadow-[0_0_22px_rgba(52,211,153,0.3)]",
+                    activeSpeech === message.id &&
+                      "border-emerald-300 bg-emerald-500/15 shadow-[0_0_22px_rgba(52,211,153,0.3)]",
                   )}
                 >
                   {message.text}
                 </div>
+
                 {message.role === "assistant" && (
                   <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    {/* Listen [🔊] Button */}
                     <button
                       type="button"
                       onClick={() => speak(message.id, message.text)}
-                      className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-zinc-300 hover:border-emerald-400/40 hover:text-emerald-100"
+                      className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-zinc-300 transition-all hover:border-emerald-400/40 hover:text-emerald-100"
                     >
+                      <Volume2 className="h-3 w-3" />
                       Listen
                     </button>
+
                     <button
                       type="button"
                       onClick={stopSpeech}
-                      className="flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-zinc-300 hover:border-red-400/40 hover:text-red-100"
+                      className="flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-zinc-300 transition-all hover:border-red-400/40 hover:text-red-100"
                     >
                       <Square className="h-3 w-3" /> Stop
                     </button>
@@ -468,7 +669,9 @@ export default function AssistantPage() {
                     <div className="flex items-center gap-1 border-l border-white/10 pl-2">
                       <button
                         type="button"
-                        onClick={() => handleFeedback(message.id, "up", message.text)}
+                        onClick={() =>
+                          handleFeedback(message.id, "up", message.text)
+                        }
                         aria-label="Helpful answer"
                         title="Mark helpful — logged to Farm Memory"
                         className={cn(
@@ -483,7 +686,9 @@ export default function AssistantPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleFeedback(message.id, "down", message.text)}
+                        onClick={() =>
+                          handleFeedback(message.id, "down", message.text)
+                        }
                         aria-label="Not helpful answer"
                         title="Mark not helpful — logged to Farm Memory"
                         className={cn(
@@ -502,67 +707,80 @@ export default function AssistantPage() {
               </div>
             </div>
           ))}
+
           {typing && (
-            <div className="flex items-end gap-2">
-              <span aria-hidden className="flex h-8 w-8 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-500/10">🌾</span>
-              <div aria-label="KrishiGPT is thinking" className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-white/10 bg-white/[0.04] px-4 py-3.5">
-                {[0, 1, 2].map((dot) => (
-                  <span key={dot} className="h-2 w-2 animate-bounce rounded-full bg-emerald-400" style={{ animationDelay: `${dot * 0.15}s` }} />
-                ))}
-              </div>
+            <div className="flex items-center gap-2 text-xs text-emerald-400">
+              <span className="flex h-2 w-2">
+                <span className="absolute inline-flex h-2 w-2 animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              <span>Knowledge Brain thinking…</span>
             </div>
           )}
           <div ref={bottomRef} />
         </div>
 
-        <div className="-mx-1 flex gap-2 overflow-x-auto border-t border-white/5 px-1 pt-3">
+        {/* Input Bar */}
+        <div className="border-t border-white/5 pt-3">
           <form
-            onSubmit={(event) => {
-              event.preventDefault();
+            onSubmit={(e) => {
+              e.preventDefault();
               void send(input);
             }}
-            className="flex w-full items-end gap-2"
+            className="flex items-end gap-2"
           >
+            <div className="relative flex-1">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  e.target.style.height = "auto";
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    void send(input);
+                  }
+                }}
+                placeholder={
+                  language === "gu"
+                    ? "ટામેટા કે ખેતી વિશે પૂછો... (દા.ત. હમણે પાણી આપું?)"
+                    : language === "mr"
+                      ? "शेतीबद्दल विचारा... (उदा. आता पाणी द्यावं का?)"
+                      : language === "hi"
+                        ? "खेती के बारे में पूछें... (उदा. क्या अभी पानी देना चाहिए?)"
+                        : "Ask about farming... (e.g. Should I irrigate now?)"
+                }
+                rows={1}
+                className="w-full resize-none rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
+              />
+            </div>
+
             {hasRecognition && (
               <button
                 type="button"
                 onClick={toggleMic}
-                aria-label={listening ? "Stop listening" : "Speak your question"}
-                title={`Voice input (${recognitionLanguage(language)})`}
                 className={cn(
-                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-all",
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border transition-all",
                   listening
-                    ? "animate-pulse border-red-400/60 bg-red-500/20 text-red-200"
-                    : "border-white/10 bg-white/[0.03] text-zinc-300 hover:border-emerald-500/40 hover:text-emerald-200",
+                    ? "border-red-500/60 bg-red-500/20 text-red-300 animate-pulse"
+                    : "border-white/10 bg-white/[0.04] text-zinc-400 hover:text-white",
                 )}
+                aria-label="Voice input"
               >
-                <Mic className="h-4 w-4" />
+                <Mic className="h-5 w-5" />
               </button>
             )}
-            <textarea
-              ref={inputRef}
-              rows={1}
-              value={input}
-              onChange={(event) => {
-                setInput(event.target.value);
-                event.currentTarget.style.height = "auto";
-                event.currentTarget.style.height = `${Math.min(event.currentTarget.scrollHeight, 160)}px`;
-              }}
-              placeholder={t("assistant.placeholder")}
-              className="max-h-40 min-h-11 min-w-0 flex-1 resize-none rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3 text-sm leading-5 text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-emerald-500/50"
-            />
+
             <button
               type="submit"
               disabled={!input.trim() || typing}
-              aria-label="Send"
-              className={cn(
-                "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-all",
-                input.trim() && !typing
-                  ? "bg-emerald-500 text-black shadow-[0_0_20px_rgba(34,197,94,0.4)] hover:bg-emerald-400"
-                  : "cursor-not-allowed border border-white/10 bg-white/[0.03] text-zinc-600",
-              )}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-black shadow-[0_0_16px_rgba(34,197,94,0.3)] transition-all hover:bg-emerald-400 disabled:opacity-40 disabled:shadow-none"
+              aria-label="Send message"
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-5 w-5" />
             </button>
           </form>
         </div>

@@ -728,6 +728,8 @@ interface FarmState {
   ensureDailySummaries: () => void;
   /** First-run exhibition seed — fills empty slices, never overwrites user data. */
   ensureDemoSeed: () => void;
+  brainLearnedFromYou: number;
+  incrementBrainLearned: () => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1321,6 +1323,9 @@ export const useFarmStore = create<FarmState>()(
       isAuthenticated: false,
       onboardingDone: true,
       appPinHash: null,
+      brainLearnedFromYou: 0,
+      incrementBrainLearned: () =>
+        set((s) => ({ brainLearnedFromYou: (s.brainLearnedFromYou || 0) + 1 })),
       setLanguage: (language) =>
         set((s) => ({
           language,
@@ -2565,10 +2570,10 @@ export const useFarmStore = create<FarmState>()(
 /* ------------------------------------------------------------------ */
 
 if (typeof window !== "undefined") {
-  useFarmStore.persist.onFinishHydration(() => {
+  useFarmStore.persist?.onFinishHydration?.(() => {
     useFarmStore.setState({ hydrated: true });
   });
-  if (useFarmStore.persist.hasHydrated()) {
+  if (useFarmStore.persist?.hasHydrated?.()) {
     useFarmStore.setState({ hydrated: true });
   }
 
