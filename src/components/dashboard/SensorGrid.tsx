@@ -56,7 +56,7 @@ export default function SensorGrid() {
     humidityLow: 40,
     aqiHigh: 150,
   };
-  const showRaw = farm.settings?.showRawCalibrationValues;
+  const showRaw = farm.isLive && Boolean(farm.settings?.showRawCalibrationValues);
 
   const soilRaw = soilRawVal ?? Math.round(1023 - (soilVal * 6.5));
   const mqRaw = mqRawVal ?? 230;

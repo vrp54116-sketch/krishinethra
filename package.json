@@ -1,6 +1,6 @@
 {
   "name": "krishinethra",
-  "version": "5.1.0",
+  "version": "6.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,7 +8,7 @@
     "build": "npm run i18n:check && next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "npx tsx scripts/qa-sweep.ts && npx tsx scripts/verify-b1-memory.ts && npx tsx scripts/verify-b2-brain.ts && npx tsx scripts/verify-b3-brain.ts && npx tsx scripts/verify-b4-advisor.ts"
+    "test": "npx tsx scripts/qa-sweep.ts && npx tsx scripts/verify-b1-memory.ts && npx tsx scripts/verify-b2-brain.ts && npx tsx scripts/verify-b3-brain.ts && npx tsx scripts/verify-b4-advisor.ts && npx tsx scripts/verify-b5-brain.ts && npx tsx scripts/verify-p1-pipeline.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

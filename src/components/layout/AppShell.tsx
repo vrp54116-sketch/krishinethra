@@ -25,6 +25,7 @@ import {
   TrendingUp,
   Wifi,
   Activity,
+  Brain,
   X,
   type LucideIcon,
 } from "lucide-react";
@@ -106,10 +107,13 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/app/reports", labelKey: "nav.reports", titleKey: "titles.reports", icon: BarChart3 },
   { href: "/app/alerts", labelKey: "nav.alerts", titleKey: "titles.alerts", icon: Bell },
   { href: "/app/voice", labelKey: "nav.voice", titleKey: "titles.voice", icon: Mic },
+  { href: "/brain", labelKey: "nav.brain", titleKey: "titles.brain", icon: Brain },
   { href: "/app/settings", labelKey: "nav.settings", titleKey: "titles.settings", icon: Settings },
 ];
 
 const PAGE_STAMPS: Record<string, string> = {
+  "/brain": "BRAIN STUDIO // STAGE",
+  "/app/brain": "BRAIN STUDIO // STAGE",
   "/app/dashboard": "DASHBOARD // LIVE MONITORING",
   "/app/camera": "CAMERA // LEAF SCANNER",
   "/leaf-scanner": "LEAF SCANNER // REAL TOMATO DOCTOR",

@@ -239,189 +239,204 @@ export function getLocalizedDiseaseInfo(
   humPct: number = 65
 ): DiseaseInfoItem {
   const norm = label.toLowerCase();
+  const tr = (k: string, fb: string) => {
+    const val = t(k, undefined, lang);
+    return val && val !== k ? val : fb;
+  };
 
   if (norm.includes("healthy")) {
+    const d = DISEASE_INFO["Tomato___healthy"];
     return {
-      friendly: t("leaf_class_healthy", undefined, lang),
-      scientific: "Solanum lycopersicum",
-      natural: t("leaf_treatment_natural_healthy", undefined, lang),
-      chemical: t("leaf_treatment_chemical_healthy", undefined, lang),
+      friendly: tr("scanner.healthy", d.friendly),
+      scientific: d.scientific,
+      natural: tr("scanner.natural.healthy", d.natural),
+      chemical: tr("scanner.chemical.healthy", d.chemical),
       prevention: [
-        t("leaf_prevention_healthy_1", undefined, lang),
-        t("leaf_prevention_healthy_2", undefined, lang),
-        t("leaf_prevention_healthy_3", undefined, lang),
+        tr("scanner.prev.healthy.1", d.prevention[0] || "Keep 60 cm spacing"),
+        tr("scanner.prev.healthy.2", d.prevention[1] || "Water at base, not overhead"),
+        tr("scanner.prev.healthy.3", d.prevention[2] || "Mulch to stop soil splash"),
       ],
       risk: () => makeRisk("none", false, "none"),
     };
   }
 
   if (norm.includes("early_blight") || norm.includes("early blight")) {
+    const d = DISEASE_INFO["Tomato___Early_blight"];
     const isHigh = tempC > 24 && humPct > 70;
     const text = isHigh
       ? `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = high spread conditions`
       : `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = low spread conditions (requires temp > 24°C & hum > 70%)`;
     return {
-      friendly: t("leaf_class_early_blight", undefined, lang),
-      scientific: "Alternaria solani",
-      natural: t("leaf_treatment_natural_early_blight", undefined, lang),
-      chemical: t("leaf_treatment_chemical_early_blight", undefined, lang),
+      friendly: tr("scanner.Early_blight", d.friendly),
+      scientific: d.scientific,
+      natural: tr("scanner.natural.Early_blight", d.natural),
+      chemical: tr("scanner.chemical.Early_blight", d.chemical),
       prevention: [
-        t("leaf_prevention_early_blight_1", undefined, lang),
-        t("leaf_prevention_early_blight_2", undefined, lang),
-        t("leaf_prevention_early_blight_3", undefined, lang),
+        tr("scanner.prev.Early_blight.1", d.prevention[0] || "Mulch soil"),
+        tr("scanner.prev.Early_blight.2", d.prevention[1] || "Stake plants for airflow"),
+        tr("scanner.prev.Early_blight.3", d.prevention[2] || "Rotate crops next season"),
       ],
       risk: () => makeRisk(isHigh ? "High" : "Low", isHigh, text),
     };
   }
 
   if (norm.includes("late_blight") || norm.includes("late blight")) {
+    const d = DISEASE_INFO["Tomato___Late_blight"];
     const isHigh = humPct > 85 && tempC >= 10 && tempC <= 25;
     const text = isHigh
       ? `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = high spread conditions`
       : `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = low spread conditions (requires hum > 85% & temp 10–25°C)`;
     return {
-      friendly: t("leaf_class_late_blight", undefined, lang),
-      scientific: "Phytophthora infestans",
-      natural: t("leaf_treatment_natural_late_blight", undefined, lang),
-      chemical: t("leaf_treatment_chemical_late_blight", undefined, lang),
+      friendly: tr("scanner.Late_blight", d.friendly),
+      scientific: d.scientific,
+      natural: tr("scanner.natural.Late_blight", d.natural),
+      chemical: tr("scanner.chemical.Late_blight", d.chemical),
       prevention: [
-        t("leaf_prevention_late_blight_1", undefined, lang),
-        t("leaf_prevention_late_blight_2", undefined, lang),
-        t("leaf_prevention_late_blight_3", undefined, lang),
+        tr("scanner.prev.Late_blight.1", d.prevention[0] || "Never water overhead"),
+        tr("scanner.prev.Late_blight.2", d.prevention[1] || "Resistant varieties"),
+        tr("scanner.prev.Late_blight.3", d.prevention[2] || "Wide spacing"),
       ],
       risk: () => makeRisk(isHigh ? "High" : "Low", isHigh, text),
     };
   }
 
   if (norm.includes("leaf_mold") || norm.includes("leaf mold")) {
+    const d = DISEASE_INFO["Tomato___Leaf_Mold"];
     const isHigh = humPct > 80 && tempC > 20;
     const text = isHigh
       ? `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = high spread conditions`
       : `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = low spread conditions (requires hum > 80% & temp > 20°C)`;
     return {
-      friendly: t("leaf_class_leaf_mold", undefined, lang),
-      scientific: "Passalora fulva",
-      natural: t("leaf_treatment_natural_leaf_mold", undefined, lang),
-      chemical: t("leaf_treatment_chemical_leaf_mold", undefined, lang),
+      friendly: tr("scanner.Leaf_Mold", d.friendly),
+      scientific: d.scientific,
+      natural: tr("scanner.natural.Leaf_Mold", d.natural),
+      chemical: tr("scanner.chemical.Leaf_Mold", d.chemical),
       prevention: [
-        t("leaf_prevention_leaf_mold_1", undefined, lang),
-        t("leaf_prevention_leaf_mold_2", undefined, lang),
-        t("leaf_prevention_leaf_mold_3", undefined, lang),
+        tr("scanner.prev.Leaf_Mold.1", d.prevention[0] || "Prune lower leaves"),
+        tr("scanner.prev.Leaf_Mold.2", d.prevention[1] || "Ventilate greenhouse"),
+        tr("scanner.prev.Leaf_Mold.3", d.prevention[2] || "Resistant varieties"),
       ],
       risk: () => makeRisk(isHigh ? "High" : "Low", isHigh, text),
     };
   }
 
   if (norm.includes("septoria")) {
+    const d = DISEASE_INFO["Tomato___Septoria_leaf_spot"];
     const isHigh = humPct > 75 && tempC >= 20 && tempC <= 30;
     const text = isHigh
       ? `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = high spread conditions`
       : `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = low spread conditions (requires hum > 75% & temp 20–30°C)`;
     return {
-      friendly: t("leaf_class_septoria", undefined, lang),
-      scientific: "Septoria lycopersici",
-      natural: t("leaf_treatment_natural_septoria", undefined, lang),
-      chemical: t("leaf_treatment_chemical_septoria", undefined, lang),
+      friendly: tr("scanner.Septoria", d.friendly),
+      scientific: d.scientific,
+      natural: tr("scanner.natural.Septoria", d.natural),
+      chemical: tr("scanner.chemical.Septoria", d.chemical),
       prevention: [
-        t("leaf_prevention_septoria_1", undefined, lang),
-        t("leaf_prevention_septoria_2", undefined, lang),
+        tr("scanner.prev.Septoria.1", d.prevention[0] || "Crop rotation 2 years"),
+        tr("scanner.prev.Septoria.2", d.prevention[1] || "Drip irrigation only"),
       ],
       risk: () => makeRisk(isHigh ? "High" : "Low", isHigh, text),
     };
   }
 
   if (norm.includes("bacterial_spot") || norm.includes("bacterial spot")) {
+    const d = DISEASE_INFO["Tomato___Bacterial_spot"];
     const isHigh = humPct > 80 && tempC > 25;
     const text = isHigh
       ? `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = high spread conditions`
       : `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = low spread conditions (requires hum > 80% & temp > 25°C)`;
     return {
-      friendly: t("leaf_class_bacterial_spot", undefined, lang),
-      scientific: "Xanthomonas spp.",
-      natural: t("leaf_treatment_natural_bacterial_spot", undefined, lang),
-      chemical: t("leaf_treatment_chemical_bacterial_spot", undefined, lang),
+      friendly: tr("scanner.Bacterial_spot", d.friendly),
+      scientific: d.scientific,
+      natural: tr("scanner.natural.Bacterial_spot", d.natural),
+      chemical: tr("scanner.chemical.Bacterial_spot", d.chemical),
       prevention: [
-        t("leaf_prevention_bacterial_spot_1", undefined, lang),
-        t("leaf_prevention_bacterial_spot_2", undefined, lang),
-        t("leaf_prevention_bacterial_spot_3", undefined, lang),
+        tr("scanner.prev.Bacterial_spot.1", d.prevention[0] || "Certified disease-free seed"),
+        tr("scanner.prev.Bacterial_spot.2", d.prevention[1] || "Rotate crops 2 years"),
+        tr("scanner.prev.Bacterial_spot.3", d.prevention[2] || "Avoid working in wet plants"),
       ],
       risk: () => makeRisk(isHigh ? "High" : "Low", isHigh, text),
     };
   }
 
   if (norm.includes("target_spot") || norm.includes("target spot")) {
+    const d = DISEASE_INFO["Tomato___Target_Spot"];
     const isHigh = humPct > 80 && tempC >= 22 && tempC <= 30;
     const text = isHigh
       ? `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = high spread conditions`
       : `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = low spread conditions (requires hum > 80% & temp 22–30°C)`;
     return {
-      friendly: t("leaf_class_target_spot", undefined, lang),
-      scientific: "Corynespora cassiicola",
-      natural: t("leaf_treatment_natural_target_spot", undefined, lang),
-      chemical: t("leaf_treatment_chemical_target_spot", undefined, lang),
+      friendly: tr("scanner.Target_Spot", d.friendly),
+      scientific: d.scientific,
+      natural: tr("scanner.natural.Target_Spot", d.natural),
+      chemical: tr("scanner.chemical.Target_Spot", d.chemical),
       prevention: [
-        t("leaf_prevention_target_spot_1", undefined, lang),
-        t("leaf_prevention_target_spot_2", undefined, lang),
+        tr("scanner.prev.Target_Spot.1", d.prevention[0] || "Stake plants"),
+        tr("scanner.prev.Target_Spot.2", d.prevention[1] || "Sanitize tools"),
       ],
       risk: () => makeRisk(isHigh ? "High" : "Low", isHigh, text),
     };
   }
 
   if (norm.includes("spider_mites") || norm.includes("spider mites")) {
+    const d = DISEASE_INFO["Tomato___Spider_mites Two-spotted_spider_mite"];
     const isHigh = tempC > 30 && humPct < 40;
     const text = isHigh
       ? `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = high spread conditions`
       : `hum ${Math.round(humPct)}% + temp ${Math.round(tempC)}°C = low spread conditions (requires temp > 30°C & hum < 40%)`;
     return {
-      friendly: t("leaf_class_spider_mites", undefined, lang),
-      scientific: "Tetranychus urticae",
-      natural: t("leaf_treatment_natural_spider_mites", undefined, lang),
-      chemical: t("leaf_treatment_chemical_spider_mites", undefined, lang),
+      friendly: tr("scanner.Spider_mites", d.friendly),
+      scientific: d.scientific,
+      natural: tr("scanner.natural.Spider_mites", d.natural),
+      chemical: tr("scanner.chemical.Spider_mites", d.chemical),
       prevention: [
-        t("leaf_prevention_spider_mites_1", undefined, lang),
-        t("leaf_prevention_spider_mites_2", undefined, lang),
-        t("leaf_prevention_spider_mites_3", undefined, lang),
+        tr("scanner.prev.Spider_mites.1", d.prevention[0] || "Raise humidity slightly"),
+        tr("scanner.prev.Spider_mites.2", d.prevention[1] || "Remove weeds"),
+        tr("scanner.prev.Spider_mites.3", d.prevention[2] || "Check leaf undersides weekly"),
       ],
       risk: () => makeRisk(isHigh ? "High" : "Low", isHigh, text),
     };
   }
 
   if (norm.includes("mosaic_virus") || norm.includes("tomv") || norm.includes("mosaic")) {
+    const d = DISEASE_INFO["Tomato___Tomato_mosaic_virus"];
     return {
-      friendly: t("leaf_class_mosaic_virus", undefined, lang),
-      scientific: "Tomato mosaic virus",
-      natural: t("leaf_treatment_natural_mosaic_virus", undefined, lang),
-      chemical: t("leaf_treatment_chemical_mosaic_virus", undefined, lang),
+      friendly: tr("scanner.Mosaic_virus", d.friendly),
+      scientific: d.scientific,
+      natural: tr("scanner.natural.Mosaic_virus", d.natural),
+      chemical: tr("scanner.chemical.Mosaic_virus", d.chemical),
       prevention: [
-        t("leaf_prevention_mosaic_virus_1", undefined, lang),
-        t("leaf_prevention_mosaic_virus_2", undefined, lang),
-        t("leaf_prevention_mosaic_virus_3", undefined, lang),
+        tr("scanner.prev.Mosaic_virus.1", d.prevention[0] || "Resistant varieties"),
+        tr("scanner.prev.Mosaic_virus.2", d.prevention[1] || "Control aphids"),
+        tr("scanner.prev.Mosaic_virus.3", d.prevention[2] || "Do not smoke near plants"),
       ],
       risk: () => makeRisk("High", true, "spreads by touch — isolate now"),
     };
   }
 
   if (norm.includes("tylcv") || norm.includes("yellow_leaf_curl") || norm.includes("yellow leaf curl")) {
+    const d = DISEASE_INFO["Tomato___Tomato_Yellow_Leaf_Curl_Virus"];
     return {
-      friendly: t("leaf_class_tylcv", undefined, lang),
-      scientific: "Tomato yellow leaf curl virus",
-      natural: t("leaf_treatment_natural_tylcv", undefined, lang),
-      chemical: t("leaf_treatment_chemical_tylcv", undefined, lang),
+      friendly: tr("scanner.TYLCV", d.friendly),
+      scientific: d.scientific,
+      natural: tr("scanner.natural.TYLCV", d.natural),
+      chemical: tr("scanner.chemical.TYLCV", d.chemical),
       prevention: [
-        t("leaf_prevention_tylcv_1", undefined, lang),
-        t("leaf_prevention_tylcv_2", undefined, lang),
-        t("leaf_prevention_tylcv_3", undefined, lang),
+        tr("scanner.prev.TYLCV.1", d.prevention[0] || "Insect net house"),
+        tr("scanner.prev.TYLCV.2", d.prevention[1] || "Resistant varieties"),
+        tr("scanner.prev.TYLCV.3", d.prevention[2] || "Remove weeds hosting whitefly"),
       ],
       risk: () => makeRisk("High", true, "whitefly spreads it — trap now"),
     };
   }
 
   // Not A Leaf fallback
+  const dNot = DISEASE_INFO["Not A Leaf"];
   return {
-    friendly: t("leaf_class_not_leaf", undefined, lang),
+    friendly: tr("scanner.not_leaf", dNot.friendly),
     scientific: "-",
-    natural: t("leaf_treatment_natural_not_leaf", undefined, lang),
-    chemical: t("leaf_treatment_chemical_not_leaf", undefined, lang),
+    natural: tr("scanner.natural.not_leaf", dNot.natural),
+    chemical: tr("scanner.chemical.not_leaf", dNot.chemical),
     prevention: [],
     risk: () => makeRisk("none", false, "none"),
   };

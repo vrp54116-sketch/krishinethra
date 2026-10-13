@@ -10,6 +10,9 @@ type TruthRow = {
 };
 
 const FEATURES: TruthRow[] = [
+  { feature: "PERSONAL BRAIN", kind: "model", source: "trained in-browser on your log" },
+  { feature: "KNOWLEDGE BRAIN", kind: "model", source: "our 4-lang KB + intent model" },
+  { feature: "GEMINI", kind: "api", source: "fallback only" },
   { feature: "Soil moisture", kind: "hardware", source: "Soil probes on the farm device" },
   { feature: "Temperature", kind: "hardware", source: "Temperature sensor on the farm device" },
   { feature: "Humidity", kind: "hardware", source: "Humidity sensor on the farm device" },

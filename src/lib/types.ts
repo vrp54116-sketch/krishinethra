@@ -56,6 +56,7 @@ export interface PumpState {
 
 export interface Alert {
   id: string;
+  type?: string;
   level: "critical" | "warning" | "info";
   title: string;
   message: string;

@@ -143,8 +143,8 @@ export default function WirelessEdgeCard() {
   return (
     <Card>
       <CardHeader
-        title="EDGE BRIDGE // CONNECTION"
-        subtitle="ESP32 single edge node MQTT bridge · Telemetry contract: {node,soil,temp,hum,aqi,rain,pump,r2,mode,stale,rssi,up}"
+        title="EDGE BRIDGE"
+        subtitle="ESP8266 / ESP32 single edge node MQTT bridge · Telemetry contract: {node,soil,temp,hum,aqi,rain,pump,r2,mode,stale,rssi,up}"
         action={
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300">
             <Radio className="h-4 w-4" />
@@ -284,7 +284,7 @@ export default function WirelessEdgeCard() {
         <div className="rounded-xl border border-white/10 bg-black/40 px-3 py-2.5">
           <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Last Seen</p>
           <p className="mt-1 font-mono text-xs font-extrabold text-white">
-            {ageSec == null ? "—" : ageSec < 2 ? "now" : `${ageSec}s ago`}
+            {ageSec == null ? "—" : `last seen ${ageSec}s ago`}
           </p>
         </div>
 

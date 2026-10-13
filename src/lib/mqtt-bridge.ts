@@ -1,20 +1,20 @@
 /**
  * mqtt-bridge.ts
- * Single ESP32 Edge Node MQTT Bridge.
+ * ESP8266 / ESP32 Edge Node MQTT Bridge over WebSocket.
  *
- * Connects to a single ESP32 edge node over MQTT WebSocket with automatic failover:
+ * Connects to farm node over MQTT WebSocket with automatic failover:
  *   - wss://broker.emqx.io:8084/mqtt
  *   - wss://broker.hivemq.com:8884/mqtt
  *
  * Topics:
- *   krishinethra/{token}/up  — ESP32 telemetry (JSON, node === "EDGE")
- *   krishinethra/{token}/cmd — Web → ESP32 commands (plain strings)
+ *   krishinethra/{token}/up  — ESP8266 telemetry (JSON, node === "EDGE")
+ *   krishinethra/{token}/cmd — Web → ESP8266 commands (plain strings)
  *
  * Telemetry Contract EXACT:
- *   { node, soil, temp, hum, aqi, rain, pump, r2, mode: "AUTO"|"MANUAL", stale, rssi, up }
+ *   { node: "EDGE", soil, temp, hum, aqi, rain, pump, r2, mode, stale, rssi, up }
  *
- * Commands EXACT:
- *   PUMP_ON, PUMP_OFF, MODE_AUTO, MODE_MANUAL, R2_ON, R2_OFF, BUZZ:<n>:<ms>
+ * Commands EXACT strings to krishinethra/{token}/cmd:
+ *   PUMP_ON, PUMP_OFF, MODE_AUTO, MODE_MANUAL, R2_ON, R2_OFF
  */
 
 import mqtt, { type MqttClient } from "mqtt";
@@ -56,10 +56,10 @@ export type FarmCommand =
   | `BUZZ:${number}:${number}`
   | string;
 
-const FAILOVER_BROKERS = [
+const FAILOVER_BROKERS: readonly string[] = [
   "wss://broker.emqx.io:8084/mqtt",
   "wss://broker.hivemq.com:8884/mqtt",
-] as const;
+];
 
 /* ------------------------------------------------------------------ */
 /* Internal client state                                              */
@@ -74,6 +74,8 @@ let failoverIdx = 0;
 let failoverTimer: ReturnType<typeof setTimeout> | null = null;
 let hopping = false;
 
+// Exported bridge state mirrors
+export let lastSeen: number | null = null;
 export let lastSeenAt: number | null = null;
 export let msgCount = 0;
 export let rssi: number | null = null;
@@ -187,14 +189,13 @@ function startClient(brokerUrl: string, token: string, candidates: string[]): vo
       return;
     }
 
-    // Accept only JSON where node === "EDGE"
+    // Accept ONLY JSON where node === "EDGE"
     if (!data || typeof data !== "object" || data.node !== "EDGE") {
       return;
     }
 
     // Telemetry Contract EXACT:
-    // { node, soil, temp, hum, aqi, rain, pump, r2, mode: "AUTO"|"MANUAL", stale, rssi, up }
-    // (ignore extra fields like sraw/mraw)
+    // { node, soil, temp, hum, aqi, rain, pump, r2, mode, stale, rssi, up }
     const telemetry: EdgeTelemetry = {
       node: "EDGE",
       soil: typeof data.soil === "number" ? data.soil : Number(data.soil) || 0,
@@ -223,7 +224,8 @@ function startClient(brokerUrl: string, token: string, candidates: string[]): vo
     };
 
     msgCount++;
-    lastSeenAt = Date.now();
+    lastSeen = Date.now();
+    lastSeenAt = lastSeen;
     rssi = telemetry.rssi;
 
     // Push into store live slice
@@ -233,7 +235,7 @@ function startClient(brokerUrl: string, token: string, candidates: string[]): vo
       /* ignore */
     }
 
-    // Notify listeners
+    // Notify registered listeners
     for (const listener of telemetryListeners) {
       try {
         listener(telemetry);
@@ -269,20 +271,22 @@ function startClient(brokerUrl: string, token: string, candidates: string[]): vo
 /* ------------------------------------------------------------------ */
 
 /**
- * Connect to ESP32 node via MQTT WebSocket with failover.
+ * Connect to ESP8266/ESP32 edge node via MQTT WebSocket with broker failover.
  * Subscribes to krishinethra/{token}/up.
+ * Includes singleton guard against React StrictMode double-connect.
  */
 export function connect(token?: string, brokerUrl?: string): void {
   if (typeof window === "undefined") return;
   const t = (token || DEFAULT_FARM_TOKEN).trim() || DEFAULT_FARM_TOKEN;
   const candidates = getCandidates(brokerUrl);
+  const targetBroker = candidates[0];
 
-  // Singleton connected guard: avoid duplicate connections
+  // Singleton connected guard: avoid duplicate connections in React StrictMode
   if (
     client &&
     (currentStatus === "online" || currentStatus === "connecting") &&
     activeToken === t &&
-    activeBroker === candidates[0]
+    activeBroker === targetBroker
   ) {
     return;
   }
@@ -297,7 +301,7 @@ export function connect(token?: string, brokerUrl?: string): void {
   }
   client = null;
 
-  startClient(candidates[0], t, candidates);
+  startClient(targetBroker, t, candidates);
 }
 
 /** Disconnect client cleanly and set offline state. */
@@ -313,7 +317,7 @@ export function disconnect(): void {
   pushStatus("offline");
 }
 
-/** Subscribe to live telemetry packets. Returns unsubscribe callback. */
+/** Subscribe to live telemetry packets. Returns cleanup function to unsubscribe. */
 export function onTelemetry(cb: (t: EdgeTelemetry) => void): () => void {
   telemetryListeners.add(cb);
   return () => {
@@ -353,7 +357,7 @@ export function isConnected(): boolean {
   return currentStatus === "online";
 }
 
-/** Returns connection state: 'connecting' | 'online' | 'offline'. */
+/** Returns connection state: 'connecting' | 'online' | 'offline'. Also supports property coercion. */
 export function state(): MqttState {
   return currentStatus;
 }
@@ -368,6 +372,10 @@ export function getMqttStatus(): MqttState {
 
 export function isMqttOnline(): boolean {
   return currentStatus === "online";
+}
+
+export function getLastSeen(): number | null {
+  return lastSeen;
 }
 
 export function getLastSeenAt(): number | null {
@@ -396,16 +404,48 @@ export function isTelemetryFresh(maxAgeMs = 5000): boolean {
 }
 
 /* Exact command helpers */
-export const cmdPumpOn = () => farmCmd("PUMP_ON");
-export const cmdPumpOff = () => farmCmd("PUMP_OFF");
-export const cmdPumpTimed = (sec: number) => farmCmd(`PUMP_${sec}`);
-export const cmdModeAuto = () => farmCmd("MODE_AUTO");
-export const cmdModeManual = () => farmCmd("MODE_MANUAL");
-export const cmdMode = (mode: "AUTO" | "MANUAL") =>
-  farmCmd(mode === "MANUAL" ? "MODE_MANUAL" : "MODE_AUTO");
-export const cmdR2On = () => farmCmd("R2_ON");
-export const cmdR2Off = () => farmCmd("R2_OFF");
-export const cmdR2 = (on: boolean) => farmCmd(on ? "R2_ON" : "R2_OFF");
-export const cmdBuzz = () => farmCmd("BUZZ:2:150");
-export const cmdBuzzPattern = (n: number, ms: number) =>
-  farmCmd(`BUZZ:${Math.max(1, Math.round(n))}:${Math.max(20, Math.round(ms))}`);
+export const cmdPumpOn = (token?: string) => sendCmd("PUMP_ON", token);
+export const cmdPumpOff = (token?: string) => sendCmd("PUMP_OFF", token);
+export const cmdPumpTimed = (sec: number, token?: string) => {
+  sendCmd("PUMP_ON", token);
+  setTimeout(() => {
+    sendCmd("PUMP_OFF", token);
+  }, sec * 1000);
+};
+export const cmdModeAuto = (token?: string) => sendCmd("MODE_AUTO", token);
+export const cmdModeManual = (token?: string) => sendCmd("MODE_MANUAL", token);
+export const cmdMode = (mode: "AUTO" | "MANUAL", token?: string) =>
+  sendCmd(mode === "MANUAL" ? "MODE_MANUAL" : "MODE_AUTO", token);
+export const cmdR2On = (token?: string) => sendCmd("R2_ON", token);
+export const cmdR2Off = (token?: string) => sendCmd("R2_OFF", token);
+export const cmdR2 = (on: boolean, token?: string) =>
+  sendCmd(on ? "R2_ON" : "R2_OFF", token);
+export const cmdBuzz = (token?: string) => sendCmd("BUZZ:2:150", token);
+export const cmdBuzzPattern = (n: number, ms: number, token?: string) =>
+  sendCmd(`BUZZ:${Math.max(1, Math.round(n))}:${Math.max(20, Math.round(ms))}`, token);
+
+const bridge = {
+  connect,
+  disconnect,
+  onTelemetry,
+  sendCmd,
+  farmCmd,
+  get state() {
+    return currentStatus;
+  },
+  get lastSeen() {
+    return lastSeen;
+  },
+  get msgCount() {
+    return msgCount;
+  },
+  get rssi() {
+    return rssi;
+  },
+  getState,
+  isMqttOnline,
+  getActiveBroker,
+  getActiveToken,
+};
+
+export default bridge;

@@ -107,6 +107,7 @@ export const PumpHeroCard = memo(function PumpHeroCard() {
 
   const handlePower = (on: boolean) => {
     setPumpManual(on);
+    farm.farmCmd(on ? "PUMP_ON" : "PUMP_OFF");
     const soilStr = (snapshot?.soil ?? 0).toFixed(1);
     logPump(
       on ? "Pump turned ON (Manual)" : "Pump turned OFF (Manual)",
@@ -119,6 +120,7 @@ export const PumpHeroCard = memo(function PumpHeroCard() {
   const handleCustomTimedRun = () => {
     const sec = Math.max(1, Math.min(3600, customSec || 30));
     setPumpManual(true, sec);
+    farm.farmCmd("PUMP_ON");
     const soilStr = (snapshot?.soil ?? 0).toFixed(1);
     logPump(
       `Pump ON for ${sec}s`,
@@ -129,6 +131,7 @@ export const PumpHeroCard = memo(function PumpHeroCard() {
   const handleMode = (mode: Mode) => {
     if (pump.mode === mode) return;
     setPumpMode(mode);
+    farm.farmCmd(mode === "auto" ? "MODE_AUTO" : "MODE_MANUAL");
     const label = mode === "auto" ? "Auto AI" : mode === "manual" ? "Manual" : "Schedule";
     const title = `Pump mode → ${label}`;
     const recentDuplicate = alerts.some(
@@ -142,18 +145,22 @@ export const PumpHeroCard = memo(function PumpHeroCard() {
   };
 
   const handleEmergencyStop = () => {
+    farm.farmCmd("PUMP_OFF");
+    farm.farmCmd("MODE_MANUAL");
+    setPumpManual(false);
+    setPumpMode("manual");
     useFarmStore.setState((s) => ({
-      pump: { ...s.pump, running: false },
+      pump: { ...s.pump, running: false, mode: "manual" },
       manualPumpRemainingSec: null,
     }));
     const soilStr = (snapshot?.soil ?? 0).toFixed(1);
     addAlert({
       level: "critical",
       title: "Emergency STOP pressed",
-      message: `Pump force-stopped by user at Soil ${soilStr}%.${pump.mode === "auto" ? " Auto AI may restart it if dry conditions persist." : ""}`,
+      message: `Pump force-stopped by user at Soil ${soilStr}%. Sent PUMP_OFF + MODE_MANUAL.`,
     });
     toast.error("Emergency STOP", {
-      description: "Pump halted immediately. All timed runs cancelled.",
+      description: "Pump halted immediately. Sent PUMP_OFF + MODE_MANUAL.",
     });
   };
 

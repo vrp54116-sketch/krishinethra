@@ -3,7 +3,7 @@
 import { memo, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Pause, Play, Power, Square, Timer } from "lucide-react";
+import { OctagonX, Pause, Play, Power, Radio, Square, Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFarm, useFarmStore } from "@/lib/store";
 import { useT } from "@/lib/i18n";
@@ -11,12 +11,11 @@ import { Card, CardHeader } from "./ui";
 import SegmentedControl from "@/components/ui/SegmentedControl";
 import { playWaterDrop } from "@/lib/audio";
 
-type Mode = "manual" | "auto" | "schedule";
+type Mode = "manual" | "auto";
 
-const MODES: Array<{ id: Mode; labelKey: string }> = [
-  { id: "manual", labelKey: "dashboard.manual" },
-  { id: "auto", labelKey: "dashboard.autoAI" },
-  { id: "schedule", labelKey: "dashboard.scheduleMode" },
+const MODES: Array<{ id: Mode; label: string }> = [
+  { id: "manual", label: "MANUAL" },
+  { id: "auto", label: "AUTO AI" },
 ];
 
 export const PumpControl = memo(function PumpControl() {
@@ -31,131 +30,165 @@ export const PumpControl = memo(function PumpControl() {
   const alerts = farm.alerts;
 
   const [pulse, setPulse] = useState(false);
-  const prevRunning = useRef(pump.running);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const prevRunning = useRef(farm.pump);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Requirement 8: When pump turns ON: pulse 3x + water drop sound
+  // 1-second ticker for confirmed Xs ago
   useEffect(() => {
-    if (pump.running && !prevRunning.current) {
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const lastSeenMs = useFarmStore((s) => s.live?.lastSeenAt ?? s.mqttLastSeen);
+  const confirmedAgo = lastSeenMs ? Math.max(0, Math.floor((nowMs - lastSeenMs) / 1000)) : 0;
+
+  // Pulse ring & audio on pump activation
+  useEffect(() => {
+    if (farm.pump && !prevRunning.current) {
       playWaterDrop();
       setPulse(true);
       const timer = setTimeout(() => setPulse(false), 2000);
       return () => clearTimeout(timer);
     }
-    prevRunning.current = pump.running;
-  }, [pump.running]);
+    prevRunning.current = farm.pump;
+  }, [farm.pump]);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   const logPump = (title: string, message: string) => {
     addAlert({ level: "info", title, message });
     toast.success(title, { description: message });
   };
 
+  const clearActiveTimer = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
   const handlePower = (on: boolean) => {
+    clearActiveTimer();
     setPumpManual(on);
+    farm.farmCmd(on ? "PUMP_ON" : "PUMP_OFF");
     const soilStr = farm.soil.toFixed(1);
     logPump(
-      on ? "Pump turned ON (Manual)" : "Pump turned OFF (Manual)",
+      on ? "Pump turned ON" : "Pump turned OFF",
       on
-        ? `Manual run for ${thresholds?.pumpDurationSec ?? 30}s — Soil at ${soilStr}%.`
-        : "Manual run stopped by user.",
+        ? `Manual run — Soil at ${soilStr}%. Command: PUMP_ON.`
+        : "Manual run stopped by user. Command: PUMP_OFF.",
     );
   };
 
   const handleQuickRun = (sec: number) => {
-    if (pump.mode !== "manual") {
-      toast.info("Switched to Manual mode", {
-        description: `Quick run needs Manual — Auto AI paused for ${sec}s.`,
-      });
+    clearActiveTimer();
+    if (farm.mode !== "MANUAL") {
+      farm.farmCmd("MODE_MANUAL");
+      setPumpMode("manual");
+      toast.info("Switched to MANUAL mode for timed run");
     }
     setPumpManual(true, sec);
+    farm.farmCmd("PUMP_ON");
     const soilStr = farm.soil.toFixed(1);
-    logPump(
-      `Pump ON for ${sec}s`,
-      `Quick manual run — Soil at ${soilStr}%.`,
-    );
+    logPump(`Pump ON (${sec}S)`, `Quick manual run — Soil at ${soilStr}%.`);
+
+    timerRef.current = setTimeout(() => {
+      farm.farmCmd("PUMP_OFF");
+      setPumpManual(false);
+      logPump("Pump OFF", `Timed run (${sec}S) completed.`);
+    }, sec * 1000);
   };
 
-  const handleMode = (mode: Mode) => {
-    if (pump.mode === mode) return;
+  const handleModeChange = (mode: Mode) => {
+    clearActiveTimer();
+    const cmd = mode === "auto" ? "MODE_AUTO" : "MODE_MANUAL";
+    farm.farmCmd(cmd);
     setPumpMode(mode);
-    const label = mode === "auto" ? "Auto AI" : mode === "manual" ? "Manual" : "Schedule";
+    const label = mode === "auto" ? "AUTO AI" : "MANUAL";
     const title = `Pump mode → ${label}`;
     const recentDuplicate = alerts.some(
       (a) => a.title === title && Date.now() - a.timestamp < 10 * 60 * 1000,
     );
     if (!recentDuplicate) {
-      logPump(title, `Mode changed to ${label} by user.`);
+      logPump(title, `Mode changed to ${label}. Command: ${cmd}.`);
     } else {
-      toast.success(title, { description: `Mode changed to ${label} by user.` });
+      toast.success(title, { description: `Mode changed to ${label}. Command: ${cmd}.` });
     }
   };
 
-  // Live Jal Agent Auto-AI reasoning lines.
-  const autoLines = (): Array<{ text: string; hot: boolean }> => {
-    const soil = farm.soil;
-    const rain = farm.rain;
-    const low = thresholds?.moistureLow ?? 30;
-    const high = thresholds?.moistureHigh ?? 75;
-
-    if (pump.running) {
-      if (rain) {
-        return [
-          { text: `Rain detected! Auto-stop triggered to prevent over-watering`, hot: true },
-          { text: `Soil moisture: ${soil.toFixed(1)}%`, hot: false },
-        ];
-      }
-      return [
-        { text: `Soil moisture ${soil.toFixed(1)}% — pump RUNNING, lifting toward ${high}%`, hot: true },
-        { text: `Rain sensor: Dry (No rain detected)`, hot: false },
-      ];
-    }
-
-    if (rain) {
-      return [
-        { text: `Rain detected — pump held OFF (rain irrigation active)`, hot: true },
-        { text: `Soil moisture: ${soil.toFixed(1)}% (Threshold: <${low}%)`, hot: false },
-      ];
-    }
-
-    if (soil < low) {
-      return [
-        { text: `Soil moisture ${soil.toFixed(1)}% < ${low}% & dry → pump will start`, hot: true },
-        { text: `Jal Agent: Irrigation triggered`, hot: false },
-      ];
-    }
-
-    return [
-      { text: `Soil moisture ${soil.toFixed(1)}% ≥ ${low}% — holding OFF`, hot: false },
-      { text: `Will restart if moisture drops below ${low}% and no rain is detected`, hot: false },
-    ];
+  const handleEmergencyStop = () => {
+    clearActiveTimer();
+    farm.farmCmd("PUMP_OFF");
+    farm.farmCmd("MODE_MANUAL");
+    setPumpManual(false);
+    setPumpMode("manual");
+    addAlert({
+      level: "critical",
+      title: "EMERGENCY STOP",
+      message: `Emergency stop pressed. Sent PUMP_OFF + MODE_MANUAL.`,
+    });
+    toast.error("EMERGENCY STOP ACTIVATED", {
+      description: "Dispatched PUMP_OFF and MODE_MANUAL to edge node.",
+    });
   };
 
-  const isManual = pump.mode === "manual";
+  const handleToggleR2 = () => {
+    const nextR2 = !farm.r2;
+    farm.setEdgeR2(nextR2);
+    farm.farmCmd(nextR2 ? "R2_ON" : "R2_OFF");
+    toast.success(nextR2 ? "Spare Relay (R2) turned ON" : "Spare Relay (R2) turned OFF", {
+      description: `Command: ${nextR2 ? "R2_ON" : "R2_OFF"}`,
+    });
+  };
+
+  const isManual = farm.mode === "MANUAL";
+  const isRunning = farm.pump;
+
+  // Status text from telemetry.pump when LIVE ("PUMP RUNNING" + confirmed Xs ago)
+  const statusBadgeText = farm.isLive
+    ? isRunning
+      ? "PUMP RUNNING"
+      : "IDLE"
+    : isRunning
+      ? "RUNNING"
+      : "STANDBY";
+
+  const statusDetailText = farm.isLive
+    ? isRunning
+      ? `PUMP RUNNING · confirmed ${confirmedAgo}s ago`
+      : `IDLE · confirmed ${confirmedAgo}s ago`
+    : isRunning
+      ? t("dashboard.pumping")
+      : t("dashboard.pumpIdle");
 
   const nowStamp = new Date().toLocaleTimeString("en-GB", { hour12: false });
   const isSafetyLocked = Boolean(farm.rain || farm.stale);
 
   return (
     <Card className={cn("relative rounded-[12px] border border-[var(--line)] bg-[var(--panel)] p-6", pulse && "border-[var(--terra)]")}>
-      {/* Rule 9: pump-ON = orange pulse ring */}
-      {pump.running && (
-        <span aria-hidden className="pump-pulse-ring" />
-      )}
+      {isRunning && <span aria-hidden className="pump-pulse-ring" />}
 
-      {/* Header row = mono uppercase label left + status stamp right */}
+      {/* Header row */}
       <CardHeader
         title={t("dashboard.pumpStatus")}
-        subtitle={`MODE: ${pump.mode === "auto" ? "AUTO AI" : pump.mode === "manual" ? "MANUAL" : "SCHEDULE"}`}
+        subtitle={`MODE: ${farm.mode === "AUTO" ? "AUTO AI" : "MANUAL"}`}
         action={
           <span
             className={cn(
               "inline-flex items-center gap-1.5 rounded-none border px-2.5 py-0.5 text-[10px] font-editorial-mono font-bold tracking-widest uppercase transition-all",
-              pump.running
+              isRunning
                 ? "border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)]"
                 : "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink-2)]",
             )}
           >
-            <span className={cn("h-1.5 w-1.5 rounded-none", pump.running ? "animate-pulse bg-[var(--terra)]" : "bg-[var(--ink-3)]")} />
-            {pump.running ? "RUNNING" : "STANDBY"}
+            <span className={cn("h-1.5 w-1.5 rounded-none", isRunning ? "animate-pulse bg-[var(--terra)]" : "bg-[var(--ink-3)]")} />
+            {statusBadgeText}
           </span>
         }
       />
@@ -165,13 +198,13 @@ export const PumpControl = memo(function PumpControl() {
         <span
           className={cn(
             "flex h-10 w-10 shrink-0 items-center justify-center rounded-none border transition-all",
-            pump.running
+            isRunning
               ? "border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)]"
               : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-3)]",
           )}
         >
           <AnimatePresence mode="wait" initial={false}>
-            {pump.running ? (
+            {isRunning ? (
               <motion.div
                 key="running-play"
                 initial={{ rotate: -90, scale: 0.6, opacity: 0 }}
@@ -196,8 +229,8 @@ export const PumpControl = memo(function PumpControl() {
         </span>
         <div className="min-w-0 flex-1 font-editorial-mono">
           <p className="text-xs font-bold uppercase tracking-wider text-[var(--ink)]">
-            {pump.running ? t("dashboard.pumping") : t("dashboard.pumpIdle")}
-            {pump.running && isManual && manualRemaining != null && (
+            {statusDetailText}
+            {isRunning && isManual && manualRemaining != null && (
               <span className="ml-2 text-[var(--terra)] font-semibold">
                 {Math.max(0, Math.ceil(manualRemaining))}S LEFT
               </span>
@@ -209,28 +242,28 @@ export const PumpControl = memo(function PumpControl() {
         </div>
       </div>
 
-      {/* Mode segmented control as bordered square tabs */}
+      {/* Segmented [MANUAL][AUTO AI] sends MODE_MANUAL / MODE_AUTO */}
       <div className="mt-3">
         <SegmentedControl
-          options={MODES.map((m) => ({ id: m.id, label: t(m.labelKey) }))}
-          value={pump.mode}
-          onChange={handleMode}
+          options={MODES}
+          value={farm.mode === "AUTO" ? "auto" : "manual"}
+          onChange={(m) => handleModeChange(m as Mode)}
           layoutId="pump-mode-dashboard"
           aria-label="Pump mode"
         />
       </div>
 
-      {/* Big ON/OFF square switch */}
+      {/* Buttons [ON] and [OFF] */}
       <div className="mt-3 grid grid-cols-2 gap-2">
         <button
           type="button"
           onClick={() => handlePower(true)}
-          disabled={!isManual || pump.running}
+          disabled={!isManual || isRunning}
           className={cn(
             "flex h-14 items-center justify-center gap-2 rounded-none border text-xs font-editorial-mono font-bold uppercase tracking-widest transition-all select-none",
-            isManual && pump.running
+            isManual && isRunning
               ? "border-[var(--terra)] bg-[var(--terra)] text-white ring-2 ring-[var(--terra)]/60 animate-pulse shadow-[0_0_16px_rgba(196,80,58,0.5)]"
-              : isManual && !pump.running
+              : isManual && !isRunning
                 ? "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink)] hover:border-[var(--ink-2)] hover:bg-[var(--panel)] cursor-pointer"
                 : "border-[var(--line)] bg-[var(--panel-2)]/30 text-[var(--ink-3)] cursor-not-allowed opacity-40",
           )}
@@ -240,12 +273,12 @@ export const PumpControl = memo(function PumpControl() {
         <button
           type="button"
           onClick={() => handlePower(false)}
-          disabled={!isManual || !pump.running}
+          disabled={!isManual || !isRunning}
           className={cn(
             "flex h-14 items-center justify-center gap-2 rounded-none border text-xs font-editorial-mono font-bold uppercase tracking-widest transition-all select-none",
-            isManual && pump.running
+            isManual && isRunning
               ? "border-[var(--terra)] bg-[var(--panel-2)] text-[var(--terra)] hover:bg-[var(--terra-soft)] cursor-pointer"
-              : isManual && !pump.running
+              : isManual && !isRunning
                 ? "border-[var(--line)] bg-[var(--panel-2)] text-[var(--ink-2)]"
                 : "border-[var(--line)] bg-[var(--panel-2)]/30 text-[var(--ink-3)] cursor-not-allowed opacity-40",
           )}
@@ -255,11 +288,11 @@ export const PumpControl = memo(function PumpControl() {
       </div>
       {!isManual && (
         <p className="mt-1 text-center font-editorial-mono text-[10px] uppercase tracking-wider text-[var(--ink-3)]">
-          Switch to Manual mode to toggle ON / OFF directly.
+          Switch to MANUAL mode to toggle ON / OFF directly.
         </p>
       )}
 
-      {/* Quick run timers as square ghost buttons */}
+      {/* Timers buttons [5S] [10S] [30S] (timers = PUMP_ON then setTimeout PUMP_OFF) */}
       <div className="mt-3 flex items-center gap-2">
         <Timer className="h-4 w-4 shrink-0 text-[var(--ink-3)]" />
         <div className="grid flex-1 grid-cols-3 gap-2">
@@ -276,8 +309,39 @@ export const PumpControl = memo(function PumpControl() {
         </div>
       </div>
 
-      {/* Agent reasoning = mono log lines with timestamps, LOCKED stamps where safety fired */}
-      {pump.mode === "auto" && (
+      {/* Spare relay (R2) toggle row (sends R2_ON / R2_OFF) */}
+      <div className="mt-3 flex items-center justify-between rounded-none border border-[var(--line)] bg-[var(--panel-2)] px-3 py-2.5 font-editorial-mono text-xs">
+        <div className="flex items-center gap-2">
+          <Radio className={cn("h-4 w-4", farm.r2 ? "text-emerald-400" : "text-[var(--ink-3)]")} />
+          <span className="font-bold text-[var(--ink)] uppercase tracking-wider">
+            SPARE RELAY (R2): {farm.r2 ? "ON" : "OFF"}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={handleToggleR2}
+          className={cn(
+            "rounded-none border px-3 py-1 font-bold text-[11px] uppercase tracking-wider transition-all cursor-pointer",
+            farm.r2
+              ? "border-emerald-500 bg-emerald-500/20 text-emerald-300"
+              : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink-2)] hover:text-[var(--ink)]",
+          )}
+        >
+          {farm.r2 ? "R2_OFF" : "R2_ON"}
+        </button>
+      </div>
+
+      {/* [EMERGENCY STOP] sends PUMP_OFF + MODE_MANUAL */}
+      <button
+        type="button"
+        onClick={handleEmergencyStop}
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-none border border-red-500/60 bg-red-600/90 px-4 py-3 font-editorial-mono text-xs font-black uppercase tracking-widest text-white shadow-[0_0_20px_rgba(239,68,68,0.4)] transition-all hover:bg-red-500 active:scale-[0.98] cursor-pointer"
+      >
+        <OctagonX className="h-4 w-4" /> EMERGENCY STOP
+      </button>
+
+      {/* Agent reasoning when auto */}
+      {farm.mode === "AUTO" && (
         <div className="mt-3 space-y-1.5 rounded-none border border-[var(--line)] bg-[var(--panel-2)] p-3 font-editorial-mono text-[11px]">
           <div className="flex items-center justify-between border-b border-[var(--line)] pb-1.5 mb-2">
             <span className="font-bold uppercase tracking-wider text-[var(--ink-2)]">
@@ -289,19 +353,12 @@ export const PumpControl = memo(function PumpControl() {
               </span>
             )}
           </div>
-          {autoLines().map((l, i) => (
-            <div key={i} className="flex items-start gap-1.5 leading-relaxed text-[var(--ink-2)]">
-              <span className="text-[var(--ink-3)] shrink-0 font-mono">[{nowStamp}]</span>
-              {isSafetyLocked && i === 0 && (
-                <span className="shrink-0 px-1 py-0.2 border border-[var(--terra)] bg-[var(--terra-soft)] text-[var(--terra)] font-bold text-[9px] uppercase">
-                  LOCKED
-                </span>
-              )}
-              <span className={cn(l.hot && "text-[var(--terra)] font-semibold")}>
-                {l.text}
-              </span>
-            </div>
-          ))}
+          <div className="flex items-start gap-1.5 leading-relaxed text-[var(--ink-2)]">
+            <span className="text-[var(--ink-3)] shrink-0 font-mono">[{nowStamp}]</span>
+            <span>
+              Soil: {farm.soil.toFixed(1)}% (Low: {thresholds?.moistureLow ?? 30}%, High: {thresholds?.moistureHigh ?? 75}%) · Rain: {farm.rain ? "DETECTED" : "NONE"}
+            </span>
+          </div>
         </div>
       )}
     </Card>

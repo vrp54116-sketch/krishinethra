@@ -159,7 +159,7 @@ export default function SensorRow() {
           )}
         >
           <CloudRain className={cn("h-4 w-4", isRaining ? "text-blue-300" : "text-zinc-500")} />
-          <span>Rain Detected: <strong className="text-white">{isRaining ? "Yes" : "No"}</strong></span>
+          <span>RAIN: <strong className="text-white">{isRaining ? "DETECTED" : "NONE"}</strong></span>
         </div>
       </div>
 

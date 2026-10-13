@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import {
   Brain,
   Cpu,
@@ -240,6 +241,13 @@ export default function PersonalBrainCard({ className }: { className?: string })
 
         {/* Action Button */}
         <div className="flex items-center gap-2">
+          <Link
+            href="/brain"
+            className="flex items-center gap-1.5 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3 py-2 text-xs font-semibold text-purple-300 hover:bg-purple-500/20 transition-all active:scale-95"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+            <span>Open Studio (/brain) ↗</span>
+          </Link>
           <button
             type="button"
             onClick={handleTrainNow}

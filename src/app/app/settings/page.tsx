@@ -1780,7 +1780,7 @@ export default function SettingsPage() {
         </div>
       )}
       <footer className="flex justify-center pt-2">
-        <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 font-mono text-[10px] font-bold tracking-wide text-zinc-400">v5.1.0 • Tomato Doctor Live</span>
+        <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 font-mono text-[10px] font-bold tracking-wide text-zinc-400">v6.0.0 • BRC BRAIN EDITION</span>
       </footer>
     </div>
   );

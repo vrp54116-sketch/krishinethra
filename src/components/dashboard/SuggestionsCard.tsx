@@ -81,10 +81,10 @@ export default memo(function SuggestionsCard({ className }: { className?: string
   useEffect(() => {
     void loadSuggestions();
 
-    const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
+    const THIRTY_SECONDS_MS = 30 * 1000;
     const intervalId = setInterval(() => {
       void loadSuggestions();
-    }, FIFTEEN_MINUTES_MS);
+    }, THIRTY_SECONDS_MS);
 
     return () => {
       clearInterval(intervalId);

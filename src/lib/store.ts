@@ -1806,7 +1806,7 @@ export const useFarmStore = create<FarmState>()(
 
       addAlert: (alert) => {
         const now = alert.timestamp ?? Date.now();
-        const currentBucket = Math.floor(now / (10 * 60 * 1000));
+        const alertType = (alert.type || alert.title || "").trim();
         const full: Alert = {
           id: alert.id ?? uid("alert"),
           timestamp: now,
@@ -1814,17 +1814,17 @@ export const useFarmStore = create<FarmState>()(
           level: alert.level,
           title: alert.title,
           message: alert.message,
+          ...(alert.type ? { type: alert.type } : {}),
           ...(alert.zone ? { zone: alert.zone } : {}),
         };
         let alertId = full.id;
         set((s) => {
           if (alert.dedupe !== false) {
-            // Dedupe by (type/title + 10-minute bucket)
+            // Dedupe by (type+10min)
             const dup = s.alerts.find(
               (a) =>
-                a.title === full.title &&
-                (Math.floor(a.timestamp / (10 * 60 * 1000)) === currentBucket ||
-                  now - a.timestamp < ALERT_DEDUP_WINDOW_MS),
+                ((a.type || a.title || "").trim() === alertType) &&
+                now - a.timestamp < ALERT_DEDUP_WINDOW_MS,
             );
             if (dup) {
               alertId = dup.id;
@@ -2694,19 +2694,34 @@ export interface FarmView {
 export function useFarm(): FarmView;
 export function useFarm<T>(selector: (farm: FarmView) => T): T;
 export function useFarm<T>(selector?: (farm: FarmView) => T): T | FarmView {
-  const store = useFarmStore();
-  const isLive = store.source === "LIVE" || store.settings?.mode === "live";
+  let store: ReturnType<typeof useFarmStore.getState>;
+  try {
+    store = useFarmStore();
+  } catch {
+    store = useFarmStore.getState();
+  }
+  const online = store.mqttStatus === "online";
+  const lastSeen = store.live?.lastSeenAt ?? store.mqttLastSeen;
+  const age = lastSeen != null ? Date.now() - lastSeen : Infinity;
+  const isFresh = online && age < 5000;
+  const isLive = (store.source === "LIVE" || store.settings?.mode === "live") && isFresh;
+  const source: FarmSource = isLive ? "LIVE" : "SIM";
+  const isStale = isLive
+    ? Boolean(store.live?.stale ?? store.edgeStale) || (age != null && age >= 4000)
+    : false;
 
   const farm: FarmView = {
-    source: store.source,
+    source,
     isLive,
     soil: isLive
       ? (store.live?.soil ?? store.snapshot?.soil ?? 45)
-      : Math.max(15, (typeof store.snapshot?.soil === "number" && store.snapshot.soil > 0)
+      : Math.max(30, Math.min(70, (typeof store.snapshot?.soil === "number" && store.snapshot.soil > 0)
           ? store.snapshot.soil
-          : (typeof store.snapshot?.soilMoistureA === "number" && store.snapshot.soilMoistureA > 0)
-            ? store.snapshot.soilMoistureA
-            : 45),
+          : (typeof store.snapshot?.soilMoistureB === "number" && store.snapshot.soilMoistureB > 0)
+            ? store.snapshot.soilMoistureB
+            : (typeof store.snapshot?.soilMoistureA === "number" && store.snapshot.soilMoistureA > 0)
+              ? store.snapshot.soilMoistureA
+              : 45)),
     temp: isLive ? (store.live?.temp ?? store.snapshot?.temp ?? 28) : (store.snapshot?.temp ?? store.snapshot?.tempC ?? 28),
     hum: isLive ? (store.live?.hum ?? store.snapshot?.hum ?? 60) : (store.snapshot?.hum ?? store.snapshot?.humidity ?? 60),
     aqi: isLive ? (store.live?.aqi ?? store.snapshot?.aqi ?? 85) : (store.snapshot?.aqi ?? 85),
@@ -2714,7 +2729,7 @@ export function useFarm<T>(selector?: (farm: FarmView) => T): T | FarmView {
     pump: isLive ? Boolean(store.live?.pump ?? store.pump.running) : store.pump.running,
     r2: isLive ? Boolean(store.live?.r2 ?? store.edgeR2) : Boolean(store.edgeR2),
     mode: isLive ? (store.live?.mode ?? (store.pump.mode === "auto" ? "AUTO" : "MANUAL")) : (store.pump.mode === "auto" ? "AUTO" : "MANUAL"),
-    stale: isLive ? Boolean(store.live?.stale ?? store.edgeStale) : false,
+    stale: isStale,
     rssi: isLive ? (store.live?.rssi ?? store.mqttRssi ?? store.snapshot?.rssi ?? null) : (store.mqttRssi ?? store.snapshot?.rssi ?? null),
     uptime: isLive ? (store.live?.uptime ?? store.snapshot?.uptime ?? 0) : (store.snapshot?.uptime ?? 0),
 
