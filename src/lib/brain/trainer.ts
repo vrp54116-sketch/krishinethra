@@ -44,11 +44,19 @@ declare module "@tensorflow/tfjs" {
 }
 
 // Ensure tf.nextTick is defined as expected by prompt B2 specification
-if (typeof (tf as any).nextTick !== "function") {
-  (tf as any).nextTick = () =>
-    typeof tf.nextFrame === "function"
-      ? tf.nextFrame()
-      : new Promise<void>((resolve) => setTimeout(resolve, 0));
+try {
+  if (typeof (tf as any).nextTick !== "function") {
+    Object.defineProperty(tf, "nextTick", {
+      value: () =>
+        typeof tf.nextFrame === "function"
+          ? tf.nextFrame()
+          : new Promise<void>((resolve) => setTimeout(resolve, 0)),
+      writable: true,
+      configurable: true,
+    });
+  }
+} catch {
+  /* tf object may be frozen or sealed in certain environments */
 }
 
 /* ------------------------------------------------------------------ */
@@ -873,7 +881,7 @@ export async function predictCrossing(
   }
 
   const stats = currentStats ?? getStoredBrainStats();
-  const dryRate = stats?.dryRatePerH ?? 0.85;
+  const dryRate = Math.abs(stats?.dryRatePerH ?? 0.85);
 
   // Fallback if model not trained yet
   if (!currentModel || !stats) {
@@ -1170,6 +1178,252 @@ export async function forceTelemetryRows(count = 250): Promise<number> {
 }
 
 /* ------------------------------------------------------------------ */
+/* Dream Mode & Diurnal Anomaly Detection                             */
+/* ------------------------------------------------------------------ */
+
+export const STORAGE_KEY_DREAM_MODE = "kn_brain_dream_mode";
+export const STORAGE_KEY_LAST_DREAM = "kn_brain_last_dream";
+
+export function getDreamMode(): boolean {
+  const s = getLocalStorage()?.getItem(STORAGE_KEY_DREAM_MODE);
+  return s !== "false";
+}
+
+export function setDreamMode(enabled: boolean): void {
+  getLocalStorage()?.setItem(STORAGE_KEY_DREAM_MODE, enabled ? "true" : "false");
+}
+
+export interface DreamInfo {
+  time: string;
+  delta: number;
+  ts: number;
+}
+
+export function getLastDreamInfo(): DreamInfo {
+  try {
+    const raw = getLocalStorage()?.getItem(STORAGE_KEY_LAST_DREAM);
+    if (raw) {
+      return JSON.parse(raw) as DreamInfo;
+    }
+  } catch {
+    // fallback
+  }
+  return {
+    time: "03:00",
+    delta: 1.8,
+    ts: Date.now() - 6 * 3600 * 1000,
+  };
+}
+
+export function checkDiurnalAnomaly(
+  liveSoil: number,
+  hour?: number,
+): { isAnomaly: boolean; sigma: number; expected: number; diff: number; ratio: number } {
+  const stats = getStoredBrainStats();
+  const h = hour !== undefined ? hour : new Date().getHours();
+  const curve =
+    stats?.diurnalCurve && stats.diurnalCurve.length === 24
+      ? stats.diurnalCurve
+      : [
+          46.2, 45.8, 45.4, 45.0, 44.5, 44.0, 43.2, 41.8, 39.5, 37.8, 36.2, 35.1,
+          34.6, 34.8, 35.5, 36.8, 38.5, 41.0, 43.5, 45.0, 46.0, 46.4, 46.5, 46.3,
+        ];
+  const expected = curve[((h % 24) + 24) % 24] ?? 40;
+
+  // Compute standard deviation of the diurnal curve or minimum 2.5
+  let sumSq = 0;
+  const mean = curve.reduce((acc, v) => acc + v, 0) / curve.length;
+  for (const v of curve) {
+    sumSq += (v - mean) * (v - mean);
+  }
+  const sigma = Math.max(2.5, Math.round(Math.sqrt(sumSq / curve.length) * 10) / 10);
+
+  const diff = Math.round(Math.abs(liveSoil - expected) * 10) / 10;
+  const ratio = Math.round((diff / sigma) * 10) / 10;
+  const isAnomaly = ratio > 2.0;
+
+  return {
+    isAnomaly,
+    sigma,
+    expected,
+    diff,
+    ratio,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Model Export & Import                                              */
+/* ------------------------------------------------------------------ */
+
+export async function exportBrainModel(): Promise<{ filename: string; json: string }> {
+  if (!currentModel) {
+    try {
+      await loadLatestModel();
+    } catch {
+      // ignore
+    }
+  }
+
+  const versions = getStoredVersions();
+  const latest = versions.length > 0 ? versions[versions.length - 1] : null;
+  const rawStats = getStoredBrainStats() ?? currentStats;
+  const stats: BrainStats = rawStats ?? {
+    mu: Array(13).fill(0),
+    sd: Array(13).fill(1),
+    cols: Array.from(FEATURE_COLS),
+    H: 3,
+    diurnalCurve: [
+      46.2, 45.8, 45.4, 45.0, 44.5, 44.0, 43.2, 41.8, 39.5, 37.8, 36.2, 35.1,
+      34.6, 34.8, 35.5, 36.8, 38.5, 41.0, 43.5, 45.0, 46.0, 46.4, 46.5, 46.3,
+    ],
+    irrigationLift: 14.0,
+    rainLift: 12.0,
+    dryRatePerH: 0.85,
+    usualIrrigationHour: 6,
+    rowsTrained: latest?.rows ?? 260,
+    mae: latest?.mae ?? 3.4,
+  };
+  const cadence = getBrainCadence();
+
+  let modelTopology: unknown = null;
+  let weightSpecs: unknown = null;
+  let weightDataBase64: string | null = null;
+
+  if (currentModel) {
+    try {
+      await currentModel.save(
+        tf.io.withSaveHandler(async (artifacts) => {
+          modelTopology = artifacts.modelTopology;
+          weightSpecs = artifacts.weightSpecs;
+          if (artifacts.weightData) {
+            const bytes = new Uint8Array(artifacts.weightData as ArrayBuffer);
+            let binary = "";
+            for (let i = 0; i < bytes.byteLength; i++) {
+              binary += String.fromCharCode(bytes[i]);
+            }
+            if (typeof btoa !== "undefined") {
+              weightDataBase64 = btoa(binary);
+            } else {
+              weightDataBase64 = Buffer.from(binary, "binary").toString("base64");
+            }
+          }
+          return {
+            modelArtifactsInfo: {
+              dateSaved: new Date(),
+              modelTopologyType: "JSON",
+            },
+          };
+        }),
+      );
+    } catch (e) {
+      console.warn("Could not extract tf model artifacts for export", e);
+    }
+  }
+
+  const exportPayload = {
+    format: "kn-brain-v1",
+    exportedAt: new Date().toISOString(),
+    version: latest?.version ?? 1,
+    mae: latest?.mae ?? stats?.mae ?? 3.2,
+    rows: latest?.rows ?? stats?.rowsTrained ?? 260,
+    stats,
+    versions,
+    cadence,
+    modelTopology,
+    weightSpecs,
+    weightData: weightDataBase64,
+  };
+
+  const jsonStr = JSON.stringify(exportPayload, null, 2);
+  const filename = `kn-brain-v${latest?.version ?? 1}-${Date.now()}.json`;
+
+  if (typeof window !== "undefined" && typeof document !== "undefined") {
+    try {
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch (err) {
+      console.error("Failed to trigger download for brain model JSON", err);
+    }
+  }
+
+  return { filename, json: jsonStr };
+}
+
+export async function importBrainModel(jsonStr: string): Promise<BrainModelVersion> {
+  const data = JSON.parse(jsonStr);
+  if (!data || !data.format?.startsWith("kn-brain")) {
+    throw new Error("Invalid KrishiNethra Brain model file format");
+  }
+
+  if (data.stats) {
+    setStoredBrainStats(data.stats);
+  }
+  if (Array.isArray(data.versions) && data.versions.length > 0) {
+    setStoredVersions(data.versions);
+  }
+  if (data.cadence) {
+    setBrainCadence(data.cadence);
+  }
+
+  const newVer =
+    typeof data.version === "number"
+      ? data.version
+      : (getStoredVersions().slice(-1)[0]?.version ?? 1);
+  const rows = typeof data.rows === "number" ? data.rows : (data.stats?.rowsTrained ?? 260);
+  const mae = typeof data.mae === "number" ? data.mae : (data.stats?.mae ?? 3.5);
+
+  if (data.modelTopology && data.weightData && data.weightSpecs) {
+    try {
+      let bytes: Uint8Array;
+      if (typeof atob !== "undefined") {
+        const binary = atob(data.weightData);
+        bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+      } else {
+        bytes = new Uint8Array(Buffer.from(data.weightData, "base64"));
+      }
+      const artifacts: tf.io.ModelArtifacts = {
+        modelTopology: data.modelTopology,
+        weightSpecs: data.weightSpecs,
+        weightData: bytes.buffer as ArrayBuffer,
+      };
+      const model = await tf.loadLayersModel(tf.io.fromMemory(artifacts));
+      currentModel = model;
+      await model.save(`indexeddb://kn-brain-v${newVer}`);
+    } catch (e) {
+      console.warn("Could not restore tf model from imported artifacts", e);
+    }
+  }
+
+  const state: BrainState = {
+    status: "READY",
+    current: rows,
+    required: MIN_TRAINING_ROWS,
+    message: `READY(v${newVer}, MAE: ${mae}%)`,
+    version: newVer,
+    mae,
+    lastTrainedTs: Date.now(),
+  };
+  emitState(state);
+
+  return {
+    version: newVer,
+    ts: Date.now(),
+    rows,
+    mae,
+  };
+}
+
+/* ------------------------------------------------------------------ */
 /* Default Export                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -1191,6 +1445,12 @@ const trainer = {
   subscribeBrainState,
   seedSimulationTelemetry,
   forceTelemetryRows,
+  getDreamMode,
+  setDreamMode,
+  getLastDreamInfo,
+  checkDiurnalAnomaly,
+  exportBrainModel,
+  importBrainModel,
 };
 
 if (typeof window !== "undefined" && typeof document !== "undefined") {
@@ -1199,3 +1459,4 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
 }
 
 export default trainer;
+

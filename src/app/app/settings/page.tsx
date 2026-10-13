@@ -1558,6 +1558,41 @@ export default function SettingsPage() {
               />
             </label>
           </div>
+          <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-bold text-white">Quiet Hours (22:00 - 06:00)</p>
+                <p className="text-[11px] text-zinc-400">Silence advisor briefing during night rest</p>
+              </div>
+              <Toggle
+                checked={telegram.quietHoursEnabled ?? true}
+                onChange={(v) => updateSettings({ telegram: { quietHoursEnabled: v } })}
+                label="Enable quiet hours"
+              />
+            </div>
+            {(telegram.quietHoursEnabled ?? true) && (
+              <div className="mt-2.5 flex items-center gap-3 text-xs text-zinc-300">
+                <label className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-zinc-400">Start:</span>
+                  <input
+                    type="time"
+                    value={telegram.quietHoursStart ?? "22:00"}
+                    onChange={(e) => updateSettings({ telegram: { quietHoursStart: e.target.value } })}
+                    className="rounded-lg border border-white/10 bg-black/40 px-2 py-1 font-mono text-xs text-white"
+                  />
+                </label>
+                <label className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-zinc-400">End:</span>
+                  <input
+                    type="time"
+                    value={telegram.quietHoursEnd ?? "06:00"}
+                    onChange={(e) => updateSettings({ telegram: { quietHoursEnd: e.target.value } })}
+                    className="rounded-lg border border-white/10 bg-black/40 px-2 py-1 font-mono text-xs text-white"
+                  />
+                </label>
+              </div>
+            )}
+          </div>
           <button
             type="button"
             onClick={() => void handleTgTest()}

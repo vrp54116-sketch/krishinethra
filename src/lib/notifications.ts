@@ -21,6 +21,9 @@ import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useFarmStore } from "./store";
 import type { Alert } from "./types";
+import { isQuietHours, sendLocalized } from "./brain/advisor";
+
+export { sendLocalized };
 
 export type PushAlertInput = Omit<Alert, "id" | "timestamp" | "read"> &
   Partial<Pick<Alert, "id" | "timestamp" | "read">>;
@@ -170,6 +173,15 @@ function postToTelegram(alert: Alert): void {
     const telegram = useFarmStore.getState().settings.telegram;
     if (!telegram?.enabled) return;
     if (!telegram.botToken || !telegram.chatId) return;
+
+    // Respect quiet hours for non-critical alerts
+    if (
+      telegram.quietHoursEnabled &&
+      alert.level !== "critical" &&
+      isQuietHours(new Date(), telegram.quietHoursStart ?? "22:00", telegram.quietHoursEnd ?? "06:00")
+    ) {
+      return;
+    }
     void fetch("/api/telegram", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

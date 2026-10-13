@@ -176,6 +176,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
     botToken: "",
     chatId: "",
     enabled: false,
+    quietHoursEnabled: true,
+    quietHoursStart: "22:00",
+    quietHoursEnd: "06:00",
   },
 };
 

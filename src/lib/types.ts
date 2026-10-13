@@ -300,5 +300,40 @@ export interface AppSettings {
     botToken: string;
     chatId: string;
     enabled: boolean;
+    quietHoursEnabled?: boolean;
+    quietHoursStart?: string;
+    quietHoursEnd?: string;
   };
 }
+
+/* ------------------------------------------------------------------ */
+/* Advisor Loop Types (PROMPT B4)                                     */
+/* ------------------------------------------------------------------ */
+
+export type AdvisorSuggestionType =
+  | "irrigation_forecast"
+  | "spray_window"
+  | "disease_risk_rise"
+  | "heat_stress"
+  | "rain_skip"
+  | "weekly_money";
+
+export type AdvisorSeverity = "critical" | "warning" | "info";
+
+export interface AdvisorMappedCommand {
+  action: "irrigate" | "spray" | "scan" | "shade" | "skip_rain" | "view_reports" | string;
+  labelKey: string;
+  href?: string;
+}
+
+export interface AdvisorSuggestion {
+  id: string;
+  type: AdvisorSuggestionType;
+  severity: AdvisorSeverity;
+  textKey: string;
+  params: Record<string, string | number>;
+  citation: string;
+  createdAt: number;
+  mappedCommand?: AdvisorMappedCommand;
+}
+

@@ -29,11 +29,19 @@ try {
 }
 
 // Polyfill tf.nextTick if needed
-if (typeof (tf as any).nextTick !== "function") {
-  (tf as any).nextTick = () =>
-    typeof tf.nextFrame === "function"
-      ? tf.nextFrame()
-      : new Promise<void>((resolve) => setTimeout(resolve, 0));
+try {
+  if (typeof (tf as any).nextTick !== "function") {
+    Object.defineProperty(tf, "nextTick", {
+      value: () =>
+        typeof tf.nextFrame === "function"
+          ? tf.nextFrame()
+          : new Promise<void>((resolve) => setTimeout(resolve, 0)),
+      writable: true,
+      configurable: true,
+    });
+  }
+} catch {
+  // ignore if tf is frozen/sealed in production bundle
 }
 
 export const HASH_BUCKETS = 2000;

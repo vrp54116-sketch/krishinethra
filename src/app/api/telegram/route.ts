@@ -131,7 +131,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const text = buildAlertText({
+    const customText = pick(body["text"]);
+    const text = customText || buildAlertText({
       level: pick(body["level"]) || "info",
       title: pick(body["title"]) || "Farm alert",
       message: pick(body["message"]) || "",
