@@ -10,16 +10,17 @@ type TruthRow = {
 };
 
 const FEATURES: TruthRow[] = [
+  { feature: "LIVE-HARDWARE", kind: "hardware", source: "Real ESP8266 node: soil moisture (A0), DHT11 climate, rain drop (digital), MQ-135 (threshold digital), 2-channel relay, water pump" },
   { feature: "PERSONAL BRAIN", kind: "model", source: "trained in-browser on your log" },
   { feature: "KNOWLEDGE BRAIN", kind: "model", source: "our 4-lang KB + intent model" },
   { feature: "GEMINI", kind: "api", source: "fallback only" },
-  { feature: "Soil moisture", kind: "hardware", source: "Soil probes on the farm device" },
-  { feature: "Temperature", kind: "hardware", source: "Temperature sensor on the farm device" },
-  { feature: "Humidity", kind: "hardware", source: "Humidity sensor on the farm device" },
-  { feature: "Rain detection", kind: "hardware", source: "Rain sensor on the farm device" },
-  { feature: "Pump state", kind: "hardware", source: "Pump state reported by the farm device" },
-  { feature: "Buzzer alerts", kind: "hardware", source: "Buzzer output on the farm device" },
-  { feature: "Relay control", kind: "hardware", source: "Physical relay connected to the pump" },
+  { feature: "Soil moisture", kind: "hardware", source: "Soil moisture (A0) probe on ESP8266 node" },
+  { feature: "Temperature", kind: "hardware", source: "DHT11 climate sensor on ESP8266 node" },
+  { feature: "Humidity", kind: "hardware", source: "DHT11 climate sensor on ESP8266 node" },
+  { feature: "Rain detection", kind: "hardware", source: "Rain drop (digital) sensor on ESP8266 node" },
+  { feature: "Pump state", kind: "hardware", source: "Water pump reported by ESP8266 node" },
+  { feature: "Buzzer alerts", kind: "hardware", source: "Buzzer output on the ESP8266 node" },
+  { feature: "Relay control", kind: "hardware", source: "2-channel relay on ESP8266 node" },
   { feature: "Leaf Disease Doctor", kind: "model", source: "11-class tomato model (9 diseases + healthy + not-a-leaf), trained by us on Teachable Machine, runs fully in the browser — works offline" },
   { feature: "KrishiGPT", kind: "api", source: "Gemini API response; requires internet and a configured key" },
   { feature: "Weather forecast", kind: "api", source: "Open-Meteo forecast API; requires internet" },
@@ -64,7 +65,12 @@ export default function TruthPanel() {
           <tbody>
             {FEATURES.map((row) => {
               const isLiveRow = row.kind === "hardware" && hardwareIsLive;
-              const badge = row.kind === "hardware" && !isLiveRow ? "SIMULATION-LABELED" : BADGES[row.kind];
+              const badge =
+                row.kind === "hardware"
+                  ? hardwareIsLive
+                    ? "EDGE-LIVE"
+                    : "SIMULATION"
+                  : BADGES[row.kind];
               return (
                 <tr key={row.feature} className="border-b border-[var(--line)]/70 align-top">
                   <td className="px-2 py-2 font-semibold">{(t(`truth.feature.${row.feature}`) !== `truth.feature.${row.feature}` && t(`truth.feature.${row.feature}`)) || row.feature}</td>

@@ -18,7 +18,7 @@
  * 13. LIVE pump command round-trip: MQTT topic publish & state dispatch.
  * 14. Performance: main thread yield verification during training.
  * 15. Honesty: Truth Panel contains PERSONAL BRAIN, KNOWLEDGE BRAIN, GEMINI; no feature claims LIVE without source flag.
- * 16. Version 6.0.0 & Footer Pill "v6.0.0 • BRC BRAIN EDITION".
+ * 16. Version 6.1.0 & Footer Pill "v6.1.0 • ESP8266 EDGE EDITION".
  */
 
 import "fake-indexeddb/auto";
@@ -405,18 +405,18 @@ async function runB6Gauntlet() {
   }
 
   // -------------------------------------------------------------------
-  // TEST 15: Version 6.0.0 & Footer Pill
+  // TEST 15: Version 6.1.0 & Footer Pill
   // -------------------------------------------------------------------
-  console.log("\n▶ TEST 15: Version 6.0.0 & Footer Pill");
+  console.log("\n▶ TEST 15: Version 6.1.0 & Footer Pill");
   {
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "../package.json"), "utf8"));
-    assert(pkg.version === "6.0.0", `package.json version is "6.0.0" (found "${pkg.version}")`);
+    assert(pkg.version === "6.1.0", `package.json version is "6.1.0" (found "${pkg.version}")`);
 
     const settingsSrc = fs.readFileSync(path.join(__dirname, "../src/app/app/settings/page.tsx"), "utf8");
-    assert(settingsSrc.includes("v6.0.0 • BRC BRAIN EDITION"), "Settings footer pill matches 'v6.0.0 • BRC BRAIN EDITION'");
+    assert(settingsSrc.includes("v6.1.0 • ESP8266 EDGE EDITION"), "Settings footer pill matches 'v6.1.0 • ESP8266 EDGE EDITION'");
 
     const homeSrc = fs.readFileSync(path.join(__dirname, "../src/app/page.tsx"), "utf8");
-    assert(homeSrc.includes("v6.0.0 • BRC BRAIN EDITION"), "Homepage footer pill matches 'v6.0.0 • BRC BRAIN EDITION'");
+    assert(homeSrc.includes("v6.1.0 • ESP8266 EDGE EDITION"), "Homepage footer pill matches 'v6.1.0 • ESP8266 EDGE EDITION'");
   }
 
   // -------------------------------------------------------------------

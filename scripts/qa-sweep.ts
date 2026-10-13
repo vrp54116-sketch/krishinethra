@@ -237,15 +237,15 @@ async function runQaTests() {
   }
 
   // -------------------------------------------------------------------
-  // TEST 8: Version 6.0.0 & Settings Footer Pill (v6.0.0 • BRC BRAIN EDITION)
+  // TEST 8: Version 6.1.0 & Settings Footer Pill (v6.1.0 • ESP8266 EDGE EDITION)
   // -------------------------------------------------------------------
-  console.log("\n▶ TEST 8: Version 6.0.0 & Settings Footer Pill");
+  console.log("\n▶ TEST 8: Version 6.1.0 & Settings Footer Pill");
   {
     const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "../package.json"), "utf8"));
-    assert(pkg.version === "6.0.0", `package.json version is "6.0.0" (found "${pkg.version}")`);
+    assert(pkg.version === "6.1.0", `package.json version is "6.1.0" (found "${pkg.version}")`);
 
     const settingsSrc = fs.readFileSync(path.join(__dirname, "../src/app/app/settings/page.tsx"), "utf8");
-    assert(settingsSrc.includes("v6.0.0 • BRC BRAIN EDITION"), "Settings footer pill matches 'v6.0.0 • BRC BRAIN EDITION'");
+    assert(settingsSrc.includes("v6.1.0 • ESP8266 EDGE EDITION"), "Settings footer pill matches 'v6.1.0 • ESP8266 EDGE EDITION'");
   }
 
   // -------------------------------------------------------------------

@@ -47,10 +47,15 @@ declare module "@tensorflow/tfjs" {
 try {
   if (typeof (tf as any).nextTick !== "function") {
     Object.defineProperty(tf, "nextTick", {
-      value: () =>
-        typeof tf.nextFrame === "function"
-          ? tf.nextFrame()
-          : new Promise<void>((resolve) => setTimeout(resolve, 0)),
+      value: () => {
+        if (typeof (globalThis as any).requestAnimationFrame === "function") {
+          return new Promise<void>((resolve) => (globalThis as any).requestAnimationFrame(resolve));
+        }
+        if (typeof setImmediate === "function") {
+          return new Promise<void>((resolve) => setImmediate(resolve));
+        }
+        return new Promise<void>((resolve) => setTimeout(resolve, 0));
+      },
       writable: true,
       configurable: true,
     });
